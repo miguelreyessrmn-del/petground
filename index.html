@@ -5477,7 +5477,7 @@ function actualizarDashboard() {
   document.getElementById('stat-entradas').textContent = entradasHoy;
   document.getElementById('stat-salidas').textContent = salidasHoy;
   document.getElementById('stat-alojamientos').textContent = entradas.length;
-  badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
+  document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
   document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';
@@ -9385,6 +9385,132 @@ function eliminarServicio(id) {
   renderServiciosList();
   poblarSelectServicios();
   notify('Servicio eliminado','success');
+}
+<!-- COBRO RÁPIDO FLOTANTE -->
+<div id="cobro-rapido-btn" onclick="abrirCobroRapido()"
+  style="position:fixed;bottom:24px;right:24px;z-index:500;width:56px;height:56px;border-radius:50%;background:var(--green);box-shadow:0 4px 20px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;border:none"
+  title="Cobro rápido"
+  onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 28px rgba(0,0,0,0.3)'"
+  onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.25)'">
+  <span style="font-size:26px">💵</span>
+</div>
+
+<!-- MODAL COBRO RÁPIDO -->
+<div class="modal-overlay" id="modal-cobro-rapido">
+  <div class="modal" style="width:380px">
+    <div class="modal-header">
+      <div class="modal-title">💵 Cobro rápido</div>
+      <button class="modal-close" onclick="closeModal('modal-cobro-rapido')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+
+      <!-- Monto -->
+      <div style="margin-bottom:20px">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px">Monto a cobrar</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;font-weight:700;color:var(--gray-400)">$</span>
+          <input type="number" id="cr-monto" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
+            style="width:100%;padding:14px 14px 14px 32px;border:2px solid var(--gray-200);border-radius:10px;font-size:24px;font-weight:800;color:var(--blue);font-family:'Nunito',sans-serif;outline:none;text-align:right"
+            onfocus="this.style.borderColor='var(--green)'"
+            onblur="this.style.borderColor='var(--gray-200)'"
+            onkeydown="if(event.key==='Enter')cobrarRapido()">
+          <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:var(--gray-400)">PM$</span>
+        </div>
+      </div>
+
+      <!-- Concepto -->
+      <div style="margin-bottom:20px">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px">Concepto</label>
+        <div id="cr-conceptos" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="cr-btn-concepto active" data-concepto="Guardería" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--green);background:#f0fdf4;border-radius:10px;font-size:12px;font-weight:700;color:var(--green);cursor:pointer;text-align:center">🐕 Guardería</button>
+          <button class="cr-btn-concepto" data-concepto="Transporte" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--gray-200);background:white;border-radius:10px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center">🚗 Transporte</button>
+          <button class="cr-btn-concepto" data-concepto="Accesorios" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--gray-200);background:white;border-radius:10px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center">🎀 Accesorios</button>
+          <button class="cr-btn-concepto" data-concepto="Medicamento" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--gray-200);background:white;border-radius:10px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center">💊 Medicamento</button>
+          <button class="cr-btn-concepto" data-concepto="Baño y estética" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--gray-200);background:white;border-radius:10px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center">✂️ Baño</button>
+          <button class="cr-btn-concepto" data-concepto="Otro" onclick="crSelConcepto(this)" style="padding:10px 8px;border:2px solid var(--gray-200);background:white;border-radius:10px;font-size:12px;font-weight:700;color:var(--gray-600);cursor:pointer;text-align:center">📝 Otro</button>
+        </div>
+      </div>
+
+      <!-- Nota opcional -->
+      <div style="margin-bottom:20px">
+        <label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px">Nota (opcional)</label>
+        <input type="text" id="cr-nota" placeholder="Nombre del cliente, perro, referencia..." class="form-input" style="font-size:13px">
+      </div>
+
+      <!-- Botón cobrar -->
+      <button onclick="cobrarRapido()" id="cr-btn-cobrar"
+        style="width:100%;padding:14px;background:var(--green);color:white;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:'Poppins',sans-serif;transition:opacity 0.15s"
+        onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+        💵 Cobrar y abrir cajón
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _crConcepto = 'Guardería';
+
+function abrirCobroRapido() {
+  document.getElementById('cr-monto').value = '';
+  document.getElementById('cr-nota').value = '';
+  _crConcepto = 'Guardería';
+  // Reset botones concepto
+  document.querySelectorAll('.cr-btn-concepto').forEach(b => {
+    const activo = b.dataset.concepto === 'Guardería';
+    b.style.border = activo ? '2px solid var(--green)' : '2px solid var(--gray-200)';
+    b.style.background = activo ? '#f0fdf4' : 'white';
+    b.style.color = activo ? 'var(--green)' : 'var(--gray-600)';
+  });
+  document.getElementById('modal-cobro-rapido').classList.add('open');
+  setTimeout(() => document.getElementById('cr-monto').focus(), 200);
+}
+
+function crSelConcepto(btn) {
+  _crConcepto = btn.dataset.concepto;
+  document.querySelectorAll('.cr-btn-concepto').forEach(b => {
+    const activo = b === btn;
+    b.style.border = activo ? '2px solid var(--green)' : '2px solid var(--gray-200)';
+    b.style.background = activo ? '#f0fdf4' : 'white';
+    b.style.color = activo ? 'var(--green)' : 'var(--gray-600)';
+  });
+}
+
+async function cobrarRapido() {
+  const monto = parseFloat(document.getElementById('cr-monto').value);
+  if (!monto || monto <= 0) {
+    document.getElementById('cr-monto').style.border = '2px solid var(--red)';
+    document.getElementById('cr-monto').style.background = '#fff5f5';
+    setTimeout(() => {
+      document.getElementById('cr-monto').style.border = '2px solid var(--gray-200)';
+      document.getElementById('cr-monto').style.background = '';
+    }, 1500);
+    notify('⚠️ Ingresa un monto válido', 'error');
+    return;
+  }
+  const nota = document.getElementById('cr-nota').value.trim();
+  const concepto = _crConcepto + (nota ? ` — ${nota}` : '');
+  const btn = document.getElementById('cr-btn-cobrar');
+  setBtnLoading(btn, true);
+  try {
+    // Guardar en cobros sin entrada_id
+    await sb('POST', 'cobros', {
+      cliente_id: null,
+      entrada_id: null,
+      fecha: new Date().toISOString().split('T')[0],
+      metodo: 'Efectivo',
+      monto,
+      concepto,
+      notas: nota,
+      status: 'pagado'
+    });
+    // Abrir cajón + ticket
+    await abrirCajonPorCobro('Cobro rápido', concepto, monto, null);
+    closeModal('modal-cobro-rapido');
+    notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
+  } catch(err) {
+    notify('Error: ' + err.message, 'error');
+  }
+  setBtnLoading(btn, false);
 }
 </script>
 </body>

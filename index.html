@@ -2964,7 +2964,8 @@ async function cargarTodo() {
       servicio: e.servicio||'',
       notas: e.notas||'',
       status: e.status||'activo',
-      responsiva: e.responsiva_firmada||false
+      responsiva: e.responsiva_firmada||false,
+      descuento: e.descuento ? (typeof e.descuento === 'string' ? JSON.parse(e.descuento) : e.descuento) : null
     }));
 
     // Cargar reservaciones pendientes
@@ -3965,10 +3966,19 @@ function verDetalleHospedaje(id) {
   poblarDropdownHabitacion('mdh-habitacion', e.habitacion||'');
   document.getElementById('mdh-importe').value = e.importe||0;
   document.getElementById('mdh-notas').value = e.notas||'';
-  // Reset descuento
+  // Restaurar descuento guardado
   _mdhDescTipo = 'pct';
   mdh_setDescTipo('pct');
-  document.getElementById('mdh-descuento').value = '';
+  if (e.descuento) {
+    const d = e.descuento;
+    _mdhDescTipo = d.tipo || 'pct';
+    mdh_setDescTipo(_mdhDescTipo);
+    document.getElementById('mdh-descuento').value = d.valor || '';
+    // Restaurar importe base para que el descuento se recalcule correctamente
+    document.getElementById('mdh-importe').value = d.base || e.importe || 0;
+  } else {
+    document.getElementById('mdh-descuento').value = '';
+  }
   mdh_calcResumen();
 
   // Mascotas
@@ -4076,11 +4086,23 @@ function mdh_renderAdelantos() {
   }
 
   const colorPend = pendiente === 0 ? '#16a34a' : '#dc2626';
+  const e = entradas.find(en => en.id === detalleHospedajeId);
+  const desc = e?.descuento;
+  const descLine = desc && desc.valor > 0 ? `
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#dc2626;margin-bottom:4px">
+      <span>🏷️ Descuento ${desc.tipo==='pct' ? desc.valor+'%' : 'fijo'}</span>
+      <span style="font-weight:700">-$${desc.monto.toLocaleString('es-MX')} PM$</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-400);margin-bottom:4px">
+      <span>Precio base</span>
+      <span>$${(desc.base||0).toLocaleString('es-MX')} PM$</span>
+    </div>` : '';
   resumenEl.innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);margin-bottom:4px">
       <span>Total del hospedaje</span>
       <span style="font-weight:700">$${importe.toLocaleString('es-MX')} PM$</span>
     </div>
+    ${descLine}
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--green);margin-bottom:4px">
       <span>✅ Pagado / Adelantos</span>
       <span style="font-weight:700">$${totalPagado.toLocaleString('es-MX')} PM$</span>
@@ -4261,10 +4283,12 @@ async function generarComprobantePDF(entradaId) {
 
   const totalPagado = cobrosEntry.filter(co=>co.status==='pagado').reduce((s,co)=>s+co.monto,0);
   const totalAdelantos = cobrosEntry.filter(co=>co.status==='adelanto').reduce((s,co)=>s+co.monto,0);
-  // Pendiente real = importe total - lo que ya se pagó - adelantos
   const totalPendiente = Math.max(0, (e.importe||0) - totalPagado - totalAdelantos);
+  const desc = e.descuento;
+  const descLabel = desc && desc.valor > 0
+    ? (desc.tipo==='pct' ? `Descuento ${desc.valor}%` : 'Descuento fijo')
+    : null;
 
-  // Abrir en modal dentro de la misma página para evitar bloqueo de popups
   let modalComp = document.getElementById('modal-comprobante');
   if (!modalComp) {
     modalComp = document.createElement('div');
@@ -4275,98 +4299,92 @@ async function generarComprobantePDF(entradaId) {
   }
   modalComp.innerHTML = '';
   const compWrapper = document.createElement('div');
-  compWrapper.style.cssText = 'background:white;border-radius:12px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;position:relative';
-  
-  // Botones de acción
+  compWrapper.style.cssText = 'background:white;border-radius:12px;width:100%;max-width:400px;max-height:92vh;overflow-y:auto;position:relative';
+
   const actBar = document.createElement('div');
   actBar.style.cssText = 'position:sticky;top:0;background:white;padding:10px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;z-index:1;border-radius:12px 12px 0 0';
-  actBar.innerHTML = '<span style="font-weight:700;color:#E8622A">📄 Comprobante</span><div style="display:flex;gap:8px"><button onclick="window.print()" style="background:#E8622A;color:white;border:none;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button><button onclick="cerrarModalComprobante()" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer">✕ Cerrar</button></div>';
+  actBar.innerHTML = '<span style="font-weight:700;color:#E8622A;font-size:13px">📄 Comprobante</span><div style="display:flex;gap:8px"><button onclick="window.print()" style="background:#E8622A;color:white;border:none;border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">🖨️ Imprimir</button><button onclick="cerrarModalComprobante()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:12px">✕</button></div>';
   compWrapper.appendChild(actBar);
-  
+
+  const noches = Math.max(0, Math.ceil((new Date(e.salidaPrevista) - new Date(e.entrada)) / (1000*60*60*24)));
+
   const compContent = document.createElement('div');
-  compContent.style.cssText = 'padding:24px';
-  compContent.innerHTML = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Comprobante PetGround</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 13px; color: #222; padding: 32px; max-width: 560px; margin: 0 auto; }
-  .header { display:flex; align-items:center; gap:16px; border-bottom: 3px solid #E8622A; padding-bottom:16px; margin-bottom:20px; }
-  .header-text h1 { font-size:22px; color:#E8622A; font-weight:900; }
-  .header-text p { font-size:11px; color:#666; margin-top:2px; }
-  .badge { display:inline-block; background:#E8622A; color:white; border-radius:20px; padding:4px 14px; font-size:11px; font-weight:700; margin-bottom:16px; }
-  .section { background:#f9f9f9; border-radius:8px; padding:14px 16px; margin-bottom:14px; }
-  .section-title { font-size:11px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
-  .row { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid #eee; }
-  .row:last-child { border-bottom:none; }
-  .row .label { color:#666; }
-  .row .value { font-weight:600; }
-  .total-section { background:#E8622A; color:white; border-radius:8px; padding:14px 16px; margin-bottom:14px; }
-  .total-row { display:flex; justify-content:space-between; padding:3px 0; }
-  .total-row.big { font-size:18px; font-weight:900; margin-top:6px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.3); }
-  .pendiente { background:#fff3cd; border:1.5px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:14px; color:#92400e; }
-  .footer { text-align:center; color:#999; font-size:11px; margin-top:20px; padding-top:16px; border-top:1px dashed #ddd; }
-  .mascotas { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
-  .mascota-tag { background:#fde8de; color:#E8622A; border-radius:20px; padding:3px 12px; font-size:12px; font-weight:700; }
-  @media print { body { padding: 16px; } }
-</style>
-</head>
-<body>
-  <div class="header">
-    ${logoHtml}
-    <div class="header-text">
-      <h1>${cfg.nombre || 'PetGround'}</h1>
-      <p>${cfg.propietario || 'Dr. Jaime Reyes Franco'} · Hotel de Mascotas</p>
-      <p>${cfg.direccion || 'Puebla, México'} · ${cfg.telefono || ''}</p>
-    </div>
+  compContent.style.cssText = 'padding:20px 18px;font-family:Arial,sans-serif;font-size:12px;color:#222;';
+  compContent.innerHTML = `
+  <style>
+    .cp-header{text-align:center;padding-bottom:12px;border-bottom:2px solid #E8622A;margin-bottom:14px}
+    .cp-logo{font-size:32px;margin-bottom:4px}
+    .cp-nombre{font-size:18px;font-weight:900;color:#E8622A}
+    .cp-sub{font-size:10px;color:#888;margin-top:2px}
+    .cp-badge{display:inline-block;background:#E8622A;color:white;border-radius:20px;padding:3px 12px;font-size:10px;font-weight:700;margin-bottom:12px}
+    .cp-section{background:#f9f9f9;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+    .cp-stitle{font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+    .cp-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee;font-size:11px}
+    .cp-row:last-child{border-bottom:none}
+    .cp-row .lbl{color:#666}
+    .cp-row .val{font-weight:600}
+    .cp-total{background:#1a3a5c;color:white;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+    .cp-trow{display:flex;justify-content:space-between;font-size:11px;padding:2px 0}
+    .cp-trow.big{font-size:15px;font-weight:900;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2)}
+    .cp-trow.desc{color:#fca5a5}
+    .cp-pend{background:#fff3cd;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 12px;color:#92400e;font-size:11px;margin-bottom:10px;font-weight:700}
+    .cp-ok{background:#d6f0e4;border-radius:8px;padding:8px 12px;color:#1a7a4a;font-size:11px;margin-bottom:10px;font-weight:700}
+    .cp-footer{text-align:center;color:#aaa;font-size:9px;margin-top:12px;padding-top:10px;border-top:1px dashed #ddd}
+    .cp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .cp-tag{background:#fde8de;color:#E8622A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700}
+    @media print{.cp-actbar{display:none!important}}
+  </style>
+
+  <div class="cp-header">
+    ${cfg.logo ? `<img src="${cfg.logo}" style="width:50px;height:50px;object-fit:contain;margin-bottom:4px">` : '<div class="cp-logo">🐾</div>'}
+    <div class="cp-nombre">${cfg.nombre||'PetGround'}</div>
+    <div class="cp-sub">${cfg.propietario||''} · ${cfg.direccion||'Puebla, México'}</div>
   </div>
 
-  <div class="badge">COMPROBANTE DE HOSPEDAJE</div>
+  <div style="text-align:center;margin-bottom:12px"><span class="cp-badge">COMPROBANTE DE HOSPEDAJE</span></div>
 
-  <div class="section">
-    <div class="section-title">👤 Datos del cliente</div>
-    <div class="row"><span class="label">Nombre:</span><span class="value">${c.nombre}</span></div>
-    <div class="row"><span class="label">Teléfono:</span><span class="value">${c.whatsapp || c.telefono || '—'}</span></div>
+  <div class="cp-section">
+    <div class="cp-stitle">👤 Cliente</div>
+    <div class="cp-row"><span class="lbl">Nombre</span><span class="val">${c.nombre}</span></div>
+    <div class="cp-row"><span class="lbl">Tel.</span><span class="val">${c.whatsapp||c.telefono||'—'}</span></div>
   </div>
 
-  <div class="section">
-    <div class="section-title">🐕 Mascotas</div>
-    <div class="mascotas">${(e.mascotas||[]).map(m=>`<span class="mascota-tag">🐕 ${m}</span>`).join('')}</div>
+  <div class="cp-section">
+    <div class="cp-stitle">🐕 Mascotas</div>
+    <div class="cp-tags">${(e.mascotas||[]).map(m=>`<span class="cp-tag">🐕 ${m}</span>`).join('')}</div>
   </div>
 
-  <div class="section">
-    <div class="section-title">🏠 Datos de la estancia</div>
-    <div class="row"><span class="label">Habitación:</span><span class="value">Hab. ${e.habitacion}</span></div>
-    <div class="row"><span class="label">Entrada:</span><span class="value">${e.entrada}</span></div>
-    <div class="row"><span class="label">Salida prevista:</span><span class="value">${e.salidaPrevista}</span></div>
-    <div class="row"><span class="label">Estado:</span><span class="value">${e.status === 'activo' ? '✅ Activo' : e.status}</span></div>
-    ${e.notas ? `<div class="row"><span class="label">Notas:</span><span class="value">${e.notas}</span></div>` : ''}
+  <div class="cp-section">
+    <div class="cp-stitle">🏠 Estancia</div>
+    <div class="cp-row"><span class="lbl">Habitación</span><span class="val">Hab. ${e.habitacion}</span></div>
+    <div class="cp-row"><span class="lbl">Entrada</span><span class="val">${e.entrada.replace(' ','  ')}</span></div>
+    <div class="cp-row"><span class="lbl">Salida prev.</span><span class="val">${e.salidaPrevista.replace(' ','  ')}</span></div>
+    <div class="cp-row"><span class="lbl">Noches</span><span class="val">${noches}</span></div>
+    ${e.notas ? `<div class="cp-row"><span class="lbl">Notas</span><span class="val" style="text-align:right;max-width:60%">${e.notas}</span></div>` : ''}
   </div>
 
-  <div class="total-section">
-    <div class="section-title" style="color:rgba(255,255,255,0.7)">💰 Resumen de pagos</div>
-    <div class="total-row"><span>Importe total:</span><span>$${(e.importe||0).toLocaleString('es-MX')} PM$</span></div>
-    <div class="total-row"><span>Pagado:</span><span>$${totalPagado.toLocaleString('es-MX')} PM$</span></div>
-    ${totalAdelantos > 0 ? `<div class="total-row"><span>Adelantos:</span><span>$${totalAdelantos.toLocaleString('es-MX')} PM$</span></div>` : ''}
-    <div class="total-row big"><span>Pendiente:</span><span>$${totalPendiente.toLocaleString('es-MX')} PM$</span></div>
+  <div class="cp-total">
+    <div class="cp-stitle" style="color:rgba(255,255,255,0.6)">💰 Pagos</div>
+    ${desc && desc.valor > 0 ? `
+    <div class="cp-trow"><span>Precio base</span><span>$${(desc.base||0).toLocaleString('es-MX')} PM$</span></div>
+    <div class="cp-trow desc"><span>🏷️ ${descLabel} (-$${desc.monto.toLocaleString('es-MX')})</span><span>$${e.importe.toLocaleString('es-MX')} PM$</span></div>
+    ` : ''}
+    <div class="cp-trow"><span>Total hospedaje</span><span>$${(e.importe||0).toLocaleString('es-MX')} PM$</span></div>
+    <div class="cp-trow"><span>Pagado</span><span>$${(totalPagado+totalAdelantos).toLocaleString('es-MX')} PM$</span></div>
+    <div class="cp-trow big"><span>Pendiente</span><span>$${totalPendiente.toLocaleString('es-MX')} PM$</span></div>
   </div>
 
   ${totalPendiente > 0
-    ? `<div class="pendiente">⚠️ <strong>Saldo pendiente: $${totalPendiente.toLocaleString('es-MX')} PM$</strong><br>Por favor realiza tu pago para completar el servicio.</div>`
-    : '<div style="background:#d6f0e4;border-radius:8px;padding:12px 16px;color:#1a7a4a;margin-bottom:14px;font-weight:700">✅ Pagado en su totalidad</div>'
+    ? `<div class="cp-pend">⚠️ Saldo pendiente: $${totalPendiente.toLocaleString('es-MX')} PM$</div>`
+    : '<div class="cp-ok">✅ Pagado en su totalidad</div>'
   }
 
-  <div class="footer">
-    <p>${cfg.footer || '¡Gracias por confiar en PetGround! Tu mascota estuvo en las mejores manos.'}</p>
-    <p style="margin-top:4px">${cfg.url || ''}</p>
-    <p style="margin-top:8px;font-size:10px">Generado el ${new Date().toLocaleString('es-MX')}</p>
-  </div>
+  <div class="cp-footer">
+    <p>${cfg.footer||'¡Gracias por confiar en nosotros!'}</p>
+    <p style="margin-top:3px">${cfg.url||''}</p>
+    <p style="margin-top:4px">Generado: ${new Date().toLocaleString('es-MX')}</p>
+  </div>`;
 
-
-</body>
-</html>`;
   compWrapper.appendChild(compContent);
   modalComp.appendChild(compWrapper);
 }
@@ -4427,21 +4445,31 @@ async function guardarCambiosHospedaje() {
   const hs = document.getElementById('mdh-hora-salida').value;
   const hab = document.getElementById('mdh-habitacion').value;
   const notas = document.getElementById('mdh-notas').value;
-  // Aplicar descuento al importe antes de guardar
+  const importeBruto = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
+  const descVal = parseFloat(document.getElementById('mdh-descuento')?.value) || 0;
+  const descTipo = _mdhDescTipo || 'pct';
   const importe = mdh_getImporteConDescuento();
+  // Guardar descuento como objeto {valor, tipo, monto_descontado}
+  const descMonto = descTipo === 'pct' ? Math.min(importeBruto, importeBruto * descVal / 100) : Math.min(importeBruto, descVal);
+  const descuentoObj = descVal > 0 ? { valor: descVal, tipo: descTipo, monto: descMonto, base: importeBruto } : null;
   if (!fe||!fs) { notify('⚠️ Las fechas son obligatorias', 'error'); return; }
   if (new Date(fs)<new Date(fe)) { notify('⚠️ La salida no puede ser antes que la entrada', 'error'); return; }
+  const btn = document.querySelector('#modal-detalle-hospedaje .btn-primary[onclick="guardarCambiosHospedaje()"]');
+  setBtnLoading(btn, true);
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${detalleHospedajeId}`, {
       fecha_entrada: `${fe}T${he}:00`,
       fecha_salida_prevista: `${fs}T${hs}:00`,
-      habitacion: hab, importe, notas
+      habitacion: hab, importe,
+      descuento: descuentoObj ? JSON.stringify(descuentoObj) : null,
+      notas
     });
     await cargarTodo();
     closeModal('modal-detalle-hospedaje');
     notify('✅ Hospedaje actualizado', 'success');
   } catch(err) { notify('Error: '+err.message, 'error'); }
+  setBtnLoading(btn, false);
   setLoading(false);
 }
 
@@ -6626,7 +6654,12 @@ function reenviarComprobanteWA(cobId) {
 function enviarComprobanteWA(e, c, cobrado, metodo, pendiente) {
   const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
   const adelantos = cobros.filter(co=>co.entradaId===e.id&&co.status==='pagado'&&co.monto!==cobrado).reduce((s,co)=>s+co.monto,0);
-  const detallePago = (adelantos>0?`✅ Adelantos previos: $${adelantos.toLocaleString('es-MX')} PM$\n`:'')
+  const desc = e.descuento;
+  const descLineWA = desc && desc.valor > 0
+    ? `🏷️ Descuento ${desc.tipo==='pct'?desc.valor+'%':'fijo'}: -$${desc.monto.toLocaleString('es-MX')} PM$\n`
+    : '';
+  const detallePago = descLineWA
+    + (adelantos>0?`✅ Adelantos previos: $${adelantos.toLocaleString('es-MX')} PM$\n`:'')
     + `${metIcon[metodo]||''} *Pago de hoy (${metodo}): $${cobrado.toLocaleString('es-MX')} PM$*\n`
     + (pendiente > 0 ? `⏳ Saldo pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '✅ *Saldo: $0 — Pagado completo*');
   let msg = aplicarPlantillaWA('wa_tpl_pago', {
@@ -6637,7 +6670,6 @@ function enviarComprobanteWA(e, c, cobrado, metodo, pendiente) {
     salida: new Date().toLocaleDateString('es-MX'),
     total: e.importe.toLocaleString('es-MX')
   });
-  // Insertar detalle de pago antes de la firma si existe marcador, sino al final
   msg = msg + '\n\n' + detallePago;
   const tel = (c.whatsapp||'').replace(/\D/g,'');
   const numero = tel.startsWith('52') ? tel : '52'+tel;

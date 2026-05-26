@@ -5477,7 +5477,7 @@ function actualizarDashboard() {
   document.getElementById('stat-entradas').textContent = entradasHoy;
   document.getElementById('stat-salidas').textContent = salidasHoy;
   document.getElementById('stat-alojamientos').textContent = entradas.length;
-  document.getElementById('badge-entradas').textContent = entradas.length;
+  badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
   document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';

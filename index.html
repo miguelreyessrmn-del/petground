@@ -2002,6 +2002,37 @@
       <!-- KPIs principales -->
       <div class="stats-row" style="margin-bottom:20px" id="rep-kpis"></div>
 
+      <!-- GRÁFICAS DE RETENCIÓN -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" id="rep-retencion-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📅 Tiempo desde última visita</div>
+          </div>
+          <div style="padding:16px 20px">
+            <div id="rep-chart-recencia" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center"></div>
+            <div id="rep-recencia-lista" style="margin-top:12px"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔁 Frecuencia de visitas</div>
+          </div>
+          <div style="padding:16px 20px">
+            <div id="rep-chart-frecuencia" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center"></div>
+            <div id="rep-frecuencia-lista" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clientes en riesgo -->
+      <div class="card" style="margin-bottom:20px" id="rep-riesgo-card">
+        <div class="card-header">
+          <div class="card-title">🚨 Clientes en riesgo (sin visita en +6 meses)</div>
+          <span class="badge badge-red" id="rep-riesgo-count">0</span>
+        </div>
+        <div id="rep-riesgo-lista" style="padding:0 20px 16px"></div>
+      </div>
+
       <!-- GRÁFICA FACTURACIÓN POR MES -->
       <div class="card" style="margin-bottom:20px">
         <div class="card-header">
@@ -2239,41 +2270,22 @@
         </div>
       </div>
 
-      <!-- Mascotas con selector de servicio -->
+      <!-- Mascotas con selector de servicio Y descuento individual -->
       <div class="form-group" style="margin-bottom:16px">
         <label class="form-label">🐕 Mascotas hospedadas y servicio</label>
-        <div id="mdh-mascotas" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:grid;grid-template-columns:2fr 3fr 1fr;gap:6px;margin-bottom:6px;padding:0 4px">
+          <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Mascota</span>
+          <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Servicio</span>
+          <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Desc.%</span>
+        </div>
+        <div id="mdh-mascotas" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div id="mdh-precio-base-hint" style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right"></div>
       </div>
 
       <!-- Notas -->
       <div class="form-group" style="margin-bottom:16px">
         <label class="form-label">📝 Notas (objetos que trajo, indicaciones...)</label>
         <textarea class="form-input" id="mdh-notas" rows="3" placeholder="correa, collar, alimento, suéter, medicamento..."></textarea>
-      </div>
-
-      <!-- Descuento -->
-      <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-weight:700;font-size:13px;color:#c2410c;margin-bottom:10px">🏷️ Descuento</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button id="mdh-desc-btn-pct" onclick="mdh_setDescTipo('pct')"
-            style="flex:1;padding:6px;border-radius:6px;border:2px solid #f97316;background:#fff7ed;color:#c2410c;font-weight:700;font-size:12px;cursor:pointer">
-            % Porcentaje
-          </button>
-          <button id="mdh-desc-btn-monto" onclick="mdh_setDescTipo('monto')"
-            style="flex:1;padding:6px;border-radius:6px;border:2px solid #ddd;background:#f9f9f9;color:#666;font-weight:700;font-size:12px;cursor:pointer">
-            $ Monto fijo
-          </button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <label class="form-label" style="font-size:11px" id="mdh-desc-label">Descuento (%)</label>
-            <input type="text" inputmode="numeric" class="form-input" id="mdh-descuento" placeholder="0" oninput="mdh_calcResumen()" style="color:#dc2626;font-weight:700">
-          </div>
-          <div>
-            <label class="form-label" style="font-size:11px">Total a cobrar</label>
-            <input type="text" class="form-input" id="mdh-total-final" readonly style="background:white;font-weight:800;color:var(--green);font-family:'Nunito',sans-serif;border:2px solid #86efac">
-          </div>
-        </div>
       </div>
 
       <!-- Adelantos y resumen de cobro -->
@@ -3988,19 +4000,6 @@ function verDetalleHospedaje(id) {
   poblarDropdownHabitacion('mdh-habitacion', e.habitacion||'');
   document.getElementById('mdh-importe').value = e.importe||0;
   document.getElementById('mdh-notas').value = e.notas||'';
-  // Restaurar descuento guardado
-  _mdhDescTipo = 'pct';
-  mdh_setDescTipo('pct');
-  if (e.descuento) {
-    const d = e.descuento;
-    _mdhDescTipo = d.tipo || 'pct';
-    mdh_setDescTipo(_mdhDescTipo);
-    document.getElementById('mdh-descuento').value = d.valor || '';
-    // Restaurar importe base para que el descuento se recalcule correctamente
-    document.getElementById('mdh-importe').value = d.base || e.importe || 0;
-  } else {
-    document.getElementById('mdh-descuento').value = '';
-  }
   mdh_calcResumen();
 
   // Mascotas
@@ -4008,8 +4007,7 @@ function verDetalleHospedaje(id) {
   const mdsMasc = document.getElementById('mdh-mascotas');
   if (mdsMasc) {
     const servicios = getServicios();
-    const opcs = servicios.map(s=>`<option value="${s.id}">${s.nombre} — $${s.precio} PM$</option>`).join('');
-    // Buscar mascota en clientes para obtener servicio_id
+    const opcs = servicios.map(s=>`<option value="${s.id}" data-precio="${s.precio}">${s.nombre} — $${s.precio} PM$</option>`).join('');
     const getMascotaObj = (nombre) => {
       for (const c of clientes) {
         const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === nombre);
@@ -4017,13 +4015,49 @@ function verDetalleHospedaje(id) {
       }
       return null;
     };
-    mdsMasc.innerHTML = (e.mascotas||[]).map(m => {
-      return `<div style="display:flex;align-items:center;gap:8px;background:var(--gray-50);border-radius:8px;padding:8px 12px">
-        <span style="font-size:13px;font-weight:600;flex-shrink:0">🐕 ${m}</span>
-        <select onchange="mdh_cambiarServicioMascota('${m}',this)" style="flex:1;padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px">
-          <option value="">— Servicio —</option>
-          ${opcs}
+    // Restaurar descuentos por mascota desde e.descuento
+    const descPorMascota = {};
+    if (e.descuento && e.descuento.porMascota) {
+      Object.assign(descPorMascota, e.descuento.porMascota);
+    }
+    const flagsMascota = (m) => {
+      const obj = getMascotaObj(m);
+      const flags = obj?.flags || [];
+      const notas = (obj?.notas||'').toLowerCase();
+      const esAgresivo = flags.includes('agresivo') || notas.includes('agresiv');
+      const esMedicamento = flags.includes('medicamento') || notas.includes('medic');
+      let badges = '';
+      if (esAgresivo) badges += `<span style="background:#dc2626;color:white;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">⚠️ AGRESIVO</span>`;
+      if (esMedicamento) badges += `<span style="background:#f59e0b;color:white;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">💊 MEDIC</span>`;
+      return badges;
+    };
+    const foto = (m) => {
+      const obj = getMascotaObj(m);
+      return obj?.foto
+        ? `<img src="${obj.foto}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid var(--orange);flex-shrink:0">`
+        : `<span style="font-size:18px;flex-shrink:0">🐕</span>`;
+    };
+    mdsMasc.innerHTML = (e.mascotas||[]).map((m, idx) => {
+      const descVal = descPorMascota[m] || 0;
+      return `<div style="display:grid;grid-template-columns:2fr 3fr 1fr;gap:6px;align-items:center;background:var(--gray-50);border-radius:8px;padding:8px 10px">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          ${foto(m)}
+          <div style="min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m}</div>
+            <div style="display:flex;flex-wrap:wrap">${flagsMascota(m)}</div>
+          </div>
+        </div>
+        <select data-mascota="${m}" data-idx="${idx}" onchange="mdh_cambiarServicioMascota('${m}',this)"
+          style="padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;width:100%;font-family:'Poppins',sans-serif;outline:none">
+          <option value="">— Servicio —</option>${opcs}
         </select>
+        <div style="position:relative">
+          <input type="number" min="0" max="100" placeholder="0" value="${descVal||''}"
+            data-mascota="${m}" onchange="mdh_calcResumen()" oninput="mdh_calcResumen()"
+            style="width:100%;padding:5px 20px 5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;outline:none;color:#dc2626;font-weight:700"
+            class="mdh-desc-ind">
+          <span style="position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--gray-400)">%</span>
+        </div>
       </div>`;
     }).join('') || '<span style="color:var(--gray-400);font-size:13px">—</span>';
     // Restaurar servicios guardados
@@ -4047,38 +4081,78 @@ function verDetalleHospedaje(id) {
   mdh_renderAdelantos();
 }
 
-let _mdhDescTipo = 'pct';
-function mdh_setDescTipo(tipo) {
-  _mdhDescTipo = tipo;
-  const btnPct   = document.getElementById('mdh-desc-btn-pct');
-  const btnMonto = document.getElementById('mdh-desc-btn-monto');
-  const label    = document.getElementById('mdh-desc-label');
-  if (tipo === 'pct') {
-    if (btnPct)   { btnPct.style.border='2px solid #f97316'; btnPct.style.background='#fff7ed'; btnPct.style.color='#c2410c'; }
-    if (btnMonto) { btnMonto.style.border='2px solid #ddd';  btnMonto.style.background='#f9f9f9'; btnMonto.style.color='#666'; }
-    if (label) label.textContent = 'Descuento (%)';
-  } else {
-    if (btnMonto) { btnMonto.style.border='2px solid #f97316'; btnMonto.style.background='#fff7ed'; btnMonto.style.color='#c2410c'; }
-    if (btnPct)   { btnPct.style.border='2px solid #ddd';   btnPct.style.background='#f9f9f9'; btnPct.style.color='#666'; }
-    if (label) label.textContent = 'Descuento (PM$)';
+function mdh_getImporteConDescuento() {
+  // Suma precio de cada mascota con su descuento individual
+  const sels = document.querySelectorAll('#mdh-mascotas select');
+  const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
+  const servicios = getServicios();
+  const noches = parseInt((document.getElementById('mdh-noches')?.value||'0').replace(/\D/g,'')) || 0;
+  let total = 0;
+  if (sels.length > 0 && noches > 0) {
+    sels.forEach((sel, idx) => {
+      const svcId = parseInt(sel.value);
+      const svc = servicios.find(s => s.id === svcId);
+      if (svc) {
+        const descPct = parseFloat(descs[idx]?.value||0) || 0;
+        const linea = noches * svc.precio;
+        total += linea * (1 - descPct/100);
+      }
+    });
+    return Math.round(total * 100) / 100;
   }
-  document.getElementById('mdh-descuento').value = '';
-  mdh_calcResumen();
+  // Fallback: usar importe guardado
+  return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
 }
 
-function mdh_getImporteConDescuento() {
-  const importe  = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
-  const descVal  = parseFloat(document.getElementById('mdh-descuento')?.value) || 0;
-  const descMonto = _mdhDescTipo === 'pct'
-    ? Math.min(importe, importe * descVal / 100)
-    : Math.min(importe, descVal);
-  return Math.max(0, importe - descMonto);
+function mdh_getDescuentoObj() {
+  // Construye objeto de descuento con detalle por mascota
+  const sels = document.querySelectorAll('#mdh-mascotas select');
+  const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
+  const servicios = getServicios();
+  const noches = parseInt((document.getElementById('mdh-noches')?.value||'0').replace(/\D/g,'')) || 0;
+  let base = 0, totalConDesc = 0;
+  const porMascota = {};
+  sels.forEach((sel, idx) => {
+    const mascota = sel.dataset.mascota;
+    const svcId = parseInt(sel.value);
+    const svc = servicios.find(s => s.id === svcId);
+    if (svc && noches > 0) {
+      const linea = noches * svc.precio;
+      const descPct = parseFloat(descs[idx]?.value||0) || 0;
+      base += linea;
+      totalConDesc += linea * (1 - descPct/100);
+      if (descPct > 0 && mascota) porMascota[mascota] = descPct;
+    }
+  });
+  const montoDescuento = Math.round((base - totalConDesc) * 100) / 100;
+  if (Object.keys(porMascota).length === 0) return null;
+  return { porMascota, base: Math.round(base*100)/100, monto: montoDescuento };
 }
 
 function mdh_calcResumen() {
   const total = mdh_getImporteConDescuento();
-  const el = document.getElementById('mdh-total-final');
-  if (el) el.value = '$' + total.toLocaleString('es-MX') + ' PM$';
+  const hint = document.getElementById('mdh-precio-base-hint');
+  // Mostrar desglose
+  const sels = document.querySelectorAll('#mdh-mascotas select');
+  const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
+  const servicios = getServicios();
+  const noches = parseInt((document.getElementById('mdh-noches')?.value||'0').replace(/\D/g,'')) || 0;
+  let base = 0;
+  sels.forEach((sel, idx) => {
+    const svcId = parseInt(sel.value);
+    const svc = servicios.find(s => s.id === svcId);
+    if (svc && noches > 0) base += noches * svc.precio;
+  });
+  if (hint) {
+    if (base > 0 && base !== total) {
+      const desc = Math.round((base - total)*100)/100;
+      hint.innerHTML = `<span style="color:var(--gray-400)">Base: $${base.toLocaleString('es-MX')}</span> · <span style="color:#dc2626">Descuento: -$${desc.toLocaleString('es-MX')}</span> · <span style="color:var(--green);font-weight:700">Total: $${total.toLocaleString('es-MX')} PM$</span>`;
+    } else if (base > 0) {
+      hint.innerHTML = `<span style="color:var(--green);font-weight:700">Total: $${total.toLocaleString('es-MX')} PM$</span>`;
+    } else {
+      hint.textContent = '';
+    }
+  }
   mdh_renderAdelantos();
 }
 
@@ -4110,13 +4184,13 @@ function mdh_renderAdelantos() {
   const colorPend = pendiente === 0 ? '#16a34a' : '#dc2626';
   const e = entradas.find(en => en.id === detalleHospedajeId);
   const desc = e?.descuento;
-  const descLine = desc && desc.valor > 0 ? `
+  const descLine = desc && desc.monto > 0 ? `
     <div style="display:flex;justify-content:space-between;font-size:12px;color:#dc2626;margin-bottom:4px">
-      <span>🏷️ Descuento ${desc.tipo==='pct' ? desc.valor+'%' : 'fijo'}</span>
+      <span>🏷️ Descuentos individuales</span>
       <span style="font-weight:700">-$${desc.monto.toLocaleString('es-MX')} PM$</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-400);margin-bottom:4px">
-      <span>Precio base</span>
+      <span>Precio base sin descuentos</span>
       <span>$${(desc.base||0).toLocaleString('es-MX')} PM$</span>
     </div>` : '';
   resumenEl.innerHTML = `
@@ -4133,6 +4207,11 @@ function mdh_renderAdelantos() {
       <span>${pendiente === 0 ? '🎉 Pagado completo' : '⚠️ Pendiente por cobrar'}</span>
       <span>$${pendiente.toLocaleString('es-MX')} PM$</span>
     </div>`;
+  // Pre-llenar monto pendiente en form de adelanto
+  const montoInput = document.getElementById('mdh-adel-monto');
+  if (montoInput && (!montoInput.value || montoInput.value === '0') && pendiente > 0) {
+    montoInput.value = pendiente;
+  }
 }
 
 async function mdh_eliminarAdelanto(cobId) {
@@ -4151,23 +4230,7 @@ async function mdh_cambiarServicioMascota(nombreMascota, sel) {
   const svcId = parseInt(sel.value);
   if (!svcId) return;
   localStorage.setItem('pg_svc_' + nombreMascota, sel.value);
-
-  // Recalcular importe: noches × precio del nuevo servicio
-  const servicios = getServicios();
-  const svc = servicios.find(s => s.id === svcId);
-  if (svc) {
-    const nochesEl = document.getElementById('mdh-noches');
-    const importeEl = document.getElementById('mdh-importe');
-    const noches = parseInt((nochesEl?.value||'0').replace(/\D/g,'')) || 0;
-    if (noches > 0 && importeEl) {
-      // Contar cuántas mascotas hay para multiplicar
-      const totalMascotas = document.getElementById('mdh-mascotas')?.querySelectorAll('select').length || 1;
-      const nuevoImporte = noches * svc.precio * totalMascotas;
-      importeEl.value = nuevoImporte;
-      mdh_calcResumen();
-    }
-  }
-
+  mdh_calcResumen();
   // Guardar en Supabase
   let mascObj = null;
   for (const c of clientes) {
@@ -4178,17 +4241,23 @@ async function mdh_cambiarServicioMascota(nombreMascota, sel) {
     try {
       await sb('PATCH', `mascotas?id=eq.${mascObj.id}`, { servicio_id: svcId });
       mascObj.servicio_id = svcId;
-      notify(`✅ Servicio de ${nombreMascota} actualizado`, 'success');
-    } catch(e) { notify('Error al guardar servicio: '+e.message, 'error'); }
-  } else {
-    notify(`✅ Servicio actualizado`, 'success');
+    } catch(e) { /* silencioso */ }
   }
 }
 
 function mdh_abrirFormAdelanto() {
   document.getElementById('mdh-form-adelanto').style.display = 'block';
-  document.getElementById('mdh-adel-monto').value = '';
-  document.getElementById('mdh-adel-monto').focus();
+  // Pre-llenar con saldo pendiente
+  const importe = mdh_getImporteConDescuento();
+  const pagos = (cobros||[]).filter(co => co.entradaId === detalleHospedajeId);
+  const pagado = pagos.reduce((s,co) => s + parseFloat(co.monto||0), 0);
+  const pendiente = Math.max(0, importe - pagado);
+  const montoInput = document.getElementById('mdh-adel-monto');
+  if (montoInput) {
+    montoInput.value = pendiente > 0 ? pendiente : '';
+    montoInput.focus();
+    montoInput.select();
+  }
 }
 
 async function mdh_guardarAdelanto() {
@@ -4467,13 +4536,8 @@ async function guardarCambiosHospedaje() {
   const hs = document.getElementById('mdh-hora-salida').value;
   const hab = document.getElementById('mdh-habitacion').value;
   const notas = document.getElementById('mdh-notas').value;
-  const importeBruto = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
-  const descVal = parseFloat(document.getElementById('mdh-descuento')?.value) || 0;
-  const descTipo = _mdhDescTipo || 'pct';
   const importe = mdh_getImporteConDescuento();
-  // Guardar descuento como objeto {valor, tipo, monto_descontado}
-  const descMonto = descTipo === 'pct' ? Math.min(importeBruto, importeBruto * descVal / 100) : Math.min(importeBruto, descVal);
-  const descuentoObj = descVal > 0 ? { valor: descVal, tipo: descTipo, monto: descMonto, base: importeBruto } : null;
+  const descuentoObj = mdh_getDescuentoObj();
   if (!fe||!fs) { notify('⚠️ Las fechas son obligatorias', 'error'); return; }
   if (new Date(fs)<new Date(fe)) { notify('⚠️ La salida no puede ser antes que la entrada', 'error'); return; }
   const btn = document.querySelector('#modal-detalle-hospedaje .btn-primary[onclick="guardarCambiosHospedaje()"]');
@@ -6426,11 +6490,38 @@ function hacerSalida(nombre, id) {
 
   const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
   const atrasado = new Date(e.salidaPrevista) < new Date();
-  // Calcular adelantos previos de esta entrada
   const adelantosPrevios = cobros.filter(co => co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
   const pendienteActual = Math.max(0, e.importe - adelantosPrevios);
 
+  // Detectar flags en mascotas
+  const flagsAlerta = [];
+  e.mascotas.forEach(m => {
+    for (const cl2 of clientes) {
+      const mascObj = (cl2.mascotas||[]).find(mo => (mo.nombre||mo) === m);
+      if (mascObj) {
+        const flags = mascObj.flags || [];
+        const notas = (mascObj.notas||'').toLowerCase();
+        if (flags.includes('agresivo') || notas.includes('agresiv')) flagsAlerta.push({nombre:m, tipo:'agresivo'});
+        else if (flags.includes('medicamento') || notas.includes('medic')) flagsAlerta.push({nombre:m, tipo:'medicamento'});
+      }
+    }
+  });
+  const flagsBanner = flagsAlerta.length ? `
+    <div style="background:#fee2e2;border:2px solid #dc2626;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">⚠️</span>
+      <div><div style="font-weight:800;font-size:13px;color:#dc2626">¡Atención antes de entregar!</div>
+      <div style="font-size:12px;color:#7f1d1d;margin-top:2px">${flagsAlerta.map(f=>`<b>${f.nombre}</b>: ${f.tipo==='agresivo'?'puede ser agresivo':'requiere medicamento'}`).join(' · ')}</div></div>
+    </div>` : '';
+
+  const mascotasHTML = e.mascotas.map(m => {
+    let mascObj = null;
+    for (const cl2 of clientes) { const mo = (cl2.mascotas||[]).find(mo2=>(mo2.nombre||mo2)===m); if(mo){mascObj=mo;break;} }
+    const fotoImg = mascObj?.foto ? `<img src="${mascObj.foto}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid var(--orange)">` : '';
+    return `<span style="display:inline-flex;align-items:center;gap:3px">${fotoImg}${m}</span>`;
+  }).join(' · ');
+
   document.getElementById('modal-salida-body').innerHTML = `
+    ${flagsBanner}
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;border:1px solid var(--gray-200)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:15px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
@@ -6441,10 +6532,11 @@ function hacerSalida(nombre, id) {
         ${atrasado?'<span class="badge badge-red" style="margin-left:auto">⚠️ Atrasado</span>':''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
-        <span style="color:var(--gray-600)">🐕 Mascotas:</span><span style="font-weight:600">${e.mascotas.join(', ')}</span>
+        <span style="color:var(--gray-600)">🐕 Mascotas:</span><span style="font-weight:600">${mascotasHTML}</span>
         <span style="color:var(--gray-600)">🏠 Habitación:</span><span style="font-weight:600">${e.habitacion}</span>
         <span style="color:var(--gray-600)">📥 Entrada:</span><span style="font-weight:600">${e.entrada}</span>
         <span style="color:var(--gray-600)">⏱️ Días hospedado:</span><span style="font-weight:600">${diasHospedado} día${diasHospedado!==1?'s':''}</span>
+        ${e.notas?`<span style="color:var(--gray-600)">📝 Objetos:</span><span style="font-weight:600;color:var(--orange)">${e.notas}</span>`:''}
       </div>
     </div>
 
@@ -7925,7 +8017,7 @@ function renderAdelantos() {
     const ent = entradas.find(e=>e.id===c.entradaId);
     return `<tr>
       <td>${c.fecha}</td>
-      <td><span style="font-weight:600;color:var(--blue)">${cl?.nombre||'—'}</span></td>
+      <td onclick="verPerfilCliente(${cl?.id})" style="cursor:pointer"><span style="font-weight:600;color:var(--blue)">${cl?.nombre||'—'}</span></td>
       <td>${metIcon[c.metodo]||''} ${c.metodo}</td>
       <td><span class="amount">$${c.monto.toLocaleString('es-MX')} PM$</span></td>
       <td><span style="font-size:11px;color:var(--gray-600)">${ent?'Hab. '+ent.habitacion+' · '+ent.mascotas.join(', '):'Sin vincular'}</span></td>
@@ -8673,6 +8765,130 @@ function showScreen(name) {
 }
 
 // ===================== REPORTES =====================
+function renderRetencion() {
+  const hoy = new Date();
+
+  // --- RECENCIA: tiempo desde última visita ---
+  const buckets = [
+    { label: 'Menos de 2 meses', color: '#22c55e', max: 60, count: 0, clientes: [] },
+    { label: 'Entre 2 y 6 meses', color: '#f97316', max: 180, count: 0, clientes: [] },
+    { label: 'Entre 6 y 12 meses', color: '#eab308', max: 365, count: 0, clientes: [] },
+    { label: 'Entre 1 y 2 años', color: '#3b82f6', max: 730, count: 0, clientes: [] },
+    { label: 'Más de 2 años', color: '#8b5cf6', max: Infinity, count: 0, clientes: [] },
+  ];
+
+  clientes.forEach(c => {
+    // Buscar la última visita de este cliente en historial de cobros o entradas completadas
+    const fechas = cobros.filter(co => co.clienteId === c.id && co.fecha).map(co => new Date(co.fecha));
+    if (!fechas.length) return;
+    const ultima = new Date(Math.max(...fechas));
+    const dias = Math.floor((hoy - ultima) / (1000*60*60*24));
+    const b = buckets.find(bk => dias < bk.max);
+    if (b) { b.count++; b.clientes.push({...c, diasDesde: dias, ultimaVisita: ultima.toLocaleDateString('es-MX')}); }
+  });
+
+  const totalRec = buckets.reduce((s,b)=>s+b.count,0);
+  const chartRec = document.getElementById('rep-chart-recencia');
+  if (chartRec && totalRec > 0) {
+    chartRec.innerHTML = renderPieChart(buckets.filter(b=>b.count>0), totalRec);
+  }
+  const listaRec = document.getElementById('rep-recencia-lista');
+  if (listaRec) {
+    listaRec.innerHTML = buckets.filter(b=>b.count>0).map(b => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${b.color};flex-shrink:0"></div>
+        <span style="flex:1">${b.label}</span>
+        <span style="font-weight:700;color:var(--blue)">${b.count}</span>
+        <span style="color:var(--gray-400)">${Math.round(b.count/totalRec*100)}%</span>
+      </div>`).join('');
+  }
+
+  // --- FRECUENCIA: veces que han venido ---
+  const freqBuckets = [
+    { label: '1 vez', color: '#3b82f6', count: 0 },
+    { label: '2 a 5 veces', color: '#f97316', count: 0 },
+    { label: '6 a 10 veces', color: '#eab308', count: 0 },
+    { label: '11 a 15 veces', color: '#22c55e', count: 0 },
+    { label: '16 a 20 veces', color: '#8b5cf6', count: 0 },
+    { label: 'Más de 20 veces', color: '#06b6d4', count: 0 },
+  ];
+  clientes.forEach(c => {
+    const visitas = c.alojamientos || 0;
+    if (visitas === 0) return;
+    if (visitas === 1) freqBuckets[0].count++;
+    else if (visitas <= 5) freqBuckets[1].count++;
+    else if (visitas <= 10) freqBuckets[2].count++;
+    else if (visitas <= 15) freqBuckets[3].count++;
+    else if (visitas <= 20) freqBuckets[4].count++;
+    else freqBuckets[5].count++;
+  });
+  const totalFreq = freqBuckets.reduce((s,b)=>s+b.count,0);
+  const chartFreq = document.getElementById('rep-chart-frecuencia');
+  if (chartFreq && totalFreq > 0) {
+    chartFreq.innerHTML = renderPieChart(freqBuckets.filter(b=>b.count>0), totalFreq);
+  }
+  const listaFreq = document.getElementById('rep-frecuencia-lista');
+  if (listaFreq) {
+    listaFreq.innerHTML = freqBuckets.filter(b=>b.count>0).map(b => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${b.color};flex-shrink:0"></div>
+        <span style="flex:1">${b.label}</span>
+        <span style="font-weight:700;color:var(--blue)">${b.count}</span>
+        <span style="color:var(--gray-400)">${Math.round(b.count/totalFreq*100)}%</span>
+      </div>`).join('');
+  }
+
+  // --- CLIENTES EN RIESGO ---
+  const enRiesgo = buckets.slice(2).flatMap(b=>b.clientes)
+    .sort((a,b)=>b.diasDesde-a.diasDesde)
+    .slice(0,10);
+  const countEl = document.getElementById('rep-riesgo-count');
+  if (countEl) countEl.textContent = enRiesgo.length + (enRiesgo.length===10?'+':'')+' clientes';
+  const riesgoLista = document.getElementById('rep-riesgo-lista');
+  if (riesgoLista) {
+    if (!enRiesgo.length) {
+      riesgoLista.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">¡Todos los clientes visitaron en los últimos 6 meses! 🎉</div>';
+    } else {
+      riesgoLista.innerHTML = enRiesgo.map(c => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
+            <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
+            <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · ${c.diasDesde} días sin venir</div>
+          </div>
+          <button onclick="abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 10px;font-size:11px;flex-shrink:0">💬 WA</button>
+        </div>`).join('');
+    }
+  }
+}
+
+function renderPieChart(data, total) {
+  const size = 180;
+  const cx = size/2, cy = size/2, r = 70, innerR = 40;
+  let startAngle = -Math.PI/2;
+  let paths = '', labels = '';
+  data.forEach((d, i) => {
+    const pct = d.count / total;
+    const angle = pct * 2 * Math.PI;
+    const endAngle = startAngle + angle;
+    const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+    const ix1 = cx + innerR * Math.cos(endAngle), iy1 = cy + innerR * Math.sin(endAngle);
+    const ix2 = cx + innerR * Math.cos(startAngle), iy2 = cy + innerR * Math.sin(startAngle);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const midAngle = startAngle + angle/2;
+    const lx = cx + (r+16) * Math.cos(midAngle), ly = cy + (r+16) * Math.sin(midAngle);
+    paths += `<path d="M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${innerR} ${innerR} 0 ${largeArc} 0 ${ix2} ${iy2} Z" fill="${d.color}" opacity="0.9"/>`;
+    if (pct > 0.06) labels += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="700" fill="white" stroke="${d.color}" stroke-width="3" paint-order="stroke">${Math.round(pct*100)}%</text>`;
+    startAngle = endAngle;
+  });
+  return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:${size}px;margin:0 auto;display:block">
+    ${paths}${labels}
+    <text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--blue)">${total}</text>
+    <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="9" fill="var(--gray-400)">clientes</text>
+  </svg>`;
+}
+
 function renderReportes() {
   const hoy = new Date();
   const mesActual = hoy.getMonth();
@@ -8686,6 +8902,7 @@ function renderReportes() {
     años.forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; selAño.appendChild(opt); });
   }
   renderGraficaFac();
+  renderRetencion();
 
   // KPIs
   const hospedadosActivos = entradas.length;

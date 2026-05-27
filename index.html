@@ -454,7 +454,7 @@
     <div class="login-logo">
       <div class="icon">🐾</div>
       <div class="name">PetGround</div>
-      <div class="sub">Sistema de Gestión · </div>
+      <div class="sub">Sistema de Gestión · Dr. Jaime Reyes Franco</div>
     </div>
     <div class="login-box">
       <h2>Acceso al sistema</h2>
@@ -529,41 +529,48 @@
 
   <div style="flex:1;overflow-y:auto;overflow-x:hidden">
   <div class="nav-section">
-    <div class="nav-label">Principal</div>
+    <div class="nav-label">📋 Operación diaria</div>
     <div class="nav-item active" onclick="showScreen('dashboard')">
-      <span class="icon">📊</span><span>Dashboard</span>
+      <span class="icon">🏠</span><span>Inicio</span>
     </div>
     <div class="nav-item" onclick="showScreen('entradas')">
-      <span class="icon">🏠</span><span>Hospedados</span>
-      <span class="nav-badge" id="badge-entradas">11</span>
+      <span class="icon">🐕</span><span>Hospedados ahora</span>
+      <span class="nav-badge" id="badge-entradas">0</span>
     </div>
-    <div class="nav-item" onclick="showScreen('reportes')">
-      <span class="icon">📈</span><span>Reportes</span>
+    <div class="nav-item" onclick="showScreen('nueva-entrada')">
+      <span class="icon">➕</span><span>Registrar entrada</span>
+    </div>
+    <div class="nav-item" id="nav-reservaciones-admin" onclick="showScreen('reservaciones-admin')">
+      <span class="icon">📅</span><span>Reservaciones</span><span id="badge-reservaciones" style="display:none;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto">0</span>
+    </div>
+    <div class="nav-item" id="nav-caja" onclick="showScreen('caja')">
+      <span class="icon">💵</span><span>Caja</span>
+    </div>
+    <div class="nav-item" id="nav-cobros-empleado" onclick="showScreen('cobros-empleado')">
+      <span class="icon">⏳</span><span>Cobros pendientes</span><span id="badge-cobros-empleado" style="display:none;background:var(--red);color:white;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto;padding:0 4px">0</span>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">📁 Registros</div>
+    <div class="nav-item" onclick="showScreen('clientes')">
+      <span class="icon">👥</span><span>Clientes</span>
+    </div>
+    <div class="nav-item" id="nav-mascotas" onclick="showScreen('mascotas')">
+      <span class="icon">🐾</span><span>Mascotas</span>
     </div>
     <div class="nav-item" onclick="showScreen('asistente')">
       <span class="icon">🤖</span><span>Asistente IA</span>
     </div>
   </div>
 
-  <div class="nav-section">
-    <div class="nav-label">Gestión</div>
-    <div class="nav-item" onclick="showScreen('clientes')">
-      <span class="icon">👥</span><span>Clientes</span>
-    </div>
-    <div class="nav-item" id="nav-mascotas" onclick="showScreen('mascotas')">
-      <span class="icon">🐕</span><span>Mascotas</span>
-    </div>
-    <div class="nav-item" onclick="showScreen('nueva-entrada')">
-      <span class="icon">➕</span><span>Nueva Entrada</span>
-    </div>
+  <div class="nav-section" id="nav-section-admin">
+    <div class="nav-label">⚙️ Administración</div>
     <div class="nav-item" onclick="showScreen('facturacion')">
-      <span class="icon">💰</span><span>Facturación</span>
+      <span class="icon">💰</span><span>Cobros y reportes</span>
     </div>
-    <div class="nav-item" id="nav-caja" onclick="showScreen('caja')">
-      <span class="icon">🗄️</span><span>Caja</span>
-    </div>
-    <div class="nav-item" id="nav-cobros-empleado" onclick="showScreen('cobros-empleado')">
-      <span class="icon">💳</span><span>Cobros pendientes</span><span id="badge-cobros-empleado" style="display:none;background:var(--red);color:white;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto;padding:0 4px">0</span>
+    <div class="nav-item" onclick="showScreen('reportes')">
+      <span class="icon">📈</span><span>Reportes</span>
     </div>
     <div class="nav-item" id="nav-usuarios" onclick="showScreen('usuarios')">
       <span class="icon">👤</span><span>Usuarios</span>
@@ -572,10 +579,7 @@
       <span class="icon">🏪</span><span>Mi Negocio</span>
     </div>
     <div class="nav-item" id="nav-servicios" onclick="showScreen('usuarios');setTimeout(()=>document.getElementById('servicios-list')?.scrollIntoView({behavior:'smooth'}),300)">
-      <span class="icon">🏷️</span><span>Servicios</span>
-    </div>
-    <div class="nav-item" id="nav-reservaciones-admin" onclick="showScreen('reservaciones-admin')">
-      <span class="icon">📋</span><span>Reservaciones</span><span id="badge-reservaciones" style="display:none;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto">0</span>
+      <span class="icon">🏷️</span><span>Servicios y precios</span>
     </div>
     <div class="nav-item" id="nav-importador" onclick="showScreen('importador')">
       <span class="icon">📦</span><span>Importar Gespet</span>
@@ -589,7 +593,7 @@
       <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
         <div class="user-avatar" id="sidebar-avatar" style="flex-shrink:0">JR</div>
         <div class="user-info" style="flex:1;min-width:0">
-          <div class="user-name" id="sidebar-nombre" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+          <div class="user-name" id="sidebar-nombre" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Dr. Jaime Reyes</div>
           <div class="user-role" id="sidebar-rol">Administrador</div>
         </div>
       </div>
@@ -732,6 +736,7 @@
             <div class="empty-state" style="padding:20px">
               <div class="es-icon" style="font-size:24px">📭</div>
               <div class="es-text">Sin entradas hoy</div>
+              <button onclick="showScreen('nueva-entrada')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Registrar entrada</button>
             </div>
           </div>
         </div>
@@ -763,6 +768,10 @@
 
     <!-- =================== HOSPEDADOS =================== -->
     <div class="screen fade-in" id="screen-entradas">
+      <!-- Hint -->
+      <div style="background:#f0f7ff;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#1a4a7a;display:flex;align-items:center;gap:8px">
+        💡 <span>Toca cualquier fila para ver el detalle del hospedaje, editar fechas o registrar un pago. Usa el botón <strong>Salida</strong> cuando el cliente recoja a su perro.</span>
+      </div>
       <div class="card">
         <div class="card-header">
           <div class="card-title">🏠 Hospedados activos <span class="badge badge-blue" style="margin-left:4px" id="badge-entradas-count">0</span></div>
@@ -797,6 +806,9 @@
 
     <!-- =================== CLIENTES =================== -->
     <div class="screen fade-in" id="screen-clientes">
+      <div style="background:#f0f7ff;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#1a4a7a;display:flex;align-items:center;gap:8px">
+        💡 <span>Toca el nombre de cualquier cliente para ver su perfil, historial de visitas y mascotas. Puedes buscar por nombre, teléfono, nombre del perro o raza.</span>
+      </div>
       <div class="card">
         <div class="card-header">
           <div class="card-title">👥 Clientes registrados</div>
@@ -870,12 +882,16 @@
 
     <!-- =================== NUEVA ENTRADA =================== -->
     <div class="screen fade-in" id="screen-nueva-entrada">
+      <!-- Hint -->
+      <div style="background:#fff8f0;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px;max-width:960px">
+        💡 <span>Pasos: <strong>1)</strong> Busca al cliente <strong>2)</strong> Selecciona las mascotas que ingresan <strong>3)</strong> Elige fechas y habitación <strong>4)</strong> Guarda. Si el cliente paga algo hoy, agrégalo en "Pago inicial".</span>
+      </div>
       <div style="max-width:960px">
 
         <!-- SECCIÓN CLIENTE -->
         <div class="card" style="margin-bottom:16px;overflow:visible">
           <div class="card-header">
-            <div class="card-title">👤 Seleccione Cliente</div>
+            <div class="card-title"><span style="background:var(--orange);color:white;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">1</span> Busca al cliente</div>
             <button class="btn btn-ghost btn-sm" onclick="openModalNuevoCliente()">➕ Nuevo cliente</button>
           </div>
           <div style="padding:16px 20px;overflow:visible">
@@ -934,7 +950,7 @@
         <!-- SECCIÓN ESTANCIA -->
         <div class="card" style="margin-bottom:16px" id="ne-estancia-card">
           <div class="card-header">
-            <div class="card-title">🏠 Datos de la Estancia</div>
+            <div class="card-title"><span style="background:var(--orange);color:white;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">2</span> Fechas y habitación</div>
           </div>
           <div style="padding:16px 20px">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
@@ -976,7 +992,7 @@
         <!-- SECCIÓN SERVICIOS POR MASCOTA (estilo Gespet) -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
-            <div class="card-title">🏷️ Servicio alojamiento en hotel</div>
+            <div class="card-title"><span style="background:var(--orange);color:white;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;margin-right:6px">3</span> Servicios y precios</div>
             <button class="btn btn-ghost btn-sm" onclick="agregarConceptoManual()">➕ Añadir concepto</button>
           </div>
           <div style="overflow-x:auto">
@@ -1031,7 +1047,7 @@
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:32px">
-          <button class="btn btn-primary" onclick="guardarEntrada()" style="padding:12px 28px;font-size:14px">💾 Guardar entrada</button>
+          <button class="btn btn-primary" onclick="guardarEntrada()" style="padding:12px 28px;font-size:15px;font-weight:800">✅ Confirmar entrada</button>
           <button class="btn btn-ghost" onclick="showScreen('dashboard')">Cancelar</button>
         </div>
       </div>
@@ -1151,13 +1167,16 @@
     <!-- =================== ADMIN RESERVACIONES =================== -->
     <div class="screen fade-in" id="screen-reservaciones-admin">
       <div style="max-width:960px">
+        <div style="background:#f0f7ff;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#1a4a7a;display:flex;align-items:center;gap:8px">
+          💡 <span>Una reservación es cuando el cliente aparta lugar pero aún no llega. Cuando llegue, dale click a <strong>"Confirmar entrada"</strong> y pasa automáticamente a Hospedados.</span>
+        </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
             <div class="card-title">📋 Reservaciones pendientes <span class="badge badge-orange" id="badge-res-count" style="display:none">0</span></div>
             <button class="btn btn-primary btn-sm" onclick="showScreen('nueva-reservacion')">➕ Nueva reservación</button>
           </div>
           <div id="lista-reservaciones-interna">
-            <div class="empty-state"><div class="es-icon">📭</div><div class="es-text">Sin reservaciones pendientes</div></div>
+            <div class="empty-state"><div class="es-icon">📭</div><div class="es-text">Sin reservaciones pendientes</div><button onclick="showScreen('nueva-reservacion')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Nueva reservación</button></div>
           </div>
         </div>
       </div>
@@ -1510,6 +1529,9 @@
     <!-- =================== CAJA =================== -->
     <div class="screen fade-in" id="screen-caja">
       <div style="max-width:800px">
+        <div style="background:#f0fdf4;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#166534;display:flex;align-items:center;gap:8px">
+          💡 <span>Aquí ves todo el efectivo del día. Para cobros rápidos usa el botón <strong>💵</strong> verde en la esquina de abajo. Para cobros de hospedajes, hazlo desde el detalle del cliente hospedado.</span>
+        </div>
 
         <!-- Banner QZ Tray -->
         <div id="banner-qz" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
@@ -3189,7 +3211,7 @@ async function cargarReservaciones() {
             ${r.notas?`<div style="font-size:11px;color:var(--gray-400);margin-top:2px">📝 ${r.notas}</div>`:''}
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-            <button class="btn btn-sm btn-primary" onclick="convertirEnEntrada(${r.id})">✅ Convertir en entrada</button>
+            <button class="btn btn-sm btn-primary" onclick="convertirEnEntrada(${r.id})">✅ El cliente llegó — Confirmar entrada</button>
             <button class="btn btn-sm btn-ghost" onclick="abrirWhatsApp('${wa}')">💬 WhatsApp</button>
             <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="eliminarReservacion(${r.id},'${nombre}')">🗑️ Eliminar</button>
           </div>
@@ -5464,7 +5486,7 @@ function actualizarPanelesHoy(fecha) {
       listSal.innerHTML = `<table><tbody>${sals.map(e => {
         const c = clientes.find(cl => cl.id === e.clienteId);
         const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
-        return `<tr><td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">Hacer Salida</button></td></tr>`;
+        return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
       }).join('')}</tbody></table>`;
     }
   }
@@ -5573,12 +5595,12 @@ function renderEntradas(filtro='', habFiltro='') {
       })()}</td>
       <td>${statusBadge}</td>
       <td onclick="event.stopPropagation()"><div class="action-btns">
-        <button class="btn btn-sm btn-green" onclick="hacerSalida('${c.nombre}',${e.id})">📤 Salida</button>
-        <button class="btn btn-sm btn-ghost" title="Confirmación WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬</button>
+        <button class="btn btn-sm btn-green" onclick="hacerSalida('${c.nombre}',${e.id})" title="Registrar salida del perro">📤 Hacer salida</button>
+        <button class="btn btn-sm btn-ghost" title="Enviar confirmación por WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬 WA</button>
       </div></td>
     </tr>`;
   });
-  tbody.innerHTML = rows || '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">🔍</div><div class="es-text">Sin resultados</div></div></td></tr>';
+  tbody.innerHTML = rows || `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">🐕</div><div class="es-text">No hay perros hospedados ahora</div><button onclick="showScreen('nueva-entrada')" style="margin-top:12px;background:var(--orange);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">➕ Registrar primera entrada</button></div></td></tr>`;
 }
 
 function filterEntradas(v) { renderEntradas(v, document.getElementById('filter-habitacion')?.value||''); }
@@ -8541,6 +8563,9 @@ function entrarAlSistema() {
   document.getElementById('sidebar-rol').textContent = usuarioActual.rol === 'admin' ? '👑 Administrador' : '🧑 Empleado';
   // Permisos por rol
   const esAdmin = usuarioActual.rol === 'admin';
+  // Ocultar toda la sección admin para empleados
+  const navAdmin = document.getElementById('nav-section-admin');
+  if (navAdmin) navAdmin.style.display = esAdmin ? 'block' : 'none';
   // Solo admins: usuarios, importador, negocio, servicios, facturación completa
   document.querySelectorAll('#nav-usuarios').forEach(el => el.style.display = esAdmin ? 'flex' : 'none');
   document.querySelectorAll('#nav-importador').forEach(el => el.style.display = esAdmin ? 'flex' : 'none');
@@ -8548,7 +8573,7 @@ function entrarAlSistema() {
   if (navNegocio) navNegocio.style.display = esAdmin ? 'flex' : 'none';
   const navServicios = document.getElementById('nav-servicios');
   if (navServicios) navServicios.style.display = esAdmin ? 'flex' : 'none';
-  // Nav de facturación: solo admins. El selector filtra solo el nav-item (no botones internos)
+  // Nav de facturación: solo admins.
   document.querySelectorAll('.nav-item[onclick*="facturacion"]').forEach(el => el.style.display = esAdmin ? 'flex' : 'none');
   // Cobros pendientes: solo empleados (admins ya tienen facturación completa)
   const navCobros = document.getElementById('nav-cobros-empleado');
@@ -8603,7 +8628,7 @@ function showScreen(name) {
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
   const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin'};
-  const titles = {dashboard:'Agenda Diaria',entradas:'Hospedados Activos',clientes:'Clientes','nueva-entrada':'Nueva Entrada','perfil-cliente':'Perfil de Cliente',facturacion:'Facturación y Cobros','cobros-empleado':'Cobros Pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA'};
+  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio'};
   document.getElementById('page-title').textContent = titles[name] || name;
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(navMap[name] || name))

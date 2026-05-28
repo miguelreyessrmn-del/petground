@@ -454,7 +454,7 @@
     <div class="login-logo">
       <div class="icon">🐾</div>
       <div class="name">PetGround</div>
-      <div class="sub">Sistema de Gestión · Dr. Jaime Reyes Franco</div>
+      <div class="sub">Sistema de Gestión</div>
     </div>
     <div class="login-box">
       <h2>Acceso al sistema</h2>
@@ -523,7 +523,7 @@
     </div>
     <div class="logo-text">
       <div class="name">PetGround</div>
-      <div class="sub">Dr. Jaime Reyes Franco</div>
+      <div class="sub">PetGround</div>
     </div>
   </div>
 
@@ -593,7 +593,7 @@
       <div style="display:flex;align-items:center;gap:10px;padding:8px 4px">
         <div class="user-avatar" id="sidebar-avatar" style="flex-shrink:0">JR</div>
         <div class="user-info" style="flex:1;min-width:0">
-          <div class="user-name" id="sidebar-nombre" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Dr. Jaime Reyes</div>
+          <div class="user-name" id="sidebar-nombre" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Miguel Reyes</div>
           <div class="user-role" id="sidebar-rol">Administrador</div>
         </div>
       </div>
@@ -1064,7 +1064,7 @@
         <div style="text-align:center;padding:32px 20px 24px">
           <div style="font-size:48px;margin-bottom:10px">🐾</div>
           <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:24px;color:var(--blue)">PetGround</div>
-          <div style="font-size:14px;color:var(--gray-400);margin-top:4px">Hotel de Mascotas — Dr. Jaime Reyes Franco</div>
+          <div style="font-size:14px;color:var(--gray-400);margin-top:4px">Hotel de Mascotas</div>
           <div style="font-size:13px;color:var(--gray-600);margin-top:12px">Completa el formulario y nos pondremos en contacto para confirmar tu reservación</div>
         </div>
 
@@ -1751,7 +1751,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">Propietario / Director</label>
-              <input type="text" class="form-input" id="negocio-propietario" placeholder="Dr. Jaime Reyes Franco">
+              <input type="text" class="form-input" id="negocio-propietario" placeholder="PetGround">
             </div>
           </div>
           <div class="form-row">
@@ -2027,7 +2027,7 @@
       <!-- Clientes en riesgo -->
       <div class="card" style="margin-bottom:20px" id="rep-riesgo-card">
         <div class="card-header">
-          <div class="card-title">🚨 Clientes en riesgo (sin visita en +6 meses)</div>
+          <div class="card-title">🚨 Clientes tibios (entre 6 y 18 meses sin visita)</div>
           <span class="badge badge-red" id="rep-riesgo-count">0</span>
         </div>
         <div id="rep-riesgo-lista" style="padding:0 20px 16px"></div>
@@ -2264,10 +2264,8 @@
           <label class="form-label">🌙 Noches</label>
           <input type="text" class="form-input" id="mdh-noches" readonly style="background:var(--gray-50);font-weight:700;color:var(--blue)">
         </div>
-        <div class="form-group">
-          <label class="form-label">💰 Importe total</label>
-          <input type="text" inputmode="numeric" class="form-input" id="mdh-importe" placeholder="0.00" oninput="mdh_calcResumen()">
-        </div>
+        <!-- importe oculto, se calcula por mascota -->
+        <input type="hidden" id="mdh-importe">
       </div>
 
       <!-- Mascotas con selector de servicio Y descuento individual -->
@@ -2276,7 +2274,7 @@
         <div style="display:grid;grid-template-columns:2fr 3fr 1fr;gap:6px;margin-bottom:6px;padding:0 4px">
           <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Mascota</span>
           <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Servicio</span>
-          <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Desc.%</span>
+          <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase">Desc. % / PM$</span>
         </div>
         <div id="mdh-mascotas" style="display:flex;flex-direction:column;gap:6px"></div>
         <div id="mdh-precio-base-hint" style="font-size:11px;color:var(--gray-400);margin-top:6px;text-align:right"></div>
@@ -3058,7 +3056,7 @@ async function cargarTodo() {
 function compartirLinkReserva() {
   const url = window.location.href.split('?')[0];
   const link = url + '?reservar=1';
-  const msg = `🐾 *PetGround* — Reserva en línea\n\n¡Hola! Para apartar lugar para tu mascota en nuestro hotel, llena el formulario aquí:\n\n${link}\n\nCualquier duda estamos a tus órdenes.\n_Dr. Jaime Reyes Franco — PetGround_`;
+  const msg = `🐾 *PetGround* — Reserva en línea\n\n¡Hola! Para apartar lugar para tu mascota en nuestro hotel, llena el formulario aquí:\n\n${link}\n\nCualquier duda estamos a tus órdenes.\n_PetGround_`;
   const tel = '522221234567'; // número de hotel — se puede personalizar
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   notify('💬 Abriendo WhatsApp con el link de reservación', 'success');
@@ -3881,7 +3879,7 @@ function imprimirTicketEntrada(datos) {
   const { cliente, mascotas, habitacion, fechaEntrada, horaEntrada, fechaSalida, horaSalida, notas, conceptos, total } = datos;
   const cfg = getNegocioConfig();
   const negNombre = cfg.nombre || 'PetGround';
-  const negPropietario = cfg.propietario || 'Dr. Jaime Reyes Franco';
+  const negPropietario = cfg.propietario || 'PetGround';
   const negDireccion = cfg.direccion || 'Puebla, México';
   const negUrl = cfg.url || 'petground.netlify.app';
   const negFooter = cfg.footer || '¡Gracias por confiar en nosotros! Su mascota está en las mejores manos 🐕';
@@ -4018,7 +4016,10 @@ function verDetalleHospedaje(id) {
     // Restaurar descuentos por mascota desde e.descuento
     const descPorMascota = {};
     if (e.descuento && e.descuento.porMascota) {
-      Object.assign(descPorMascota, e.descuento.porMascota);
+      // Soportar formato viejo (solo número) y nuevo ({valor, tipo})
+      Object.entries(e.descuento.porMascota).forEach(([k,v]) => {
+        descPorMascota[k] = typeof v === 'object' ? v : { valor: v, tipo: 'pct' };
+      });
     }
     const flagsMascota = (m) => {
       const obj = getMascotaObj(m);
@@ -4038,8 +4039,9 @@ function verDetalleHospedaje(id) {
         : `<span style="font-size:18px;flex-shrink:0">🐕</span>`;
     };
     mdsMasc.innerHTML = (e.mascotas||[]).map((m, idx) => {
-      const descVal = descPorMascota[m] || 0;
-      return `<div style="display:grid;grid-template-columns:2fr 3fr 1fr;gap:6px;align-items:center;background:var(--gray-50);border-radius:8px;padding:8px 10px">
+      const descVal = descPorMascota[m]?.valor || 0;
+      const descTipo = descPorMascota[m]?.tipo || 'pct';
+      return `<div style="display:grid;grid-template-columns:2fr 3fr 1.4fr;gap:6px;align-items:center;background:var(--gray-50);border-radius:8px;padding:8px 10px">
         <div style="display:flex;align-items:center;gap:6px;min-width:0">
           ${foto(m)}
           <div style="min-width:0">
@@ -4051,12 +4053,15 @@ function verDetalleHospedaje(id) {
           style="padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;width:100%;font-family:'Poppins',sans-serif;outline:none">
           <option value="">— Servicio —</option>${opcs}
         </select>
-        <div style="position:relative">
-          <input type="number" min="0" max="100" placeholder="0" value="${descVal||''}"
-            data-mascota="${m}" onchange="mdh_calcResumen()" oninput="mdh_calcResumen()"
-            style="width:100%;padding:5px 20px 5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;outline:none;color:#dc2626;font-weight:700"
+        <div style="display:flex;gap:3px;align-items:center">
+          <input type="number" min="0" placeholder="0" value="${descVal||''}"
+            data-mascota="${m}" data-tipo="${descTipo}" onchange="mdh_calcResumen()" oninput="mdh_calcResumen()"
+            style="width:0;flex:1;padding:5px 4px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;outline:none;color:#dc2626;font-weight:700;min-width:0"
             class="mdh-desc-ind">
-          <span style="position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--gray-400)">%</span>
+          <button onclick="mdh_toggleDescTipo(this)" data-tipo="${descTipo}"
+            style="padding:4px 5px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;background:white;color:var(--gray-600);flex-shrink:0">
+            ${descTipo==='pct'?'%':'PM$'}
+          </button>
         </div>
       </div>`;
     }).join('') || '<span style="color:var(--gray-400);font-size:13px">—</span>';
@@ -4081,8 +4086,17 @@ function verDetalleHospedaje(id) {
   mdh_renderAdelantos();
 }
 
+function mdh_toggleDescTipo(btn) {
+  const actual = btn.dataset.tipo || 'pct';
+  const nuevo = actual === 'pct' ? 'monto' : 'pct';
+  btn.dataset.tipo = nuevo;
+  btn.textContent = nuevo === 'pct' ? '%' : 'PM$';
+  const input = btn.previousElementSibling;
+  if (input) { input.dataset.tipo = nuevo; input.value = ''; }
+  mdh_calcResumen();
+}
+
 function mdh_getImporteConDescuento() {
-  // Suma precio de cada mascota con su descuento individual
   const sels = document.querySelectorAll('#mdh-mascotas select');
   const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
   const servicios = getServicios();
@@ -4093,19 +4107,20 @@ function mdh_getImporteConDescuento() {
       const svcId = parseInt(sel.value);
       const svc = servicios.find(s => s.id === svcId);
       if (svc) {
-        const descPct = parseFloat(descs[idx]?.value||0) || 0;
+        const descInput = descs[idx];
+        const descVal = parseFloat(descInput?.value||0) || 0;
+        const descTipo = descInput?.dataset?.tipo || 'pct';
         const linea = noches * svc.precio;
-        total += linea * (1 - descPct/100);
+        const descMonto = descTipo === 'pct' ? linea * descVal / 100 : Math.min(linea, descVal);
+        total += linea - descMonto;
       }
     });
     return Math.round(total * 100) / 100;
   }
-  // Fallback: usar importe guardado
   return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
 }
 
 function mdh_getDescuentoObj() {
-  // Construye objeto de descuento con detalle por mascota
   const sels = document.querySelectorAll('#mdh-mascotas select');
   const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
   const servicios = getServicios();
@@ -4117,11 +4132,14 @@ function mdh_getDescuentoObj() {
     const svcId = parseInt(sel.value);
     const svc = servicios.find(s => s.id === svcId);
     if (svc && noches > 0) {
+      const descInput = descs[idx];
+      const descVal = parseFloat(descInput?.value||0) || 0;
+      const descTipo = descInput?.dataset?.tipo || 'pct';
       const linea = noches * svc.precio;
-      const descPct = parseFloat(descs[idx]?.value||0) || 0;
+      const descMonto = descTipo === 'pct' ? linea * descVal / 100 : Math.min(linea, descVal);
       base += linea;
-      totalConDesc += linea * (1 - descPct/100);
-      if (descPct > 0 && mascota) porMascota[mascota] = descPct;
+      totalConDesc += linea - descMonto;
+      if (descVal > 0 && mascota) porMascota[mascota] = { valor: descVal, tipo: descTipo };
     }
   });
   const montoDescuento = Math.round((base - totalConDesc) * 100) / 100;
@@ -4707,7 +4725,7 @@ function renderMascotas(filtro='') {
 function getNegocioConfig() {
   return {
     nombre: getConfig('negocio_nombre', 'PetGround'),
-    propietario: getConfig('negocio_propietario', 'Dr. Jaime Reyes Franco'),
+    propietario: getConfig('negocio_propietario', 'PetGround'),
     telefono: getConfig('negocio_telefono', '2222540874'),
     email: getConfig('negocio_email', ''),
     direccion: getConfig('negocio_direccion', 'Puebla, México'),
@@ -4720,7 +4738,7 @@ function getNegocioConfig() {
 function aplicarConfigNegocio() {
   const cfg = getNegocioConfig();
   const nombre = cfg.nombre || 'PetGround';
-  const propietario = cfg.propietario || 'Dr. Jaime Reyes Franco';
+  const propietario = cfg.propietario || 'PetGround';
   const logo = cfg.logo || null;
 
   // Sidebar nombre
@@ -4797,7 +4815,7 @@ _{firma}_`,
 function showScreen_negocio_init() {
   const cfg = getNegocioConfig();
   document.getElementById('negocio-nombre').value = cfg.nombre || 'PetGround';
-  document.getElementById('negocio-propietario').value = cfg.propietario || 'Dr. Jaime Reyes Franco';
+  document.getElementById('negocio-propietario').value = cfg.propietario || 'PetGround';
   document.getElementById('negocio-telefono').value = cfg.telefono || '2222540874';
   document.getElementById('negocio-email').value = cfg.email || '';
   document.getElementById('negocio-direccion').value = cfg.direccion || 'Puebla, México';
@@ -6711,7 +6729,7 @@ async function confirmarSalida() {
 // Aplica variables a una plantilla WA
 function aplicarPlantillaWA(clave, vars) {
   const tpl = getConfig(clave, WA_TPL_DEFAULTS[clave] || '');
-  const firma = getConfig('negocio_propietario','Dr. Jaime Reyes Franco') + ' — ' + getConfig('negocio_nombre','PetGround');
+  const firma = getConfig('negocio_propietario','PetGround') + ' — ' + getConfig('negocio_nombre','PetGround');
   return tpl
     .replace(/{nombre}/g, vars.nombre||'')
     .replace(/{mascota}/g, vars.mascota||'')
@@ -8193,7 +8211,7 @@ function verRecibo(id) {
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:32px">🐾</div>
       <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--blue)">PetGround</div>
-      <div style="font-size:11px;color:var(--gray-400)">Dr. Jaime Reyes Franco · Puebla, Mex.</div>
+      <div style="font-size:11px;color:var(--gray-400)">PetGround · Puebla, Mex.</div>
     </div>
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Folio</span><span style="font-weight:700">#${String(c.id).padStart(4,'0')}</span></div>
@@ -8522,7 +8540,7 @@ async function setConfigMultiple(obj) {
 // ===================== LOGIN & USUARIOS =====================
 function getUsuarios() {
   const def = [
-    { id:1, nombre:'Dr. Jaime Reyes', initials:'JR', rol:'admin', color:'#F47B20', nip:'1234' },
+    { id:1, nombre:'Miguel Reyes', initials:'JR', rol:'admin', color:'#F47B20', nip:'1234' },
     { id:2, nombre:'Daniel', initials:'DA', rol:'empleado', color:'#3A5BA0', nip:'5678' },
     { id:3, nombre:'Fabiola', initials:'FA', rol:'empleado', color:'#27AE60', nip:'9012' }
   ];
@@ -8838,23 +8856,24 @@ function renderRetencion() {
       </div>`).join('');
   }
 
-  // --- CLIENTES EN RIESGO ---
-  const enRiesgo = buckets.slice(2).flatMap(b=>b.clientes)
-    .sort((a,b)=>b.diasDesde-a.diasDesde)
-    .slice(0,10);
+  // --- CLIENTES EN RIESGO: solo 6-18 meses, más recientes primero ---
+  const riesgo = buckets.slice(1, 3).flatMap(b => b.clientes) // Entre 2-6 meses (bordeline) + 6-12 meses
+    .filter(c => c.diasDesde >= 180) // solo los de +6 meses
+    .filter(c => c.diasDesde <= 548) // máximo 18 meses (~548 días)
+    .sort((a,b) => a.diasDesde - b.diasDesde); // más recientes primero
   const countEl = document.getElementById('rep-riesgo-count');
-  if (countEl) countEl.textContent = enRiesgo.length + (enRiesgo.length===10?'+':'')+' clientes';
+  if (countEl) countEl.textContent = riesgo.length + ' clientes';
   const riesgoLista = document.getElementById('rep-riesgo-lista');
   if (riesgoLista) {
-    if (!enRiesgo.length) {
-      riesgoLista.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">¡Todos los clientes visitaron en los últimos 6 meses! 🎉</div>';
+    if (!riesgo.length) {
+      riesgoLista.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Sin clientes en ese rango actualmente 🎉</div>';
     } else {
-      riesgoLista.innerHTML = enRiesgo.map(c => `
+      riesgoLista.innerHTML = riesgo.map(c => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
           <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
           <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
             <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
-            <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · ${c.diasDesde} días sin venir</div>
+            <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · <span style="color:var(--orange);font-weight:700">${c.diasDesde} días sin venir</span></div>
           </div>
           <button onclick="abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 10px;font-size:11px;flex-shrink:0">💬 WA</button>
         </div>`).join('');

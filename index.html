@@ -940,6 +940,10 @@
                   <div id="mascota-agresiva-alert" style="display:none;background:#fff3cd;border:1.5px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:#92400e">
                     ⚠️ <strong>¡Atención!</strong> <span id="mascota-agresiva-nombres"></span>
                   </div>
+                  <div id="mascota-reservacion-alert" style="display:none;background:#eff6ff;border:1.5px solid #3b82f6;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:#1e40af">
+                    📋 <strong>Reservación activa:</strong> <span id="mascota-reservacion-texto"></span>
+                    <button id="mascota-reservacion-btn" style="margin-top:6px;display:block;width:100%;background:#1e40af;color:white;border:none;border-radius:6px;padding:6px;font-size:11px;font-weight:700;cursor:pointer">✅ Confirmar esa reservación en vez de crear entrada nueva</button>
+                  </div>
                   <div id="mascotas-checklist"></div>
                 </div>
               </div>
@@ -5483,7 +5487,11 @@ function mostrarEventosDia(fecha) {
   if(tit) tit.textContent=`📋 ${label.charAt(0).toUpperCase()+label.slice(1)}`;
   const entradas_dia=entradas.filter(e=>e.entrada.startsWith(fecha));
   const salidas_dia=entradas.filter(e=>e.salidaPrevista.startsWith(fecha));
-  const res_dia=reservaciones.filter(e=>e.entrada.startsWith(fecha));
+  const res_dia=reservaciones.filter(e=>{
+    if (!(e.entrada||'').startsWith(fecha)) return false;
+    return !entradas.some(a => a.clienteId === e.clienteId &&
+      (e.mascotas||[]).every(m => (a.mascotas||[]).includes(m)));
+  });
   const hospCount=entradas.filter(e=>e.entrada.split(' ')[0]<=fecha&&e.salidaPrevista.split(' ')[0]>=fecha).length;
   let html='';
   if(entradas_dia.length){
@@ -5543,7 +5551,13 @@ function actualizarPanelesHoy(fecha) {
   const listEnt = document.getElementById('entradas-hoy-list');
   const listSal = document.getElementById('salidas-hoy-list');
   const entsDelDia = entradas.filter(e => (e.entrada||'').startsWith(fecha));
-  const resDia = reservaciones.filter(e => (e.entrada||'').startsWith(fecha));
+  // Solo reservaciones que AÚN no han llegado (no están en entradas activas)
+  const resDia = reservaciones.filter(e => {
+    if (!(e.entrada||'').startsWith(fecha)) return false;
+    // Verificar que no haya ya una entrada activa para el mismo cliente y mascotas
+    return !entradas.some(a => a.clienteId === e.clienteId &&
+      (e.mascotas||[]).every(m => (a.mascotas||[]).includes(m)));
+  });
   if (listEnt) {
     if (!entsDelDia.length && !resDia.length) {
       listEnt.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon" style="font-size:24px">📭</div><div class="es-text">Sin entradas ${labelFecha}</div></div>`;
@@ -6062,6 +6076,27 @@ async function seleccionarClienteEntrada(id) {
   if (!clienteEntradaSeleccionado.mascotas?.length) {
     lista.innerHTML = '<div style="color:var(--gray-400);font-size:12px">Este cliente no tiene mascotas registradas.</div>';
     return;
+  }
+
+  // Detectar reservaciones activas para este cliente
+  const resCliente = reservaciones.filter(r => r.clienteId === id);
+  const resAlert = document.getElementById('mascota-reservacion-alert');
+  const resTexto = document.getElementById('mascota-reservacion-texto');
+  const resBtn = document.getElementById('mascota-reservacion-btn');
+  if (resCliente.length && resAlert && resTexto && resBtn) {
+    const res = resCliente[0]; // la más próxima
+    const mascotasRes = (res.mascotas||[]).join(', ');
+    const fechaRes = (res.entrada||'').split(' ')[0];
+    resTexto.textContent = `${mascotasRes} ya tiene reservación para el ${fechaRes} (Hab. ${res.habitacion||'?'})`;
+    resBtn.onclick = () => {
+      if (confirm(`¿Confirmar la reservación de ${mascotasRes} y convertirla en entrada activa?`)) {
+        convertirEnEntrada(res.id);
+        showScreen('entradas');
+      }
+    };
+    resAlert.style.display = 'block';
+  } else if (resAlert) {
+    resAlert.style.display = 'none';
   }
 
   // Detectar mascotas agresivas

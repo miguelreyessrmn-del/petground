@@ -2366,6 +2366,33 @@
   </div>
 </div>
 
+<!-- MODAL FUSIONAR CLIENTE -->
+<div class="modal-overlay" id="modal-fusionar-cliente">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title">🔀 Fusionar clientes duplicados</div>
+      <button class="modal-close" onclick="closeModal('modal-fusionar-cliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fff8f0;border:1.5px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e">
+        ⚠️ Se moverá todo el historial, mascotas y cobros del duplicado al perfil principal. El duplicado será eliminado.
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--gray-600);margin-bottom:8px">Cliente a eliminar (duplicado):</div>
+      <div id="fusionar-origen" style="background:var(--gray-50);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--blue)"></div>
+      <div style="font-size:13px;font-weight:700;color:var(--gray-600);margin-bottom:8px">Fusionar con (perfil que se conserva):</div>
+      <input type="text" class="form-input" id="fusionar-buscar" placeholder="Buscar cliente destino..." oninput="buscarClienteFusion(this.value)" style="margin-bottom:8px">
+      <div id="fusionar-resultados" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;display:none"></div>
+      <div id="fusionar-destino-sel" style="display:none;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;color:#166534;margin-top:8px"></div>
+      <input type="hidden" id="fusionar-origen-id">
+      <input type="hidden" id="fusionar-destino-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fusionar-cliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarFusion()" id="btn-confirmar-fusion" disabled style="opacity:0.5">🔀 Confirmar fusión</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR CLIENTE -->
 <div class="modal-overlay" id="modal-editar-cliente">
   <div class="modal" style="width:560px">
@@ -4398,9 +4425,16 @@ async function generarComprobantePDF(entradaId) {
   const totalAdelantos = cobrosEntry.filter(co=>co.status==='adelanto').reduce((s,co)=>s+co.monto,0);
   const totalPendiente = Math.max(0, (e.importe||0) - totalPagado - totalAdelantos);
   const desc = e.descuento;
-  const descLabel = desc && desc.valor > 0
-    ? (desc.tipo==='pct' ? `Descuento ${desc.valor}%` : 'Descuento fijo')
-    : null;
+  // Soporte para formato nuevo (porMascota) y viejo (valor/tipo)
+  const tieneDesc = desc && (desc.monto > 0 || desc.valor > 0);
+  const descBase = desc?.base || 0;
+  const descMonto = desc?.monto || 0;
+  const descDetalle = desc?.porMascota
+    ? Object.entries(desc.porMascota).map(([m,d]) => {
+        const v = typeof d === 'object' ? d : { valor: d, tipo: 'pct' };
+        return `${m}: ${v.valor}${v.tipo==='pct'?'%':' PM$'}`;
+      }).join(', ')
+    : (desc?.tipo === 'pct' ? `${desc?.valor}%` : `$${desc?.valor} PM$`);
 
   let modalComp = document.getElementById('modal-comprobante');
   if (!modalComp) {
@@ -4478,9 +4512,9 @@ async function generarComprobantePDF(entradaId) {
 
   <div class="cp-total">
     <div class="cp-stitle" style="color:rgba(255,255,255,0.6)">💰 Pagos</div>
-    ${desc && desc.valor > 0 ? `
-    <div class="cp-trow"><span>Precio base</span><span>$${(desc.base||0).toLocaleString('es-MX')} PM$</span></div>
-    <div class="cp-trow desc"><span>🏷️ ${descLabel} (-$${desc.monto.toLocaleString('es-MX')})</span><span>$${e.importe.toLocaleString('es-MX')} PM$</span></div>
+    ${tieneDesc ? `
+    <div class="cp-trow"><span>Precio base</span><span>$${descBase.toLocaleString('es-MX')} PM$</span></div>
+    <div class="cp-trow desc"><span>🏷️ Descuento (${descDetalle})</span><span>-$${descMonto.toLocaleString('es-MX')} PM$</span></div>
     ` : ''}
     <div class="cp-trow"><span>Total hospedaje</span><span>$${(e.importe||0).toLocaleString('es-MX')} PM$</span></div>
     <div class="cp-trow"><span>Pagado</span><span>$${(totalPagado+totalAdelantos).toLocaleString('es-MX')} PM$</span></div>
@@ -4655,7 +4689,52 @@ async function eliminarDesdeDetalle() {
   setLoading(false);
 }
 
-// ===================== RENDER MASCOTAS =====================
+// ===================== PULL TO REFRESH =====================
+(function() {
+  let startY = 0, pulling = false;
+  let indicator = null;
+
+  function getIndicator() {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.style.cssText = 'position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--orange);color:white;padding:8px 20px;border-radius:0 0 20px 20px;font-size:12px;font-weight:700;z-index:9999;transition:all 0.2s;opacity:0;pointer-events:none';
+      indicator.textContent = '↓ Suelta para actualizar';
+      document.body.appendChild(indicator);
+    }
+    return indicator;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) { startY = e.touches[0].clientY; pulling = true; }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dist = e.touches[0].clientY - startY;
+    if (dist > 50) {
+      const ind = getIndicator();
+      ind.style.opacity = Math.min(1, (dist - 50) / 60) + '';
+      ind.textContent = dist > 110 ? '✓ Suelta para actualizar' : '↓ Jala para actualizar';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async e => {
+    if (!pulling) return;
+    pulling = false;
+    const dist = e.changedTouches[0].clientY - startY;
+    const ind = getIndicator();
+    if (dist > 110) {
+      ind.textContent = '⏳ Actualizando...';
+      ind.style.opacity = '1';
+      await cargarTodo();
+      actualizarDashboard();
+      ind.textContent = '✅ Actualizado';
+      setTimeout(() => { ind.style.opacity = '0'; }, 1200);
+    } else {
+      ind.style.opacity = '0';
+    }
+  });
+})();
 function renderMascotas(filtro='') {
   const tbody = document.getElementById('tbody-mascotas');
   if (!tbody) return;
@@ -5035,6 +5114,102 @@ async function guardarNegocio() {
   await cargarConfig();
   aplicarConfigNegocio();
   notify('✅ Información del negocio guardada', 'success');
+}
+
+// ===================== ELIMINAR / FUSIONAR CLIENTE =====================
+async function eliminarCliente(id, nombre) {
+  // Verificar que no tenga perros hospedados actualmente
+  const hospedadoActivo = entradas.find(e => e.clienteId === id);
+  if (hospedadoActivo) {
+    notify(`⚠️ No puedes eliminar a ${nombre} — tiene perros hospedados actualmente`, 'error');
+    return;
+  }
+  if (!confirm(`¿Eliminar a ${nombre} y todos sus datos?\n\nEsto eliminará al cliente, sus mascotas y su historial. Esta acción no se puede deshacer.`)) return;
+  setLoading(true);
+  try {
+    // Eliminar mascotas del cliente
+    await sb('DELETE', `mascotas?cliente_id=eq.${id}`, null, '');
+    // Eliminar cliente
+    await sb('DELETE', `clientes?id=eq.${id}`, null, '');
+    await cargarTodo();
+    showScreen('clientes');
+    notify(`✅ Cliente ${nombre} eliminado`, 'success');
+  } catch(err) { notify('Error: ' + err.message, 'error'); }
+  setLoading(false);
+}
+
+function abrirFusionarCliente(id) {
+  const c = clientes.find(cl => cl.id === id);
+  if (!c) return;
+  document.getElementById('fusionar-origen-id').value = id;
+  document.getElementById('fusionar-destino-id').value = '';
+  document.getElementById('fusionar-origen').textContent = `${c.nombre} · ${c.whatsapp||'Sin tel.'} · ${(c.mascotas||[]).length} mascotas`;
+  document.getElementById('fusionar-buscar').value = '';
+  document.getElementById('fusionar-resultados').style.display = 'none';
+  document.getElementById('fusionar-destino-sel').style.display = 'none';
+  const btn = document.getElementById('btn-confirmar-fusion');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  document.getElementById('modal-fusionar-cliente').classList.add('open');
+}
+
+function buscarClienteFusion(val) {
+  const origenId = parseInt(document.getElementById('fusionar-origen-id').value);
+  const box = document.getElementById('fusionar-resultados');
+  if (!val || val.length < 2) { box.style.display = 'none'; return; }
+  const v = val.toLowerCase();
+  const res = clientes.filter(c => c.id !== origenId && (
+    c.nombre.toLowerCase().includes(v) ||
+    (c.whatsapp||'').includes(v) ||
+    (c.mascotas||[]).some(m => m.nombre.toLowerCase().includes(v))
+  )).slice(0, 6);
+  if (!res.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = res.map(c => `
+    <div onclick="seleccionarDestinoFusion(${c.id},'${c.nombre.replace(/'/g,"\\'")}','${c.whatsapp||''}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-100);font-size:13px"
+      onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='white'">
+      <div style="font-weight:600;color:var(--blue)">${c.nombre}</div>
+      <div style="font-size:11px;color:var(--gray-400)">${c.whatsapp||'Sin tel.'} · ${(c.mascotas||[]).length} mascotas · ${c.alojamientos||0} visitas</div>
+    </div>`).join('');
+}
+
+function seleccionarDestinoFusion(id, nombre, wa) {
+  document.getElementById('fusionar-destino-id').value = id;
+  document.getElementById('fusionar-resultados').style.display = 'none';
+  document.getElementById('fusionar-buscar').value = nombre;
+  const sel = document.getElementById('fusionar-destino-sel');
+  sel.style.display = 'block';
+  sel.textContent = `✅ Destino: ${nombre} · ${wa}`;
+  const btn = document.getElementById('btn-confirmar-fusion');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+async function confirmarFusion() {
+  const origenId = parseInt(document.getElementById('fusionar-origen-id').value);
+  const destinoId = parseInt(document.getElementById('fusionar-destino-id').value);
+  if (!origenId || !destinoId) return;
+  const origen = clientes.find(c => c.id === origenId);
+  const destino = clientes.find(c => c.id === destinoId);
+  if (!confirm(`¿Fusionar "${origen?.nombre}" → "${destino?.nombre}"?\n\nTodas las mascotas, entradas y cobros del duplicado se moverán al perfil de ${destino?.nombre}.`)) return;
+  setLoading(true);
+  const btn = document.getElementById('btn-confirmar-fusion');
+  setBtnLoading(btn, true);
+  try {
+    // Mover mascotas
+    await sb('PATCH', `mascotas?cliente_id=eq.${origenId}`, { cliente_id: destinoId }, '');
+    // Mover entradas
+    await sb('PATCH', `entradas?cliente_id=eq.${origenId}`, { cliente_id: destinoId }, '');
+    // Mover cobros
+    await sb('PATCH', `cobros?cliente_id=eq.${origenId}`, { cliente_id: destinoId }, '');
+    // Eliminar cliente duplicado
+    await sb('DELETE', `clientes?id=eq.${origenId}`, null, '');
+    await cargarTodo();
+    closeModal('modal-fusionar-cliente');
+    verPerfilCliente(destinoId);
+    notify(`✅ Clientes fusionados correctamente`, 'success');
+  } catch(err) { notify('Error: ' + err.message, 'error'); }
+  setBtnLoading(btn, false);
+  setLoading(false);
 }
 
 // ===================== EDITAR CLIENTE =====================
@@ -5846,6 +6021,8 @@ async function verPerfilCliente(id) {
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
           <button class="wa-btn" onclick="abrirWhatsApp('${c.whatsapp}')">💬 WhatsApp</button>
           <button class="btn btn-ghost btn-sm" onclick="abrirEditarCliente(${c.id})">✏️ Editar datos</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--blue);border-color:var(--blue)" onclick="abrirFusionarCliente(${c.id})">🔀 Fusionar</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="eliminarCliente(${c.id},'${c.nombre.replace(/'/g,"\\'")}')">🗑️ Eliminar</button>
           ${c.responsiva_firmada
             ? '<span style="background:#d6f0e4;color:#1a7a4a;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700">📋 Responsiva firmada ✅</span>'
             : '<button onclick="marcarResponsivaCliente('+c.id+')" style="background:#fff3cd;color:#92400e;border:1.5px solid #f59e0b;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer">📋 Sin responsiva — Marcar como firmada</button>'}
@@ -8803,7 +8980,25 @@ function showScreen(name) {
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('ne-fecha-entrada').value = hoy;
     document.getElementById('ne-fecha-salida').value = hoy;
+    // Siempre limpiar buscador y estado al entrar
+    const buscarEl = document.getElementById('buscar-cliente-entrada');
+    if (buscarEl) buscarEl.value = '';
+    const sugEl = document.getElementById('sugerencias-cliente');
+    if (sugEl) sugEl.style.display = 'none';
+    const clienteSelEl = document.getElementById('cliente-seleccionado');
+    if (clienteSelEl) clienteSelEl.style.display = 'none';
+    const checklistEl = document.getElementById('mascotas-checklist');
+    if (checklistEl) checklistEl.innerHTML = '';
+    const resAlertEl = document.getElementById('mascota-reservacion-alert');
+    if (resAlertEl) resAlertEl.style.display = 'none';
+    const agAlertEl = document.getElementById('mascota-agresiva-alert');
+    if (agAlertEl) agAlertEl.style.display = 'none';
+    clienteEntradaSeleccionado = null;
+    document.getElementById('ne-habitacion').value = '';
+    document.getElementById('ne-hab-seleccionada').textContent = '';
+    document.getElementById('tbody-conceptos').innerHTML = '';
     calcNochesYTotal();
+    poblarGridHabitacion();
     // Restaurar estado de responsiva
     const respCb = document.getElementById('ne-responsiva');
     if (respCb) respCb.checked = localStorage.getItem('pg_responsiva') === 'true';

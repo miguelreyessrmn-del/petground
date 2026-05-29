@@ -1,0 +1,20 @@
+{
+  "name": "PetGround",
+  "short_name": "PetGround",
+  "start_url": "/petground/",
+  "display": "standalone",
+  "background_color": "#1a3a5c",
+  "theme_color": "#E8622A",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

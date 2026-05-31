@@ -546,6 +546,12 @@
     <div class="nav-item" onclick="showScreen('nueva-entrada')">
       <span class="icon">➕</span><span>Registrar entrada</span>
     </div>
+    <div class="nav-item" onclick="showScreen('nueva-salida')">
+      <span class="icon">📤</span><span>Registrar salida</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('mapa-ocupacion')">
+      <span class="icon">🗺️</span><span>Mapa Ocupación</span>
+    </div>
     <div class="nav-item" id="nav-reservaciones-admin" onclick="showScreen('reservaciones-admin')">
       <span class="icon">📅</span><span>Reservaciones</span><span id="badge-reservaciones" style="display:none;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto">0</span>
     </div>
@@ -577,6 +583,13 @@
     </div>
     <div class="nav-item" onclick="showScreen('reportes')">
       <span class="icon">📈</span><span>Reportes</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('salidas')">
+      <span class="icon">🚪</span><span>Historial Salidas</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('recordatorios')">
+      <span class="icon">🔔</span><span>Recordatorios</span>
+      <span class="nav-badge" id="badge-recordatorios" style="display:none">0</span>
     </div>
     <div class="nav-item" id="nav-usuarios" onclick="showScreen('usuarios')">
       <span class="icon">👤</span><span>Usuarios</span>
@@ -2109,6 +2122,160 @@
           </thead>
           <tbody id="rep-proximas-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- NUEVAS SECCIONES AVANZADAS -->
+      <div class="grid-2" style="margin-top:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">💰 Clientes más rentables</div>
+            <span class="badge badge-green">Top 10 por $</span>
+          </div>
+          <div style="padding:0 16px 8px" id="rep-clientes-rentables"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🏠 Habitaciones más utilizadas</div>
+          </div>
+          <div style="padding:16px" id="rep-habitaciones-uso"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">🏷️ Servicios más usados</div>
+        </div>
+        <div id="rep-servicios-uso" style="padding:0 16px 8px"></div>
+      </div>
+    </div>
+
+    <!-- =================== MAPA DE OCUPACIÓN =================== -->
+    <div class="screen fade-in" id="screen-mapa-ocupacion">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="background:var(--green-light);border:1.5px solid var(--green);border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block"></span> Libre
+          </div>
+          <div style="background:var(--red-light);border:1.5px solid var(--red);border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:6px">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block"></span> Ocupada
+          </div>
+          <div style="background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--yellow);display:flex;align-items:center;gap:6px">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--yellow);display:inline-block"></span> Sale hoy
+          </div>
+        </div>
+        <div id="mapa-kpis" style="display:flex;gap:12px"></div>
+      </div>
+      <div id="mapa-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px"></div>
+    </div>
+
+    <!-- =================== NUEVA SALIDA (PANTALLA) =================== -->
+    <div class="screen fade-in" id="screen-nueva-salida">
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">🔍 Buscar hospedado para salida</div>
+        </div>
+        <div style="padding:16px 20px">
+          <div class="search-wrap" style="width:100%;max-width:420px">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="ns-buscar" placeholder="Buscar por cliente o mascota..." class="form-input" style="width:100%;padding-left:36px" oninput="filtrarNuevaSalida(this.value)">
+          </div>
+        </div>
+      </div>
+      <div id="ns-lista" style="display:grid;gap:12px"></div>
+      <div id="ns-vacio" style="display:none">
+        <div class="card" style="text-align:center;padding:40px">
+          <div style="font-size:48px;margin-bottom:12px">✅</div>
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;color:var(--blue)">No hay hospedados activos</div>
+          <div style="font-size:13px;color:var(--gray-400);margin-top:6px">Todos los animales han salido</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== HISTORIAL DE SALIDAS =================== -->
+    <div class="screen fade-in" id="screen-salidas">
+      <div class="card" style="margin-bottom:16px">
+        <div style="padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="sal-buscar" placeholder="Buscar cliente..." class="form-input" style="padding-left:36px;width:200px" oninput="renderSalidas()">
+          </div>
+          <input type="date" class="form-input" id="sal-desde" style="width:150px" onchange="renderSalidas()">
+          <span style="font-size:12px;color:var(--gray-400)">—</span>
+          <input type="date" class="form-input" id="sal-hasta" style="width:150px" onchange="renderSalidas()">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sal-desde').value='';document.getElementById('sal-hasta').value='';renderSalidas()">✕ Limpiar</button>
+          <div id="sal-total-badge" style="margin-left:auto;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🚪 Salidas registradas</div>
+          <span class="badge badge-blue" id="sal-count-badge">0</span>
+        </div>
+        <div id="sal-loading" style="padding:30px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
+        <table id="sal-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Entrada</th><th>Salida</th><th>Días</th><th>Total</th><th>Método</th>
+            </tr>
+          </thead>
+          <tbody id="sal-tbody"></tbody>
+        </table>
+        <div id="sal-vacio" style="display:none;padding:40px;text-align:center">
+          <div style="font-size:40px;margin-bottom:8px">🚪</div>
+          <div style="font-size:14px;color:var(--gray-400)">No hay salidas en el período seleccionado</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== RECORDATORIOS =================== -->
+    <div class="screen fade-in" id="screen-recordatorios">
+      <div class="stats-row" id="rec-kpis" style="margin-bottom:20px"></div>
+      <div style="display:grid;gap:16px">
+        <!-- Salidas hoy y mañana -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📤 Salidas hoy y mañana</div>
+            <span class="badge badge-orange" id="rec-salidas-badge">0</span>
+          </div>
+          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Salida prevista</th><th>Importe</th><th>Acción</th></tr></thead>
+          <tbody id="rec-salidas-tbody"></tbody></table>
+        </div>
+        <!-- Atrasados -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚠️ Atrasados — debieron salir</div>
+            <span class="badge badge-red" id="rec-atrasados-badge">0</span>
+          </div>
+          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Debió salir</th><th>Días extra</th><th>Acción</th></tr></thead>
+          <tbody id="rec-atrasados-tbody"></tbody></table>
+        </div>
+        <!-- Próximas entradas (reservaciones) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📥 Reservaciones próximas (7 días)</div>
+            <span class="badge badge-blue" id="rec-reservas-badge">0</span>
+          </div>
+          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Fecha entrada</th><th>Días</th><th>WhatsApp</th></tr></thead>
+          <tbody id="rec-reservas-tbody"></tbody></table>
+        </div>
+        <!-- Clientes inactivos -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">😴 Clientes sin visita en 90+ días</div>
+            <span class="badge badge-yellow" id="rec-inactivos-badge">0</span>
+          </div>
+          <div style="padding:12px 20px;font-size:12px;color:var(--gray-600);background:var(--yellow-light);border-bottom:1px solid var(--gray-100)">
+            💡 Estos clientes no han traído a sus mascotas en más de 3 meses. Un mensaje de WhatsApp puede reactivarlos.
+          </div>
+          <div id="rec-inactivos-lista" style="padding:8px 16px 16px"></div>
+        </div>
+        <!-- Cumpleaños de mascotas este mes -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🎂 Cumpleaños de mascotas este mes</div>
+            <span class="badge badge-green" id="rec-cumple-badge">0</span>
+          </div>
+          <div id="rec-cumple-lista" style="padding:8px 16px 16px"></div>
+        </div>
       </div>
     </div>
 
@@ -8955,8 +9122,8 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
-  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin'};
-  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio'};
+  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin','mapa-ocupacion':'mapa-ocupacion','nueva-salida':'nueva-salida',salidas:'salidas',recordatorios:'recordatorios'};
+  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','nueva-salida':'Registrar salida','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio','mapa-ocupacion':'Mapa de Ocupación',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas'};
   document.getElementById('page-title').textContent = titles[name] || name;
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(navMap[name] || name))
@@ -8969,6 +9136,10 @@ function showScreen(name) {
   if (name === 'reservaciones-admin') cargarReservaciones();
   if (name === 'facturacion') initFacturacion();
   if (name === 'cobros-empleado') renderCobrosEmpleado();
+  if (name === 'mapa-ocupacion') renderMapaOcupacion();
+  if (name === 'nueva-salida') renderNuevaSalidaScreen();
+  if (name === 'salidas') renderSalidas();
+  if (name === 'recordatorios') renderRecordatorios();
   if (name === 'caja') {
     initCaja();
     // Ocultar KPIs y corte a empleados
@@ -9270,9 +9441,401 @@ function renderReportes() {
       <td><button class="btn btn-sm btn-green" onclick="event.stopPropagation();hacerSalida('${c?.nombre}',${e.id})">📤 Salida</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="6"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin salidas en los próximos 7 días</div></div></td></tr>';
+
+  // Secciones avanzadas
+  renderReportesExtra();
 }
 
-// ===================== ASISTENTE IA =====================
+// ===================== MAPA DE OCUPACIÓN =====================
+function renderMapaOcupacion() {
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().split('T')[0];
+  const mananaStr = new Date(hoy.getTime() + 86400000).toISOString().split('T')[0];
+  const todas = getHabitaciones();
+  const ocupadas = getHabitacionesOcupadas();
+  const total = todas.length;
+  const numOcupadas = ocupadas.length;
+  const numLibres = total - numOcupadas;
+  const pct = Math.round(numOcupadas / Math.max(total,1) * 100);
+
+  document.getElementById('mapa-kpis').innerHTML = `
+    <div style="text-align:center;padding:6px 16px;background:white;border-radius:10px;border:1.5px solid var(--gray-200);box-shadow:var(--shadow-sm)">
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">${numLibres}</div>
+      <div style="font-size:11px;color:var(--gray-400)">Libres</div>
+    </div>
+    <div style="text-align:center;padding:6px 16px;background:white;border-radius:10px;border:1.5px solid var(--gray-200);box-shadow:var(--shadow-sm)">
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">${numOcupadas}</div>
+      <div style="font-size:11px;color:var(--gray-400)">Ocupadas</div>
+    </div>
+    <div style="text-align:center;padding:6px 16px;background:white;border-radius:10px;border:1.5px solid var(--gray-200);box-shadow:var(--shadow-sm)">
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--orange)">${pct}%</div>
+      <div style="font-size:11px;color:var(--gray-400)">Ocupación</div>
+    </div>
+  `;
+
+  document.getElementById('mapa-grid').innerHTML = todas.map(hab => {
+    const entrada = entradas.find(e => e.habitacion === hab);
+    if (!entrada) {
+      return `<div onclick="showScreen('nueva-entrada')" style="background:var(--green-light);border:2px solid var(--green);border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:all 0.2s;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--green)">${hab}</div>
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-top:4px">✅ Libre</div>
+      </div>`;
+    }
+    const c = clientes.find(cl => cl.id === entrada.clienteId);
+    const nombreCliente = c ? c.nombre.split(' ')[0] : '?';
+    const mascs = (entrada.mascotas||[]).slice(0,2).join(', ');
+    const salePronto = (entrada.salidaPrevista||'').startsWith(hoyStr) || (entrada.salidaPrevista||'').startsWith(mananaStr);
+    const atrasado = new Date(entrada.salidaPrevista) < hoy;
+    const color = atrasado ? 'var(--red)' : salePronto ? 'var(--yellow)' : 'var(--orange)';
+    const bgColor = atrasado ? 'var(--red-light)' : salePronto ? 'var(--yellow-light)' : 'rgba(244,123,32,0.08)';
+    const borderColor = atrasado ? 'var(--red)' : salePronto ? 'var(--yellow)' : 'var(--orange)';
+    const icon = atrasado ? '⚠️' : salePronto ? '📤' : '🐕';
+    return `<div onclick="verDetalleHospedaje(${entrada.id})" style="background:${bgColor};border:2px solid ${borderColor};border-radius:12px;padding:12px 10px;text-align:center;cursor:pointer;transition:all 0.2s;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;color:${color}">${hab}</div>
+      <div style="font-size:11px;font-weight:700;color:${color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px">${icon} ${nombreCliente}</div>
+      <div style="font-size:10px;color:var(--gray-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px">${mascs}</div>
+      <div style="font-size:10px;color:var(--gray-400)">${(entrada.salidaPrevista||'').slice(0,10)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== NUEVA SALIDA (PANTALLA) =====================
+function renderNuevaSalidaScreen(filtro='') {
+  const hoy = new Date();
+  const lista = document.getElementById('ns-lista');
+  const vacio = document.getElementById('ns-vacio');
+  if (!lista) return;
+
+  const filtradas = entradas.filter(e => {
+    if (!filtro) return true;
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const nombre = (c?.nombre||'').toLowerCase();
+    const mascs = (e.mascotas||[]).join(' ').toLowerCase();
+    const f = filtro.toLowerCase();
+    return nombre.includes(f) || mascs.includes(f) || e.habitacion.includes(f);
+  });
+
+  if (filtradas.length === 0) {
+    lista.innerHTML = '';
+    vacio.style.display = 'block';
+    return;
+  }
+  vacio.style.display = 'none';
+
+  lista.innerHTML = filtradas.map(e => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const diasHospedado = Math.ceil((hoy - new Date(e.entrada)) / (1000*60*60*24));
+    const atrasado = new Date(e.salidaPrevista) < hoy;
+    const adelantos = cobros.filter(co => co.entradaId === e.id).reduce((s,co) => s+co.monto, 0);
+    const pendiente = Math.max(0, e.importe - adelantos);
+    return `<div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:16px;padding:16px 20px">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:16px;flex-shrink:0">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--blue)">${c?.nombre||'—'}</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:2px">🐕 ${(e.mascotas||[]).join(', ')} · 🏠 Hab. ${e.habitacion}</div>
+          <div style="font-size:12px;color:var(--gray-400)">📥 ${(e.entrada||'').slice(0,10)} · ⏱️ ${diasHospedado} día${diasHospedado!==1?'s':''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${atrasado ? '<span class="badge badge-red" style="margin-bottom:6px;display:inline-block">⚠️ Atrasado</span><br>' : ''}
+          <div style="font-family:\'Nunito\',sans-serif;font-weight:900;font-size:18px;color:${pendiente>0?'var(--orange)':'var(--green)'}">$${pendiente.toLocaleString('es-MX')} PM$</div>
+          <div style="font-size:11px;color:var(--gray-400)">${pendiente>0?'pendiente':'✅ pagado'}</div>
+        </div>
+        <button class="btn btn-green" onclick="hacerSalida('',${e.id})" style="flex-shrink:0;padding:12px 20px;font-size:14px">📤 Salida</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filtrarNuevaSalida(v) { renderNuevaSalidaScreen(v); }
+
+// ===================== HISTORIAL DE SALIDAS =====================
+let salidasCache = [];
+async function renderSalidas() {
+  const loading = document.getElementById('sal-loading');
+  const table = document.getElementById('sal-table');
+  const vacio = document.getElementById('sal-vacio');
+  const tbody = document.getElementById('sal-tbody');
+  const countBadge = document.getElementById('sal-count-badge');
+  const totalBadge = document.getElementById('sal-total-badge');
+  if (!tbody) return;
+
+  loading.style.display = 'block';
+  table.style.display = 'none';
+  vacio.style.display = 'none';
+
+  try {
+    // Inicializar fechas si están vacías
+    const desde = document.getElementById('sal-desde');
+    const hasta = document.getElementById('sal-hasta');
+    if (!desde.value) {
+      const d = new Date();
+      d.setDate(1);
+      desde.value = d.toISOString().split('T')[0];
+    }
+    if (!hasta.value) {
+      hasta.value = new Date().toISOString().split('T')[0];
+    }
+
+    let query = '?status=eq.completado&order=updated_at.desc&select=*&limit=200';
+    if (desde.value) query += `&updated_at=gte.${desde.value}`;
+    if (hasta.value) query += `&updated_at=lte.${hasta.value}T23:59:59`;
+
+    const rows = await sb('GET', 'entradas', null, query);
+    const buscar = (document.getElementById('sal-buscar')?.value||'').toLowerCase();
+    const filtradas = rows.filter(e => {
+      if (!buscar) return true;
+      const c = clientes.find(cl => cl.id === e.cliente_id);
+      return (c?.nombre||'').toLowerCase().includes(buscar) || (e.mascotas||[]).join(' ').toLowerCase().includes(buscar);
+    });
+
+    loading.style.display = 'none';
+    if (filtradas.length === 0) { vacio.style.display = 'block'; if(countBadge)countBadge.textContent='0'; return; }
+
+    table.style.display = 'table';
+    if (countBadge) countBadge.textContent = filtradas.length;
+
+    let totalIngresos = 0;
+    tbody.innerHTML = filtradas.map(e => {
+      const c = clientes.find(cl => cl.id === e.cliente_id);
+      const nombre = c?.nombre || '—';
+      const mascs = (e.mascotas||[]).slice(0,2).join(', ');
+      const fechaEnt = (e.fecha_entrada||'').slice(0,10);
+      const fechaSal = (e.updated_at||'').slice(0,10);
+      const dias = fechaEnt && fechaSal ? Math.max(1, Math.ceil((new Date(fechaSal)-new Date(fechaEnt))/(1000*60*60*24))) : '—';
+      const importe = parseFloat(e.importe)||0;
+      totalIngresos += importe;
+      // Buscar método de pago en cobros
+      const cobrosSalida = cobros.filter(co => co.entradaId === e.id);
+      const metodo = cobrosSalida[cobrosSalida.length-1]?.metodo || '—';
+      return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
+        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
+        <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+        <td><div class="room-num">${e.habitacion||'—'}</div></td>
+        <td><div class="date-cell"><div class="date">${fechaEnt}</div></div></td>
+        <td><div class="date-cell"><div class="date">${fechaSal}</div></div></td>
+        <td style="font-weight:700;text-align:center">${dias}</td>
+        <td><span class="amount">$${importe.toLocaleString('es-MX')} PM$</span></td>
+        <td><span class="badge badge-green" style="font-size:10px">${metodo}</span></td>
+      </tr>`;
+    }).join('');
+
+    if (totalBadge) totalBadge.innerHTML = `Total período: <span style="color:var(--green)">$${totalIngresos.toLocaleString('es-MX')} PM$</span>`;
+  } catch(err) {
+    loading.style.display = 'none';
+    vacio.style.display = 'block';
+    console.error('Error cargando salidas:', err);
+  }
+}
+
+// ===================== RECORDATORIOS =====================
+function renderRecordatorios() {
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().split('T')[0];
+  const mananaStr = new Date(hoy.getTime() + 86400000).toISOString().split('T')[0];
+  const en7Dias = new Date(hoy.getTime() + 7*86400000);
+  const mesActual = hoy.getMonth();
+
+  // --- KPIs ---
+  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
+  const salenProx = entradas.filter(e => {
+    const d = new Date(e.salidaPrevista);
+    return d >= hoy && d <= new Date(hoy.getTime() + 2*86400000);
+  });
+  const reservasProx = (reservaciones||[]).filter(r => {
+    const d = new Date(r.entrada);
+    return d >= hoy && d <= en7Dias;
+  });
+
+  // Clientes inactivos (último cobro > 90 días)
+  const INACTIVO_DIAS = 90;
+  const inactivos = clientes.filter(c => {
+    const ultimoCobro = cobros.filter(co => co.clienteId === c.id).sort((a,b) => new Date(b.fecha)-new Date(a.fecha))[0];
+    if (!ultimoCobro) return (c.alojamientos||0) > 0; // tuvo visitas pero no cobros recientes
+    const diasDesde = (hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24);
+    return diasDesde >= INACTIVO_DIAS;
+  }).slice(0, 20);
+
+  // Badge en nav
+  const totalAlertas = atrasados.length + salenProx.length;
+  const badge = document.getElementById('badge-recordatorios');
+  if (badge) { badge.textContent = totalAlertas; badge.style.display = totalAlertas > 0 ? '' : 'none'; }
+
+  document.getElementById('rec-kpis').innerHTML = `
+    <div class="stat-card"><div class="stat-icon red">⚠️</div><div class="stat-info"><div class="stat-num">${atrasados.length}</div><div class="stat-label">Atrasados</div></div></div>
+    <div class="stat-card"><div class="stat-icon orange">📤</div><div class="stat-info"><div class="stat-num">${salenProx.length}</div><div class="stat-label">Salen hoy/mañana</div></div></div>
+    <div class="stat-card"><div class="stat-icon blue">📅</div><div class="stat-info"><div class="stat-num">${reservasProx.length}</div><div class="stat-label">Reservas próx. 7 días</div></div></div>
+    <div class="stat-card"><div class="stat-icon yellow">😴</div><div class="stat-info"><div class="stat-num">${inactivos.length}</div><div class="stat-label">Clientes inactivos</div></div></div>
+  `;
+
+  // --- Salidas hoy y mañana ---
+  const salenTodayTomorrow = entradas.filter(e => {
+    const sal = (e.salidaPrevista||'').slice(0,10);
+    return sal === hoyStr || sal === mananaStr;
+  }).sort((a,b) => new Date(a.salidaPrevista)-new Date(b.salidaPrevista));
+  document.getElementById('rec-salidas-badge').textContent = salenTodayTomorrow.length;
+  document.getElementById('rec-salidas-tbody').innerHTML = salenTodayTomorrow.map(e => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const esHoy = (e.salidaPrevista||'').startsWith(hoyStr);
+    return `<tr>
+      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
+      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="room-num">${e.habitacion}</div></td>
+      <td><span class="badge ${esHoy?'badge-red':'badge-orange'}">${esHoy?'🔴 HOY':'🟡 Mañana'} ${(e.salidaPrevista||'').slice(0,10)}</span></td>
+      <td><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
+      <td><button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
+      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin salidas en las próximas 24 horas</td></tr>';
+
+  // --- Atrasados ---
+  document.getElementById('rec-atrasados-badge').textContent = atrasados.length;
+  document.getElementById('rec-atrasados-tbody').innerHTML = atrasados.map(e => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const diasExtra = Math.ceil((hoy - new Date(e.salidaPrevista)) / (1000*60*60*24));
+    return `<tr>
+      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--red)">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
+      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="room-num">${e.habitacion}</div></td>
+      <td style="color:var(--red);font-weight:700;font-size:12px">${(e.salidaPrevista||'').slice(0,10)}</td>
+      <td><span class="badge badge-red">+${diasExtra} día${diasExtra!==1?'s':''}</span></td>
+      <td>
+        <button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
+        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin atrasados</td></tr>';
+
+  // --- Reservaciones próximas ---
+  document.getElementById('rec-reservas-badge').textContent = reservasProx.length;
+  document.getElementById('rec-reservas-tbody').innerHTML = reservasProx.map(r => {
+    const c = clientes.find(cl => cl.id === r.clienteId);
+    const diasFaltan = Math.ceil((new Date(r.entrada) - hoy) / (1000*60*60*24));
+    return `<tr>
+      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
+      <td><div class="dogs-list">${(r.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="room-num">${r.habitacion||'—'}</div></td>
+      <td style="font-weight:600;font-size:12px">${(r.entrada||'').slice(0,10)}</td>
+      <td><span class="badge badge-blue">En ${diasFaltan} día${diasFaltan!==1?'s':''}</span></td>
+      <td>${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20recordamos%20tu%20reservaci%C3%B3n%20en%20PetGround%20para%20el%20${encodeURIComponent((r.entrada||'').slice(0,10))}%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white">💬 Recordar</a>`:'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">Sin reservaciones en los próximos 7 días</td></tr>';
+
+  // --- Clientes inactivos ---
+  document.getElementById('rec-inactivos-badge').textContent = inactivos.length;
+  document.getElementById('rec-inactivos-lista').innerHTML = inactivos.length === 0
+    ? '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px">✅ Todos los clientes activos</div>'
+    : inactivos.map(c => {
+        const ultimoCobro = cobros.filter(co => co.clienteId === c.id).sort((a,b) => new Date(b.fecha)-new Date(a.fecha))[0];
+        const diasInactivo = ultimoCobro ? Math.ceil((hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24)) : '?';
+        const mascs = (c.mascotas||[]).map(m => m.nombre||m).slice(0,2).join(', ');
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${c.nombre}</div>
+            <div style="font-size:11px;color:var(--gray-400)">🐕 ${mascs||'—'} · ${typeof diasInactivo === 'number' ? `${diasInactivo} días sin visita` : 'Sin historial'}</div>
+          </div>
+          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
+        </div>`;
+      }).join('');
+
+  // --- Cumpleaños mascotas este mes ---
+  const cumplesMes = [];
+  clientes.forEach(c => {
+    (c.mascotas||[]).forEach(m => {
+      const fechaNac = m.fechaNacimiento || m.fecha_nacimiento || '';
+      if (!fechaNac) return;
+      const mes = parseInt((fechaNac||'').slice(5,7)) - 1;
+      if (mes === mesActual) {
+        const dia = parseInt((fechaNac||'').slice(8,10));
+        cumplesMes.push({ clienteNombre: c.nombre, mascotaNombre: m.nombre||m, dia, whatsapp: c.whatsapp });
+      }
+    });
+  });
+  cumplesMes.sort((a,b) => a.dia - b.dia);
+  document.getElementById('rec-cumple-badge').textContent = cumplesMes.length;
+  document.getElementById('rec-cumple-lista').innerHTML = cumplesMes.length === 0
+    ? '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px">Sin cumpleaños este mes registrados</div>'
+    : cumplesMes.map(({clienteNombre, mascotaNombre, dia, whatsapp}) =>
+        `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--yellow-light);border:2px solid var(--yellow);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎂</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">🐕 ${mascotaNombre}</div>
+            <div style="font-size:11px;color:var(--gray-400)">Dueño: ${clienteNombre} · Día ${dia}</div>
+          </div>
+          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(clienteNombre.split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
+        </div>`
+      ).join('');
+}
+
+// ===================== REPORTES: SECCIONES ADICIONALES =====================
+function renderReportesExtra() {
+  // Clientes rentables por $ cobrado
+  const gastosPorCliente = {};
+  cobros.filter(co => co.status === 'pagado').forEach(co => {
+    if (!co.clienteId) return;
+    gastosPorCliente[co.clienteId] = (gastosPorCliente[co.clienteId]||0) + co.monto;
+  });
+  const topRentables = Object.entries(gastosPorCliente)
+    .map(([id, total]) => ({ c: clientes.find(cl => cl.id == id), total }))
+    .filter(x => x.c)
+    .sort((a,b) => b.total - a.total)
+    .slice(0, 10);
+
+  const contRentables = document.getElementById('rep-clientes-rentables');
+  if (contRentables) {
+    contRentables.innerHTML = topRentables.length === 0
+      ? '<div style="padding:16px;color:var(--gray-400);font-size:13px;text-align:center">Sin datos de cobros aún</div>'
+      : topRentables.map(({c, total}, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="font-family:\'Nunito\',sans-serif;font-weight:900;font-size:14px;color:var(--gray-400);width:22px">#${i+1}</div>
+          <div class="avatar" style="width:32px;height:32px;font-size:12px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">${c.nombre}</div><div style="font-size:11px;color:var(--gray-400)">${c.alojamientos||0} estancias</div></div>
+          <span class="amount">$${total.toLocaleString('es-MX')} PM$</span>
+        </div>`).join('');
+  }
+
+  // Habitaciones más utilizadas
+  const usoPorHab = {};
+  cobros.forEach(co => {
+    const e = [...entradas].find(en => en.id === co.entradaId);
+    const hab = e?.habitacion;
+    if (hab) usoPorHab[hab] = (usoPorHab[hab]||0) + 1;
+  });
+  const topHabs = Object.entries(usoPorHab).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const maxUso = topHabs[0]?.[1] || 1;
+  const contHabs = document.getElementById('rep-habitaciones-uso');
+  if (contHabs) {
+    contHabs.innerHTML = topHabs.length === 0
+      ? '<div style="padding:16px;color:var(--gray-400);font-size:13px;text-align:center">Sin datos aún</div>'
+      : topHabs.map(([hab, cnt]) => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="font-weight:700">Hab. ${hab}</span><span style="color:var(--gray-400)">${cnt} usos</span>
+          </div>
+          <div style="height:10px;background:var(--gray-200);border-radius:6px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(cnt/maxUso*100)}%;background:var(--orange);border-radius:6px"></div>
+          </div>
+        </div>`).join('');
+  }
+
+  // Servicios más usados
+  const usoPorServ = {};
+  entradas.forEach(e => { if(e.servicio) usoPorServ[e.servicio] = (usoPorServ[e.servicio]||0)+1; });
+  cobros.forEach(co => { if(co.concepto) usoPorServ[co.concepto] = (usoPorServ[co.concepto]||0)+1; });
+  const topServs = Object.entries(usoPorServ).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const contServs = document.getElementById('rep-servicios-uso');
+  if (contServs) {
+    contServs.innerHTML = topServs.length === 0
+      ? '<div style="padding:16px;color:var(--gray-400);font-size:13px;text-align:center">Sin datos de servicios aún</div>'
+      : `<table style="width:100%"><thead><tr><th>Servicio</th><th style="text-align:right">Usos</th></tr></thead><tbody>`
+        + topServs.map(([serv,cnt]) => `<tr><td style="font-size:13px;font-weight:600">${serv}</td><td style="text-align:right"><span class="badge badge-blue">${cnt}</span></td></tr>`).join('')
+        + '</tbody></table>';
+  }
+}
+
+
 let iaHistorial = [];
 const IA_INIT = `Eres el asistente inteligente de PetGround, un hotel de mascotas en Puebla, México. Tienes acceso completo a los datos históricos y actuales del hotel. Responde SIEMPRE en español, de forma concisa, clara y útil. Cuando te pregunten por estadísticas o reportes, calcula los números exactos a partir de los datos proporcionados. Usa tablas de texto cuando sea útil para comparar datos. Usa emojis con moderación.`;
 

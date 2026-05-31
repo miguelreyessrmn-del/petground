@@ -41,7 +41,7 @@
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Poppins',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; display:flex; }
+  body { font-family:'Poppins',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; display:flex; overflow-y:auto; }
 
   /* SIDEBAR */
   .sidebar {
@@ -100,7 +100,7 @@
   .user-info .user-role { font-size:10px; color:rgba(255,255,255,0.4); }
 
   /* MAIN */
-  .main { margin-left: 240px; flex:1; min-height:100vh; }
+  .main { margin-left: 240px; flex:1; min-height:100vh; overflow-y:visible; }
 
   /* TOPBAR */
   .topbar {
@@ -751,7 +751,7 @@
             <div class="card-title" style="font-size:13px">📥 Entradas de hoy</div>
             <span class="badge badge-orange" id="badge-ent-hoy">0</span>
           </div>
-          <div id="entradas-hoy-list" style="max-height:200px;overflow-y:auto">
+          <div id="entradas-hoy-list">
             <div class="empty-state" style="padding:20px">
               <div class="es-icon" style="font-size:24px">📭</div>
               <div class="es-text">Sin entradas hoy</div>
@@ -766,7 +766,7 @@
             <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
             <span class="badge badge-red" id="badge-sal-hoy">0</span>
           </div>
-          <div id="salidas-hoy-list" style="max-height:200px;overflow-y:auto"></div>
+          <div id="salidas-hoy-list"></div>
         </div>
       </div>
 
@@ -6094,7 +6094,54 @@ function renderEntradas(filtro='', habFiltro='') {
 }
 
 function filterEntradas(v) { renderEntradas(v, document.getElementById('filter-habitacion')?.value||''); }
-function filterSalidas() { showScreen('entradas'); document.getElementById('search-entradas').value='atras'; filterEntradas(''); }
+function filterSalidas() {
+  showScreen('entradas');
+  const hoy = new Date().toISOString().split('T')[0];
+  // Pre-filtrar solo los que salen hoy o están atrasados
+  const input = document.getElementById('search-entradas');
+  if (input) { input.value = ''; }
+  // Usar filtro especial de fecha
+  const hayAtrasados = entradas.filter(e => {
+    const sal = (e.salidaPrevista||'').slice(0,10);
+    return sal <= hoy;
+  });
+  // Aplicar filtro visual
+  setTimeout(() => {
+    const tbody = document.getElementById('tbody-entradas');
+    if (!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+      const salidaCell = tr.cells?.[4]?.textContent?.trim() || '';
+      // Extraer fecha YYYY-MM-DD del texto de la celda
+      const matchFecha = salidaCell.match(/(\d{4}-\d{2}-\d{2})/);
+      if (matchFecha) {
+        tr.style.display = matchFecha[1] <= hoy ? '' : 'none';
+      }
+    });
+    // Actualizar badge
+    const badge = document.getElementById('badge-entradas-count');
+    const visibles = hayAtrasados.length;
+    if (badge) badge.textContent = visibles;
+    // Mostrar aviso de filtro activo
+    const hint = document.querySelector('#screen-entradas .filter-hint');
+    if (!hint) {
+      const div = document.createElement('div');
+      div.className = 'filter-hint';
+      div.style.cssText = 'background:#fef3c7;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:8px';
+      div.innerHTML = `<span>⚠️ Mostrando solo salidas de hoy y atrasadas (${visibles})</span><button class="btn btn-ghost btn-sm" onclick="quitarFiltroSalidas()">✕ Ver todos</button>`;
+      const card = document.querySelector('#screen-entradas .card');
+      if (card) card.parentNode.insertBefore(div, card);
+    }
+  }, 100);
+}
+
+function quitarFiltroSalidas() {
+  const hint = document.querySelector('#screen-entradas .filter-hint');
+  if (hint) hint.remove();
+  const tbody = document.getElementById('tbody-entradas');
+  if (tbody) Array.from(tbody.querySelectorAll('tr')).forEach(tr => tr.style.display = '');
+  const badge = document.getElementById('badge-entradas-count');
+  if (badge) badge.textContent = entradas.length;
+}
 
 // ===================== RENDER CLIENTES =====================
 function renderClientes(filtro='') {
@@ -8499,16 +8546,17 @@ function renderPendientes() {
   const tbody = document.getElementById('tbody-pendientes');
   let rows = '';
   let count = 0;
+  let totalPendiente = 0;
   entradas.forEach(e => {
     const cl = clientes.find(c=>c.id===e.clienteId);
-    // Solo cobros pagados o adelantos reales (no los pendientes diferidos)
     const adelE = cobros.filter(c=>
-      (c.entradaId===e.id || c.entradaId===e.id) &&
+      (c.entradaId===e.id) &&
       (c.status==='pagado' || c.status==='adelanto')
     ).reduce((s,c)=>s+c.monto,0);
     const pendiente = e.importe - adelE;
     if (pendiente <= 0) return;
     count++;
+    totalPendiente += pendiente;
     const atrasado = new Date(e.salidaPrevista) < new Date();
     rows += `<tr>
       <td><span style="font-weight:600;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cl?.id})">${cl?.nombre||'—'}</span></td>
@@ -8522,7 +8570,23 @@ function renderPendientes() {
   });
   const badge = document.getElementById('badge-pendientes-count');
   if (badge) badge.textContent = count+' pendientes';
-  tbody.innerHTML = rows || '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">¡Todo cobrado! Sin pendientes activos.</div></div></td></tr>';
+  if (!rows) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">¡Todo cobrado! Sin pendientes activos.</div></div></td></tr>';
+    return;
+  }
+  // Fila de total al final
+  rows += `<tr style="background:var(--gray-50);border-top:2px solid var(--gray-200)">
+    <td colspan="5" style="text-align:right;font-weight:700;font-size:13px;color:var(--gray-600);padding:10px 14px">
+      TOTAL PENDIENTE POR COBRAR (${count} hospedajes):
+    </td>
+    <td style="padding:10px 14px">
+      <span style="font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;color:var(--red)">
+        $${totalPendiente.toLocaleString('es-MX')} PM$
+      </span>
+    </td>
+    <td></td>
+  </tr>`;
+  tbody.innerHTML = rows;
 }
 
 // ===================== NUEVO COBRO =====================

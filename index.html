@@ -2276,6 +2276,23 @@
           </div>
           <div id="rec-cumple-lista" style="padding:8px 16px 16px"></div>
         </div>
+
+        <!-- Solicitudes de cumpleaños pendientes de aprobar -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📬 Solicitudes de cumpleaños por aprobar</div>
+            <span class="badge badge-orange" id="rec-solicitudes-badge" style="display:none">0</span>
+          </div>
+          <div style="padding:10px 20px 4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div style="font-size:12px;color:var(--gray-600)">Fechas enviadas por los clientes desde la página pública</div>
+            <button class="btn btn-ghost btn-sm" onclick="copiarLinkCumpleanos()" title="Copiar link para compartir con clientes">
+              🔗 Copiar link para clientes
+            </button>
+          </div>
+          <div id="rec-solicitudes-lista" style="padding:0 16px 16px">
+            <div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -9806,8 +9823,106 @@ function renderRecordatorios() {
         </div>`;
       }).join('');
 
-  // --- Cumpleaños mascotas este mes ---
-  const cumplesMes = [];
+  // --- Solicitudes de cumpleaños ---
+  cargarSolicitudesCumpleanos();
+}
+
+async function cargarSolicitudesCumpleanos() {
+  const lista = document.getElementById('rec-solicitudes-lista');
+  const badge = document.getElementById('rec-solicitudes-badge');
+  if (!lista) return;
+  try {
+    const rows = await sb('GET', 'cumpleanos_requests', null,
+      '?status=eq.pendiente&order=created_at.desc&limit=50');
+    if (!rows || rows.length === 0) {
+      badge.style.display = 'none';
+      lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">✅ Sin solicitudes pendientes</div>';
+      return;
+    }
+    badge.textContent = rows.length;
+    badge.style.display = '';
+    // Actualizar badge en nav
+    const navBadge = document.getElementById('badge-recordatorios');
+    if (navBadge) {
+      const atrasados = entradas.filter(e => new Date((e.salidaPrevista||'').replace(' ','T')) < new Date()).length;
+      const total = atrasados + rows.length;
+      navBadge.textContent = total;
+      navBadge.style.display = total > 0 ? '' : 'none';
+    }
+    lista.innerHTML = rows.map(r => {
+      const fechaLeg = r.fecha_propuesta
+        ? new Date(r.fecha_propuesta + 'T12:00:00').toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'})
+        : '—';
+      const recibido = r.created_at
+        ? new Date(r.created_at).toLocaleDateString('es-MX', {day:'2-digit',month:'2-digit',year:'numeric'})
+        : '';
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);flex-wrap:wrap" id="sol-row-${r.id}">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#f59e0b);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🐾</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px;color:var(--blue)">${r.mascota_nombre||'—'}</div>
+            <div style="font-size:12px;color:var(--gray-500)">
+              👤 ${r.cliente_nombre||'—'} · 📅 Nació el <strong>${fechaLeg}</strong>
+            </div>
+            <div style="font-size:11px;color:var(--gray-400)">Recibido: ${recibido}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-sm btn-green" onclick="aprobarCumpleanos(${r.id},${r.mascota_id},'${r.fecha_propuesta}','${(r.mascota_nombre||'').replace(/'/g,"\\'")}')">
+              ✅ Aprobar
+            </button>
+            <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="rechazarCumpleanos(${r.id},'${(r.mascota_nombre||'').replace(/'/g,"\\'")}')">
+              ✕
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="padding:16px;color:var(--gray-400);font-size:13px;text-align:center">No se pudo cargar (tabla pendiente de crear)</div>';
+    badge.style.display = 'none';
+  }
+}
+
+async function aprobarCumpleanos(reqId, mascotaId, fecha, mascotaNombre) {
+  try {
+    // 1. Actualizar mascota en Supabase
+    await sb('PATCH', 'mascotas', { nacimiento: fecha }, `?id=eq.${mascotaId}`);
+    // 2. Marcar solicitud como aprobada
+    await sb('PATCH', 'cumpleanos_requests', { status: 'aprobado' }, `?id=eq.${reqId}`);
+    // 3. Actualizar en memoria
+    clientes.forEach(c => {
+      (c.mascotas||[]).forEach(m => {
+        if (m.id === mascotaId) m.nacimiento = fecha;
+      });
+    });
+    // 4. Quitar fila
+    document.getElementById('sol-row-' + reqId)?.remove();
+    notify(`✅ Cumpleaños de ${mascotaNombre} guardado: ${fecha}`, 'success');
+    cargarSolicitudesCumpleanos();
+  } catch(e) {
+    notify('Error al aprobar: ' + e.message, 'error');
+  }
+}
+
+async function rechazarCumpleanos(reqId, mascotaNombre) {
+  try {
+    await sb('PATCH', 'cumpleanos_requests', { status: 'rechazado' }, `?id=eq.${reqId}`);
+    document.getElementById('sol-row-' + reqId)?.remove();
+    notify(`Solicitud de ${mascotaNombre} rechazada`, 'info');
+    cargarSolicitudesCumpleanos();
+  } catch(e) {
+    notify('Error: ' + e.message, 'error');
+  }
+}
+
+function copiarLinkCumpleanos() {
+  const url = getConfig('negocio_url', 'petground.pages.dev');
+  const link = `https://${url}/cumpleanos.html`;
+  navigator.clipboard.writeText(link).then(() => {
+    notify('🔗 Link copiado: ' + link, 'success');
+  }).catch(() => {
+    notify('Link: ' + link, 'info');
+  });
+}
   clientes.forEach(c => {
     (c.mascotas||[]).forEach(m => {
       const fechaNac = m.nacimiento || m.fechaNacimiento || m.fecha_nacimiento || '';

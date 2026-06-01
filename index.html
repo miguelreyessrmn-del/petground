@@ -9823,6 +9823,9 @@ function renderRecordatorios() {
         </div>`;
       }).join('');
 
+  // --- Cumpleaños mascotas este mes ---
+  renderCumpleanosMes(mesActual);
+
   // --- Solicitudes de cumpleaños ---
   cargarSolicitudesCumpleanos();
 }
@@ -9923,6 +9926,10 @@ function copiarLinkCumpleanos() {
     notify('Link: ' + link, 'info');
   });
 }
+
+// Cumpleaños de mascotas este mes (parte final de renderRecordatorios, llamada desde cargarSolicitudesCumpleanos vía renderRecordatorios)
+function renderCumpleanosMes(mesActual) {
+  const cumplesMes = [];
   clientes.forEach(c => {
     (c.mascotas||[]).forEach(m => {
       const fechaNac = m.nacimiento || m.fechaNacimiento || m.fecha_nacimiento || '';
@@ -9945,7 +9952,7 @@ function copiarLinkCumpleanos() {
             <div style="font-weight:600;font-size:13px">🐕 ${mascotaNombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">Dueño: ${clienteNombre} · Día ${dia}</div>
           </div>
-          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(clienteNombre.split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
+          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((clienteNombre||'').split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
         </div>`
       ).join('');
 }

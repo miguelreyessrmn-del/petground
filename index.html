@@ -2999,41 +2999,6 @@
   </div>
 </div>
 
-<!-- TICKET VIRTUAL -->
-<div class="modal-overlay" id="modal-ticket-virtual">
-  <div class="modal" style="width:380px;max-width:96vw">
-    <div class="modal-header" style="padding:14px 20px">
-      <div class="modal-title" style="font-size:15px">🧾 Comprobante de pago</div>
-      <button class="modal-close" onclick="closeModal('modal-ticket-virtual')">✕</button>
-    </div>
-    <div class="modal-body" style="padding:0">
-      <!-- Área del ticket — estilo térmico -->
-      <div id="ticket-virtual-cuerpo" style="
-        font-family:'Courier New',Courier,monospace;
-        background:#fff9f0;
-        border:1px dashed #d97706;
-        margin:16px;
-        border-radius:8px;
-        padding:18px 16px;
-        font-size:12.5px;
-        line-height:1.7;
-        color:#1a1a1a;
-      "></div>
-    </div>
-    <div class="modal-footer" style="padding:12px 20px;gap:8px;flex-wrap:wrap">
-      <button id="tv-btn-imprimir" class="btn btn-ghost btn-sm" onclick="tvImprimirFisico()" style="gap:4px">
-        🖨️ Imprimir
-      </button>
-      <button id="tv-btn-wa" class="btn btn-sm" style="background:#25D366;color:white;gap:4px" onclick="tvEnviarWA()">
-        💬 WhatsApp
-      </button>
-      <button class="btn btn-green btn-sm" style="margin-left:auto" onclick="closeModal('modal-ticket-virtual')">
-        ✅ Listo
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- NOTIFICATION -->
 <div class="notif" id="notif"></div>
 
@@ -4563,12 +4528,27 @@ async function mdh_guardarAdelanto() {
     document.getElementById('mdh-form-adelanto').style.display = 'none';
     mdh_renderAdelantos();
     notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
-    // Cajón + ticket virtual si es efectivo
+    // Cajón + ticket si es efectivo
     const c = clientes.find(cl => cl.id === e.clienteId);
-    await abrirCajonPorCobro(
-      c?.nombre || '', (e.mascotas||[]).join(', '), monto,
-      detalleHospedajeId, metodo, 0, c?.whatsapp || ''
-    );
+    if (metodo === 'Efectivo') {
+      await abrirCajonPorCobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
+    }
+    // Ofrecer WA
+    if (c?.whatsapp) {
+      setTimeout(() => {
+        if (confirm(`¿Enviar confirmación de pago por WhatsApp a ${c.nombre}?`)) {
+          const tel = (c.whatsapp||'').replace(/\D/g,'');
+          const num = tel.startsWith('52') ? tel : '52'+tel;
+          const importe = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
+          const pagos   = (cobros||[]).filter(co => co.entradaId === detalleHospedajeId);
+          const totalPagado = pagos.reduce((s,co) => s + parseFloat(co.monto||0), 0);
+          const pendiente = Math.max(0, importe - totalPagado);
+          const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
+          const msg = `🐾 *PetGround*\n\nHola *${c.nombre}*,\n\nRegistramos tu pago:\n\n${metIcon[metodo]||''} *${metodo}: $${monto.toLocaleString('es-MX')} PM$*\n🐕 Mascotas: ${(e.mascotas||[]).join(', ')}\n🏠 Hab. ${e.habitacion}\n\n💰 Total: $${importe.toLocaleString('es-MX')} PM$\n✅ Pagado: $${totalPagado.toLocaleString('es-MX')} PM$\n${pendiente > 0 ? `⚠️ Pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '🎉 *¡Pagado completo!*'}\n\n_¡Gracias por tu confianza! 🐶_`;
+          window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+      }, 300);
+    }
   } catch(err) { notify('Error: ' + err.message, 'error'); }
   setLoading(false);
 }
@@ -7180,18 +7160,19 @@ async function confirmarSalida() {
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
-    // Si pagó en efectivo → abrir cajón + ticket virtual
-    if (cobrado > 0 && c) {
+    // Si pagó en efectivo → abrir cajón + imprimir ticket
+    if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
-      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual, metodo, pendiente, c.whatsapp);
-    } else if (cobrado === 0 && pendiente === 0) {
-      // Ya estaba pagado completo — solo mostrar ticket sin cajón
-      mostrarTicketVirtual('cobro_salida', {
-        cliente: c?.nombre||'', mascota: (e.mascotas||[]).join(', '),
-        monto: 0, metodo: 'Pagado previamente', pendiente: 0, waNum: c?.whatsapp||''
-      });
+      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual);
     }
 
+    if (c?.whatsapp && cobrado > 0) {
+      setTimeout(() => {
+        if (confirm(`¿Enviar comprobante de pago por WhatsApp a ${c.nombre}?`)) {
+          enviarComprobanteWA(e, c, cobrado, metodo, pendiente);
+        }
+      }, 400);
+    }
     if (pendiente > 0) {
       notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
     } else {
@@ -7834,260 +7815,200 @@ function renderDeudasPendientes() {
 
 
 // ===================== COLA DE IMPRESIÓN =====================
-// ===================== TICKET VIRTUAL + CAJÓN =====================
-
-// Datos del último ticket para WA
-let _tvDatos = null;
-
-// Sanitizar texto para ESC/POS (solo ASCII, sin acentos)
-function escPosText(str) {
-  return (str||'')
-    .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u')
-    .replace(/Á/g,'A').replace(/É/g,'E').replace(/Í/g,'I').replace(/Ó/g,'O').replace(/Ú/g,'U')
-    .replace(/ñ/g,'n').replace(/Ñ/g,'N').replace(/ü/g,'u').replace(/Ü/g,'U')
-    .replace(/[^\x00-\x7E]/g,'?');
-}
-
-// Mostrar ticket virtual en pantalla (siempre funciona, sin necesidad de QZ)
-function mostrarTicketVirtual(tipo, datos) {
-  _tvDatos = { tipo, datos };
-  const negocio  = getConfig('negocio_nombre','PetGround');
-  const direccion = getConfig('negocio_direccion','Puebla, México');
-  const usuario  = usuarioActual?.nombre || 'Sistema';
-  const fecha    = new Date().toLocaleDateString('es-MX', {day:'2-digit',month:'2-digit',year:'numeric'});
-  const hora     = new Date().toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
-  const sep      = '─'.repeat(30);
-
-  let html = `
-    <div style="text-align:center;margin-bottom:10px">
-      <div style="font-size:22px">🐾</div>
-      <div style="font-weight:800;font-size:15px;letter-spacing:1px">${negocio}</div>
-      <div style="font-size:10px;color:#666">${direccion}</div>
-    </div>
-    <div style="border-top:1px dashed #d97706;border-bottom:1px dashed #d97706;padding:4px 0;margin:8px 0;text-align:center;font-weight:700;font-size:11px;letter-spacing:1px">`;
-
-  if (tipo === 'cobro_efectivo' || tipo === 'cobro_salida') {
-    html += `💵 COBRO EN EFECTIVO</div>`;
-    html += `<div><b>Cliente:</b> ${datos.cliente}</div>`;
-    html += `<div><b>Mascota:</b> ${datos.mascota}</div>`;
-    html += `<div><b>Monto:</b> <span style="color:#16a34a;font-weight:800;font-size:15px">$${(datos.monto||0).toLocaleString('es-MX')} PM$</span></div>`;
-    if (datos.metodo) html += `<div><b>Método:</b> ${datos.metodo}</div>`;
-    if (datos.pendiente > 0) html += `<div style="color:#dc2626"><b>⚠️ Pendiente:</b> $${datos.pendiente.toLocaleString('es-MX')} PM$</div>`;
-    else html += `<div style="color:#16a34a"><b>✅ Pagado completo</b></div>`;
-  } else if (tipo === 'apertura_manual') {
-    html += `🔓 MOVIMIENTO DE CAJA</div>`;
-    html += `<div><b>Concepto:</b> ${datos.motivo}</div>`;
-    if (datos.monto > 0) html += `<div><b>Monto:</b> $${datos.monto.toLocaleString('es-MX')} PM$</div>`;
-    if (datos.nota) html += `<div><b>Nota:</b> ${datos.nota}</div>`;
-  } else if (tipo === 'corte') {
-    html += `🧾 CORTE DE CAJA</div>`;
-    html += `<div><b>Cobros efectivo:</b> $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')} PM$</div>`;
-    html += `<div><b>Fondo inicial:</b> $${(datos.fondoInicial||0).toLocaleString('es-MX')} PM$</div>`;
-    if ((datos.salidas||[]).length) {
-      html += `<div style="margin-top:6px;font-weight:700">Salidas:</div>`;
-      datos.salidas.forEach(s => { html += `<div style="padding-left:8px">${s.motivo}: -$${s.monto.toLocaleString('es-MX')}</div>`; });
-    }
-    html += `<div style="margin-top:8px;border-top:1px dashed #d97706;padding-top:6px;font-size:15px;font-weight:800;color:#1a4f8a"><b>TOTAL EN CAJA:</b> $${(datos.totalCaja||0).toLocaleString('es-MX')} PM$</div>`;
-  }
-
-  html += `
-    <div style="border-top:1px dashed #d97706;margin-top:10px;padding-top:8px;font-size:10px;color:#666;text-align:center">
-      <div>${usuario} · ${fecha} ${hora}</div>
-      <div style="margin-top:4px">${getConfig('negocio_footer','¡Gracias por su visita! 🐾')}</div>
-    </div>`;
-
-  document.getElementById('ticket-virtual-cuerpo').innerHTML = html;
-
-  // Mostrar/ocultar botón WA según datos
-  const btnWa = document.getElementById('tv-btn-wa');
-  if (btnWa) btnWa.style.display = (datos.waNum) ? '' : 'none';
-
-  document.getElementById('modal-ticket-virtual').classList.add('open');
-}
-
-// Abrir cajón SILENCIOSO (fire & forget, no bloquea el flujo)
-async function abrirCajonSilencioso() {
-  if (typeof qz === 'undefined') return;
-  try {
-    if (!qz.websocket.isActive()) {
-      await Promise.race([
-        qz.websocket.connect({ host:'localhost', port:{ primary:8181, fallback:8383 }}),
-        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 4000))
-      ]);
-    }
-    if (qz.websocket.isActive()) {
-      const config = qz.configs.create(getNombreImpresora());
-      await qz.print(config, [{ type:'raw', format:'hex', data:'1B700019FA' }]);
-    }
-  } catch(e) { /* silencioso — el cajón no se abre si QZ no está, está bien */ }
-}
-
-// Imprimir ticket físico vía QZ (solo si está conectado)
-async function tvImprimirFisico() {
-  if (!_tvDatos) return;
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (!ok) {
-    notify('⚠️ QZ Tray no conectado — abre QZ Tray para imprimir', 'error');
-    return;
-  }
-  try {
-    const lineas = buildTicketEscPos(_tvDatos.tipo, _tvDatos.datos);
-    const config = qz.configs.create(getNombreImpresora());
-    // Enviar como array de elementos para evitar problemas de encoding
-    await qz.print(config, [
-      { type:'raw', format:'hex', data:'1B40' },            // Init
-      { type:'raw', format:'plain', data: lineas, options:{ language:'ESCPOS' } }
-    ]);
-    notify('🖨️ Ticket enviado a impresora', 'success');
-  } catch(e) {
-    notify('Error al imprimir: ' + e.message, 'error');
-  }
-}
-
-// Enviar ticket por WhatsApp
-function tvEnviarWA() {
-  if (!_tvDatos?.datos?.waNum) return;
-  const d = _tvDatos.datos;
-  const num = d.waNum.replace(/\D/g,'');
-  const numFull = num.startsWith('52') ? num : '52'+num;
-  let msg = `🐾 *${getConfig('negocio_nombre','PetGround')}*\n\n`;
-  if (_tvDatos.tipo === 'cobro_efectivo' || _tvDatos.tipo === 'cobro_salida') {
-    msg += `Hola *${d.cliente}*, registramos tu pago:\n\n`;
-    msg += `💵 *${d.metodo||'Efectivo'}: $${(d.monto||0).toLocaleString('es-MX')} PM$*\n`;
-    msg += `🐕 ${d.mascota}\n`;
-    if (d.pendiente > 0) msg += `⚠️ Pendiente: $${d.pendiente.toLocaleString('es-MX')} PM$\n`;
-    else msg += `✅ _¡Pagado completo!_\n`;
-    msg += `\n_¡Gracias por confiar en nosotros! 🐶_`;
-  }
-  window.open(`https://wa.me/${numFull}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-// Construir ticket en texto ASCII para ESC/POS (sin caracteres raros)
-function buildTicketEscPos(tipo, datos) {
-  const negocio  = escPosText(getConfig('negocio_nombre','PetGround'));
-  const usuario  = escPosText(usuarioActual?.nombre || 'Sistema');
-  const fecha    = new Date().toLocaleDateString('es-MX');
-  const hora     = new Date().toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
-  const sep      = '--------------------------------\n';
-  let t = '';
-  t += '\x1B\x61\x01';   // Centrar
-  t += '\x1B\x45\x01' + negocio + '\x1B\x45\x00\n';
-  t += '\x1B\x61\x00';   // Izquierda
-
-  if (tipo === 'cobro_efectivo' || tipo === 'cobro_salida') {
-    t += sep + ' COBRO EN EFECTIVO\n' + sep;
-    t += ` Cliente:  ${escPosText(datos.cliente||'')}\n`;
-    t += ` Mascota:  ${escPosText(datos.mascota||'')}\n`;
-    t += ` Monto:    $${(datos.monto||0).toLocaleString('es-MX')}\n`;
-    if (datos.metodo) t += ` Metodo:   ${escPosText(datos.metodo)}\n`;
-    t += ` Cajero:   ${usuario}\n`;
-    t += ` ${fecha} ${hora}\n` + sep;
-    if (datos.pendiente > 0) t += ` PENDIENTE: $${datos.pendiente.toLocaleString('es-MX')}\n`;
-  } else if (tipo === 'apertura_manual') {
-    t += sep + ' MOVIMIENTO CAJA\n' + sep;
-    t += ` Concepto: ${escPosText(datos.motivo||'')}\n`;
-    if (datos.monto > 0) t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
-    t += ` ${fecha} ${hora}\n` + sep;
-  } else if (tipo === 'corte') {
-    t += sep + '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n' + sep;
-    t += ` Cobros:   $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')}\n`;
-    t += ` Fondo:    $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n`;
-    (datos.salidas||[]).forEach(s => {
-      t += ` ${escPosText(s.motivo||'').padEnd(18)} -$${s.monto.toLocaleString('es-MX')}\n`;
-    });
-    t += sep + '\x1B\x45\x01 TOTAL: $' + (datos.totalCaja||0).toLocaleString('es-MX') + '\x1B\x45\x00\n' + sep;
-  }
-  t += '\n\n\n';
-  return t;
-}
-
-// Función principal: registrar cobro de caja → ticket virtual + cajón silencioso
-async function abrirCajonPorCobro(cliente, mascota, monto, entradaId, metodo, pendiente, waNum) {
-  // 1. Cajón silencioso (solo si es efectivo y QZ conectado)
-  if (!metodo || metodo === 'Efectivo') {
-    abrirCajonSilencioso(); // fire & forget, no await
-  }
-  // 2. Guardar movimiento en caja
-  await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
-    `${cliente} - ${mascota}`, entradaId);
-  renderMovimientosCaja();
-  // 3. Ticket virtual (siempre)
-  mostrarTicketVirtual('cobro_efectivo', { cliente, mascota, monto, metodo: metodo||'Efectivo', pendiente: pendiente||0, waNum });
-}
-
-// Actualizar banner QZ (mantener para compatibilidad)
 function actualizarBannerQZ(conectado) {
   const banner = document.getElementById('banner-qz');
   if (!banner) return;
   banner.style.display = conectado ? 'none' : 'flex';
 }
-function actualizarBannerCola() { /* ya no se usa cola */ }
+
+function actualizarBannerCola() {
+  const banner = document.getElementById('banner-cola-impresion');
+  const texto  = document.getElementById('banner-cola-texto');
+  if (!banner) return;
+  if (_colaPendiente.length === 0) {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'flex';
+    if (texto) texto.textContent = `${_colaPendiente.length} ticket${_colaPendiente.length>1?'s':''} pendiente${_colaPendiente.length>1?'s':''} de imprimir`;
+  }
+}
 
 async function intentarConectarQZ() {
   const ok = await conectarQZ();
   actualizarBannerQZ(ok);
-  if (ok) notify('✅ Impresora conectada', 'success');
-  else notify('⚠️ No se pudo conectar a QZ Tray', 'error');
+  if (ok && _colaPendiente.length > 0) {
+    await imprimirColaPendiente();
+  }
 }
 
-// Conectar a QZ Tray
+async function imprimirColaPendiente() {
+  if (!_colaPendiente.length) return;
+  const ok = await conectarQZ();
+  if (!ok) { notify('⚠️ QZ Tray sigue sin conectar', 'error'); return; }
+  const cola = [..._colaPendiente];
+  _colaPendiente = [];
+  actualizarBannerCola();
+  for (const job of cola) {
+    try {
+      if (job.tipo === 'cajon_ticket') {
+        const config = qz.configs.create(getNombreImpresora());
+        await qz.print(config, [{ type:'raw', format:'base64', data: btoa(unescape(encodeURIComponent('\x1B\x70\x00\x19\xFA'))) }]);
+        if (job.lineas) {
+          const b64 = btoa(unescape(encodeURIComponent(job.lineas)));
+          await qz.print(config, [{ type:'raw', format:'base64', data: b64 }]);
+        }
+      }
+    } catch(e) {
+      console.warn('Error imprimiendo trabajo pendiente:', e);
+    }
+  }
+  notify('🖨️ Tickets pendientes impresos', 'success');
+}
+
+// Verificar QZ al abrir Caja
+async function verificarEstadoQZ() {
+  if (typeof qz === 'undefined') { actualizarBannerQZ(false); return; }
+  const conectado = qz.websocket.isActive();
+  actualizarBannerQZ(conectado);
+  actualizarBannerCola();
+}
+
+// ===================== SISTEMA DE CAJA =====================
+
+function getNombreImpresora() {
+  return getConfig('impresora_nombre', 'EPSON_TM_T88V');
+}
+
 async function conectarQZ() {
   if (typeof qz === 'undefined') return false;
   try {
     qz.security.setCertificatePromise(function(resolve) { resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----'); });
     qz.security.setSignatureAlgorithm('SHA512');
-    qz.security.setSignaturePromise(function(toSign) { return function(resolve) { resolve(); }; });
+    qz.security.setSignaturePromise(function(toSign) {
+      return function(resolve) { resolve(); };
+    });
     if (!qz.websocket.isActive()) {
       await Promise.race([
         qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
-        new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+        new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
       ]);
     }
     return true;
-  } catch(e) { return false; }
-}
-
-// Abrir cajón SOLO (apertura manual con ticket de registro)
-async function abrirCajon() {
-  abrirCajonSilencioso();
-  return true;
-}
-
-// Verificar estado QZ al cargar caja
-async function verificarEstadoQZ() {
-  if (typeof qz === 'undefined') { actualizarBannerQZ(false); return; }
-  const conectado = qz.websocket && qz.websocket.isActive();
-  actualizarBannerQZ(conectado);
-}
-
-// Imprimir corte de caja físico
-async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
-  mostrarTicketVirtual('corte', { cobrosEfectivo, fondoInicial, salidas, totalCaja });
-  // Intentar también imprimir físico si QZ disponible
-  const ok = await conectarQZ();
-  if (ok) {
-    try {
-      const lineas = buildTicketEscPos('corte', { cobrosEfectivo, fondoInicial, salidas, totalCaja });
-      const config = qz.configs.create(getNombreImpresora());
-      await qz.print(config, [{ type:'raw', format:'hex', data:'1B400000' }]);
-      await qz.print(config, [{ type:'raw', format:'plain', data: lineas }]);
-    } catch(e) { console.warn('No se imprimió corte:', e.message); }
+  } catch(e) {
+    return false;
   }
 }
 
-// Nombre de la impresora
-function getNombreImpresora() {
-  return getConfig('impresora_nombre', 'EPSON TM-T88V');
+async function imprimirConCajon(lineas) {
+  const ok = await conectarQZ();
+  actualizarBannerQZ(ok);
+  if (!ok) {
+    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
+    actualizarBannerCola();
+    notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+    return;
+  }
+  try {
+    const config = qz.configs.create(getNombreImpresora());
+    const cajonCmd = '\x1B\x70\x00\x19\xFA';
+    const b64 = btoa(unescape(encodeURIComponent(cajonCmd + lineas)));
+    await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
+  } catch(e) {
+    notify('Error al imprimir: ' + e.message, 'error');
+  }
 }
 
-let _colaPendiente = []; // mantener por compatibilidad
-async function imprimirColaPendiente() { notify('Sin cola pendiente', 'info'); }
-function buildTicketCaja(tipo, datos) { return buildTicketEscPos(tipo, datos); }
-async function imprimirConCajon(lineas) { /* ya no se usa — reemplazado por ticket virtual */ }
-async function imprimirTicketCaja(lineas) { /* ya no se usa */ }
+async function abrirCajon() {
+  const ok = await conectarQZ();
+  actualizarBannerQZ(ok);
+  if (!ok) return false;
+  try {
+    const config = qz.configs.create(getNombreImpresora());
+    await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+    return true;
+  } catch(e) {
+    notify('Error al abrir cajón: ' + e.message, 'error');
+    return false;
+  }
+}
+
+async function imprimirTicketCaja(lineas) {
+  const ok = await conectarQZ();
+  actualizarBannerQZ(ok);
+  if (!ok) {
+    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
+    actualizarBannerCola();
+    notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+    return;
+  }
+  try {
+    const config = qz.configs.create(getNombreImpresora());
+    const b64 = btoa(unescape(encodeURIComponent(lineas)));
+    await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
+  } catch(e) {
+    notify('Error al imprimir: ' + e.message, 'error');
+  }
+}
+
+function buildTicketCaja(tipo, datos) {
+  const negocio = getConfig('negocio_nombre', 'PetGround');
+  const usuario = usuarioActual?.nombre || 'Sistema';
+  const fecha = new Date().toLocaleDateString('es-MX');
+  const hora  = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+  const sep   = '--------------------------------\n';
+  let t = '';
+  t += '\x1B\x40';
+  t += '\x1B\x61\x01';
+  t += '\x1B\x45\x01';
+  t += negocio + '\n';
+  t += '\x1B\x45\x00';
+  t += '\x1B\x61\x00';
+  if (tipo === 'apertura_manual') {
+    t += sep + ' APERTURA DE CAJON\n' + sep;
+    t += ` Usuario:  ${usuario}\n`;
+    t += ` Motivo:   ${datos.motivo}\n`;
+    if (datos.monto > 0) t += ` Retiro:   $${datos.monto.toLocaleString('es-MX')}\n`;
+    if (datos.nota) t += ` Nota:     ${datos.nota}\n`;
+    t += ` Fecha:    ${fecha}  ${hora}\n` + sep;
+  }
+  if (tipo === 'cobro_efectivo') {
+    t += sep + ' COBRO EN EFECTIVO\n' + sep;
+    t += ` Cliente:  ${datos.cliente}\n`;
+    t += ` Mascota:  ${datos.mascota}\n`;
+    t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
+    t += ` Cobro:    ${usuario}\n`;
+    t += ` Fecha:    ${fecha}  ${hora}\n` + sep;
+  }
+  if (tipo === 'corte') {
+    t += sep + '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n' + sep;
+    t += ` Fecha:    ${fecha}\n`;
+    t += ` Usuario:  ${usuario}\n` + sep;
+    t += ' ENTRADAS\n';
+    t += ` Cobros del período: $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')}\n`;
+    t += ` Fondo inicial:      $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n` + sep;
+    t += ' SALIDAS\n';
+    (datos.salidas||[]).forEach(s => {
+      t += ` ${s.motivo.padEnd(18)} -$${s.monto.toLocaleString('es-MX')}\n`;
+    });
+    t += sep + '\x1B\x45\x01';
+    t += ` TOTAL EN CAJA: $${(datos.totalCaja||0).toLocaleString('es-MX')}\n`;
+    t += '\x1B\x45\x00' + sep;
+  }
+  t += '\n\n\n';
+  return t;
+}
 
 // ===================== SISTEMA DE CAJA =====================
+
+async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
+  const ticket = buildTicketCaja('corte', {cobrosEfectivo, fondoInicial, salidas, totalCaja});
+  await imprimirConCajon(ticket);
+  await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
+    `Retiro de $${totalCaja.toLocaleString('es-MX')} al hacer corte`);
+  cerrarModalComprobante();
+  notify('✅ Corte impreso y caja reiniciada en $0', 'success');
+  renderMovimientosCaja();
+}
 
 // Guardar movimiento en Supabase
 async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) {
@@ -8169,28 +8090,31 @@ async function confirmarAperturaCaja() {
   const monto   = parseFloat(document.getElementById('caja-monto').value) || 0;
   const nota    = document.getElementById('caja-nota').value.trim();
   const mascota = document.getElementById('caja-mascota')?.value.trim() || '';
-
   if (!motivo) { notify('Selecciona un concepto', 'error'); return; }
   const motivosSinMonto = ['Conteo de caja', 'Cambio de billetes'];
   if (!monto && !motivosSinMonto.includes(motivo)) {
     notify('Ingresa el monto', 'error'); return;
   }
-
   cerrarModalCaja();
   const notaFinal = mascota ? (mascota + (nota ? ' — ' + nota : '')) : nota;
-
-  // Cajón silencioso si es movimiento de caja
-  abrirCajonSilencioso();
-
+  const ticket = buildTicketCaja('apertura_manual', {motivo, monto, nota: notaFinal, tipo: _cajaTipo});
+  await imprimirConCajon(ticket);
   if (_cajaTipo === 'salida') {
     await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
-    notify('✅ ' + motivo + ' registrado', 'success');
+    notify('✅ Cajón abierto — ' + motivo, 'success');
   } else {
     await guardarMovimientoCaja('entrada', motivo, monto, notaFinal);
     notify('✅ Ingreso registrado — ' + motivo + (mascota ? ' · ' + mascota : ''), 'success');
   }
-  // Ticket virtual del movimiento
-  mostrarTicketVirtual('apertura_manual', { motivo, monto, nota: notaFinal, tipo: _cajaTipo });
+  renderMovimientosCaja();
+}
+
+// Apertura automática al cobrar en efectivo
+async function abrirCajonPorCobro(cliente, mascota, monto, entradaId) {
+  const ticket = buildTicketCaja('cobro_efectivo', {cliente, mascota, monto});
+  await imprimirConCajon(ticket);
+  await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
+    `${cliente} - ${mascota}`, entradaId);
   renderMovimientosCaja();
 }
 

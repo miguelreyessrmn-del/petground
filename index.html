@@ -3118,6 +3118,7 @@ let salidaActual = null;
 let entradaEditandoId = null;
 let reservaciones = [];
 let loading = false;
+let _colaPendiente = []; // cola de tickets pendientes de imprimir (QZ Tray)
 
 // ===================== LOADING STATE =====================
 function setLoading(on) {
@@ -3448,7 +3449,7 @@ function res_buscarCliente(q) {
   if (!found.length) { el.innerHTML='<div style="font-size:12px;color:var(--gray-400);padding:8px">Sin resultados</div>'; return; }
   el.innerHTML = found.map(c=>`
     <div onclick="res_seleccionarCliente(${c.id})" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:4px;cursor:pointer;background:white">
-      <div class="avatar" style="width:30px;height:30px;font-size:11px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+      <div class="avatar" style="width:30px;height:30px;font-size:11px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
       <div style="flex:1">
         <div style="font-weight:600;font-size:13px">${c.nombre}</div>
         <div style="font-size:11px;color:var(--gray-400)">📱 ${c.whatsapp||'—'} · 🐕 ${(c.mascotas||[]).map(m=>m.nombre||m).join(', ')||'Sin mascotas'}</div>
@@ -3515,7 +3516,7 @@ function nr_buscarCliente(val) {
   if (!res.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML = res.map(c => {
-    const init = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const init = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
     const macs = (c.mascotas||[]).map(m=>m.nombre||m).join(', ');
     return `<div onclick="nr_seleccionarCliente(${c.id})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-100)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='white'">
       <div class="avatar" style="width:32px;height:32px;font-size:12px;flex-shrink:0">${init}</div>
@@ -4015,7 +4016,7 @@ function verHistorialMascota(clienteId, mascotaNombre) {
 
         <!-- Historial de hospedajes -->
         <div style="font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.8px;margin-bottom:8px">HOSPEDAJES REGISTRADOS EN EL SISTEMA</div>
-        ${todasEntradas.length ? todasEntradas.sort((a,b)=>new Date(b.entrada)-new Date(a.entrada)).map(e => {
+        ${todasEntradas.length ? todasEntradas.sort((a,b)=>new Date((b.entrada||"").replace(" ","T"))-new Date((a.entrada||"").replace(" ","T"))).map(e => {
           const fe = e.entrada?.split(' ')[0]||'—';
           const fs = e.salidaPrevista?.split(' ')[0]||'—';
           const noches = Math.max(0, Math.ceil((new Date(fs)-new Date(fe))/(1000*60*60*24)));
@@ -4160,8 +4161,8 @@ function verDetalleHospedaje(id) {
   if (!e || !c) return;
   detalleHospedajeId = id;
 
-  const diasHospedado = Math.max(0, Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24)));
-  const atrasado = new Date(e.salidaPrevista) < new Date();
+  const diasHospedado = Math.max(0, Math.ceil((new Date() - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24)));
+  const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
   const adelantos = cobros.filter(co=>co.entradaId===id).reduce((s,co)=>s+co.monto,0);
 
   // Título
@@ -4170,7 +4171,7 @@ function verDetalleHospedaje(id) {
   // Info cliente
   document.getElementById('mdh-cliente').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:15px;color:var(--blue)">${c.nombre}</div>
         <div style="font-size:12px;color:var(--gray-400)">📱 ${c.whatsapp||'Sin WhatsApp'} · ⏱️ ${diasHospedado} día${diasHospedado!==1?'s':''} hospedado${adelantos>0?` · ✅ Adelantos: $${adelantos.toLocaleString('es-MX')} PM$`:''}</div>
@@ -4569,7 +4570,7 @@ async function abrirComprobantePendiente(entradaId, clienteId) {
     if (res && res[0]) { generarComprobantePDF(res[0].id); return; }
   } catch(e) {}
   // Fallback: buscar en array local
-  const ent = entradas.filter(e=>e.clienteId===clienteId).sort((a,b)=>new Date(b.entrada)-new Date(a.entrada))[0];
+  const ent = entradas.filter(e=>e.clienteId===clienteId).sort((a,b)=>new Date((b.entrada||"").replace(" ","T"))-new Date((a.entrada||"").replace(" ","T")))[0];
   if (ent) generarComprobantePDF(ent.id);
   else notify('No se encontró la entrada asociada','error');
 }
@@ -4652,7 +4653,7 @@ async function generarComprobantePDF(entradaId) {
   actBar.innerHTML = '<span style="font-weight:700;color:#E8622A;font-size:13px">📄 Comprobante</span><div style="display:flex;gap:8px"><button onclick="window.print()" style="background:#E8622A;color:white;border:none;border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">🖨️ Imprimir</button><button onclick="cerrarModalComprobante()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:12px">✕</button></div>';
   compWrapper.appendChild(actBar);
 
-  const noches = Math.max(0, Math.ceil((new Date(e.salidaPrevista) - new Date(e.entrada)) / (1000*60*60*24)));
+  const noches = Math.max(0, Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T")) - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24)));
 
   const compContent = document.createElement('div');
   compContent.style.cssText = 'padding:20px 18px;font-family:Arial,sans-serif;font-size:12px;color:#222;';
@@ -5766,23 +5767,29 @@ function sortTabla(tabla, campo) {
 function aplicarSort(arr, tabla) {
   const s = sortState[tabla];
   if (!s) return arr;
+  const toTs = v => {
+    if (!v) return 0;
+    // Safari necesita T como separador, no espacio
+    return new Date(String(v).replace(' ','T')).getTime() || 0;
+  };
   return [...arr].sort((a, b) => {
     let va, vb;
     if (tabla === 'clientes') {
-      if (s.campo === 'nombre') { va = a.nombre?.toLowerCase(); vb = b.nombre?.toLowerCase(); }
-      else if (s.campo === 'mascotas') { va = a.mascotas?.length||0; vb = b.mascotas?.length||0; }
-      else if (s.campo === 'alojamientos') { va = a.alojamientos||0; vb = b.alojamientos||0; }
-      else if (s.campo === 'facturacion') { va = a.facturacion||0; vb = b.facturacion||0; }
+      if (s.campo === 'nombre')       { va = a.nombre?.toLowerCase()||''; vb = b.nombre?.toLowerCase()||''; }
+      else if (s.campo === 'mascotas')    { va = a.mascotas?.length||0;      vb = b.mascotas?.length||0; }
+      else if (s.campo === 'alojamientos'){ va = a.alojamientos||0;          vb = b.alojamientos||0; }
+      else if (s.campo === 'facturacion') { va = a.facturacion||0;           vb = b.facturacion||0; }
     } else if (tabla === 'entradas') {
       const ca = clientes.find(cl=>cl.id===a.clienteId);
       const cb = clientes.find(cl=>cl.id===b.clienteId);
-      if (s.campo === 'nombre') { va = ca?.nombre?.toLowerCase(); vb = cb?.nombre?.toLowerCase(); }
-      else if (s.campo === 'habitacion') { va = a.habitacion; vb = b.habitacion; }
-      else if (s.campo === 'entrada') { va = a.entrada; vb = b.entrada; }
-      else if (s.campo === 'salida') { va = a.salidaPrevista; vb = b.salidaPrevista; }
-      else if (s.campo === 'importe') { va = a.importe||0; vb = b.importe||0; }
+      if      (s.campo === 'nombre')    { va = ca?.nombre?.toLowerCase()||''; vb = cb?.nombre?.toLowerCase()||''; }
+      else if (s.campo === 'habitacion'){ va = a.habitacion||'';  vb = b.habitacion||''; }
+      else if (s.campo === 'entrada')   { va = toTs(a.entrada);   vb = toTs(b.entrada); }
+      else if (s.campo === 'salida')    { va = toTs(a.salidaPrevista); vb = toTs(b.salidaPrevista); }
+      else if (s.campo === 'importe')   { va = a.importe||0;      vb = b.importe||0; }
     }
-    if (va === undefined || vb === undefined) return 0;
+    if (va === undefined || va === null) va = typeof vb === 'number' ? 0 : '';
+    if (vb === undefined || vb === null) vb = typeof va === 'number' ? 0 : '';
     if (typeof va === 'string') return s.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
     return s.dir === 'asc' ? va - vb : vb - va;
   });
@@ -5875,7 +5882,7 @@ function mostrarEventosDia(fecha) {
       const ini=c?.nombre?.split(' ').map(w=>w[0]).slice(0,2).join('')||'?';
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${e.mascotas.join(', ')} · Hab.${e.habitacion} · ${e.entrada.split(' ')[1]||''}</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${( e.mascotas||[] ).join(', ')} · Hab.${e.habitacion} · ${e.entrada.split(' ')[1]||''}</div></div>
         <span class="badge badge-orange" style="font-size:10px">Entrada</span>
       </div>`;
     });
@@ -5885,10 +5892,10 @@ function mostrarEventosDia(fecha) {
     salidas_dia.forEach(e=>{
       const c=clientes.find(cl=>cl.id===e.clienteId);
       const ini=c?.nombre?.split(' ').map(w=>w[0]).slice(0,2).join('')||'?';
-      const atrasado=new Date(e.salidaPrevista)<new Date();
+      const atrasado=new Date((e.salidaPrevista||"").replace(" ","T"))<new Date();
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${e.mascotas.join(', ')} · Hab.${e.habitacion}</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${( e.mascotas||[] ).join(', ')} · Hab.${e.habitacion}</div></div>
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
           ${atrasado?'<span class="badge badge-red" style="font-size:10px">⚠️ Atrasado</span>':'<span class="badge badge-blue" style="font-size:10px">Salida</span>'}
           <button class="btn btn-sm btn-green" style="padding:3px 8px;font-size:11px" onclick="hacerSalida('${c?.nombre}',${e.id})">📤</button>
@@ -5955,7 +5962,7 @@ function actualizarPanelesHoy(fecha) {
     } else {
       listSal.innerHTML = `<table><tbody>${sals.map(e => {
         const c = clientes.find(cl => cl.id === e.clienteId);
-        const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
+        const atrasado = esHoy && new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
         return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
       }).join('')}</tbody></table>`;
     }
@@ -5969,8 +5976,8 @@ function actualizarDashboard() {
   document.getElementById('stat-entradas').textContent = entradasHoy;
   document.getElementById('stat-salidas').textContent = salidasHoy;
   document.getElementById('stat-alojamientos').textContent = entradas.length;
-  document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
-  const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
+  document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+(e.mascotas||[]).length,0);
+  const totalAnimales = entradas.reduce((s,e)=>s+(e.mascotas||[]).length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
   document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';
   document.getElementById('badge-sal-hoy').textContent = salidasHoy+' salidas';
@@ -6024,7 +6031,7 @@ function renderEntradas(filtro='', habFiltro='') {
     const c = clientes.find(cl => cl.id === e.clienteId);
     if (!c) return false;
     if (habFiltro && e.habitacion !== habFiltro) return false;
-    if (filtro) return c.nombre.toLowerCase().includes(filtro.toLowerCase()) || e.mascotas.join(' ').toLowerCase().includes(filtro.toLowerCase());
+    if (filtro) return c.nombre.toLowerCase().includes(filtro.toLowerCase()) || ( e.mascotas||[] ).join(' ').toLowerCase().includes(filtro.toLowerCase());
     return true;
   });
   lista = aplicarSort(lista, 'entradas');
@@ -6032,43 +6039,49 @@ function renderEntradas(filtro='', habFiltro='') {
   if (badge) badge.textContent = lista.length + (lista.length !== entradas.length ? ` de ${entradas.length}` : '');
   let rows = '';
   lista.forEach(e => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
-    const salida = new Date(e.salidaPrevista);
-    const atrasado = salida < new Date();
-    const statusBadge = atrasado
-      ? '<span class="badge badge-red">⚠️ Atrasado</span>'
-      : '<span class="badge badge-green">✅ Activo</span>';
-    rows += `<tr style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
-      <td>
-        <div class="client-cell">
-          <div class="avatar">${initials}</div>
-          <div>
-            <div class="client-link">${c.nombre}</div>
-            <div class="client-sub">${c.whatsapp}</div>
+    try {
+      const c = clientes.find(cl => cl.id === e.clienteId);
+      if (!c) return;
+      const mascotas = e.mascotas || [];
+      const initials = (c.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+      const salidaTs = new Date((e.salidaPrevista||'').replace(' ','T'));
+      const atrasado = !isNaN(salidaTs) && salidaTs < new Date();
+      const statusBadge = atrasado
+        ? '<span class="badge badge-red">⚠️ Atrasado</span>'
+        : '<span class="badge badge-green">✅ Activo</span>';
+      rows += `<tr style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
+        <td>
+          <div class="client-cell">
+            <div class="avatar">${initials}</div>
+            <div>
+              <div class="client-link">${c.nombre}</div>
+              <div class="client-sub">${c.whatsapp||''}</div>
+            </div>
           </div>
-        </div>
-      </td>
-      <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
-      <td><div class="room-num">${e.habitacion}</div></td>
-      <td><div class="date-cell"><div class="date">${e.entrada.split(' ')[0]}</div><div class="time">${e.entrada.split(' ')[1]}</div></div></td>
-      <td><div class="date-cell"><div class="date" style="${atrasado?'color:var(--red);font-weight:700':''}">${e.salidaPrevista.split(' ')[0]}</div><div class="time">${e.salidaPrevista.split(' ')[1]}</div></div></td>
-      <td>${(() => {
-        const pagosEnt = cobros.filter(co=>co.entradaId===e.id);
-        const pagado = pagosEnt.reduce((s,co)=>s+(co.monto||0),0);
-        const pendiente = Math.max(0,e.importe-pagado);
-        if (pagado > 0) return `<div><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')}</span></div>
-          <div style="font-size:10px;color:${pendiente===0?'var(--green)':'var(--red)'}">
-            ${pendiente===0?'🎉 Saldado':'⚠️ Pend: $'+pendiente.toLocaleString('es-MX')}
-          </div>`;
-        return `<span class="amount">$${e.importe.toLocaleString('es-MX')} PM$</span>`;
-      })()}</td>
-      <td>${statusBadge}</td>
-      <td onclick="event.stopPropagation()"><div class="action-btns">
-        <button class="btn btn-sm btn-green" onclick="hacerSalida('${c.nombre}',${e.id})" title="Registrar salida del perro">📤 Hacer salida</button>
-        <button class="btn btn-sm btn-ghost" title="Enviar confirmación por WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬 WA</button>
-      </div></td>
-    </tr>`;
+        </td>
+        <td><div class="dogs-list">${mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+        <td><div class="room-num">${e.habitacion}</div></td>
+        <td><div class="date-cell"><div class="date">${(e.entrada||'').split(' ')[0]}</div><div class="time">${(e.entrada||'').split(' ')[1]||''}</div></div></td>
+        <td><div class="date-cell"><div class="date" style="${atrasado?'color:var(--red);font-weight:700':''}">${(e.salidaPrevista||'').split(' ')[0]}</div><div class="time">${(e.salidaPrevista||'').split(' ')[1]||''}</div></div></td>
+        <td>${(() => {
+          const pagosEnt = cobros.filter(co=>co.entradaId===e.id);
+          const pagado = pagosEnt.reduce((s,co)=>s+(co.monto||0),0);
+          const pendiente = Math.max(0,e.importe-pagado);
+          if (pagado > 0) return `<div><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')}</span></div>
+            <div style="font-size:10px;color:${pendiente===0?'var(--green)':'var(--red)'}">
+              ${pendiente===0?'🎉 Saldado':'⚠️ Pend: $'+pendiente.toLocaleString('es-MX')}
+            </div>`;
+          return `<span class="amount">$${e.importe.toLocaleString('es-MX')} PM$</span>`;
+        })()}</td>
+        <td>${statusBadge}</td>
+        <td onclick="event.stopPropagation()"><div class="action-btns">
+          <button class="btn btn-sm btn-green" onclick="hacerSalida('${(c.nombre||'').replace(/'/g,"\\'")}',${e.id})" title="Registrar salida del perro">📤 Hacer salida</button>
+          <button class="btn btn-sm btn-ghost" title="Enviar confirmación por WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬 WA</button>
+        </div></td>
+      </tr>`;
+    } catch(err) {
+      console.warn('Error renderizando fila de hospedaje id=' + e?.id, err);
+    }
   });
   tbody.innerHTML = rows || `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">🐕</div><div class="es-text">No hay perros hospedados ahora</div><button onclick="showScreen('nueva-entrada')" style="margin-top:12px;background:var(--orange);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">➕ Registrar primera entrada</button></div></td></tr>`;
 }
@@ -6133,7 +6146,7 @@ function renderClientes(filtro='') {
   lista = aplicarSort(lista, 'clientes');
   let rows = '';
   lista.forEach(c => {
-    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
     const colors = ['orange','blue','green'];
     const color = colors[c.id % 3];
     rows += `<tr onclick="verPerfilCliente(${c.id})" style="cursor:pointer">
@@ -6163,7 +6176,7 @@ function filterClientes(v) {
   const tbody = document.getElementById('tbody-clientes');
   let rows = '';
   clientes.filter(filtro).forEach(c => {
-    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
     const colors = ['orange','blue','green'];
     const color = colors[c.id % 3];
     const mascsBadge = (c.mascotas||[]).map(m => {
@@ -6204,7 +6217,7 @@ async function marcarResponsivaCliente(clienteId) {
 async function verPerfilCliente(id) {
   const c = clientes.find(cl => cl.id === id);
   if (!c) return;
-  const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
   // Cargar responsiva_firmada del cliente desde Supabase
   try {
     const cDB = await sb('GET','clientes',null,`?id=eq.${id}&select=responsiva_firmada`);
@@ -6234,7 +6247,7 @@ async function verPerfilCliente(id) {
 
   const historial = todasEntradas;
   const totalDias = historial.reduce((acc,e) => {
-    const d1=new Date(e.entrada), d2=new Date(e.salidaPrevista);
+    const d1=new Date((e.entrada||"").replace(" ","T")), d2=new Date((e.salidaPrevista||"").replace(" ","T"));
     return acc + Math.max(0, Math.round((d2-d1)/(1000*60*60*24)));
   }, 0);
 
@@ -6964,8 +6977,8 @@ function hacerSalida(nombre, id) {
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   if (!c || !e) return;
 
-  const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
-  const atrasado = new Date(e.salidaPrevista) < new Date();
+  const diasHospedado = Math.ceil((new Date() - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24));
+  const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
   const adelantosPrevios = cobros.filter(co => co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
   const pendienteActual = Math.max(0, e.importe - adelantosPrevios);
 
@@ -7000,7 +7013,7 @@ function hacerSalida(nombre, id) {
     ${flagsBanner}
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;border:1px solid var(--gray-200)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:15px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:15px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
         <div>
           <div style="font-weight:700;color:var(--blue);font-size:15px">${c.nombre}</div>
           <div style="font-size:12px;color:var(--gray-400)">📱 ${c.whatsapp||'Sin WhatsApp'}</div>
@@ -7205,7 +7218,7 @@ function enviarConfirmacionEntradaWA(entradaId) {
   if (!c || !e) return;
   const msg = aplicarPlantillaWA('wa_tpl_ingreso', {
     nombre: c.nombre,
-    mascota: e.mascotas.join(', '),
+    mascota: ( e.mascotas||[] ).join(', '),
     habitacion: e.habitacion,
     entrada: e.entrada.split(' ')[0],
     salida: e.salidaPrevista.split(' ')[0],
@@ -7254,7 +7267,7 @@ function enviarComprobanteWA(e, c, cobrado, metodo, pendiente) {
     + (pendiente > 0 ? `⏳ Saldo pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '✅ *Saldo: $0 — Pagado completo*');
   let msg = aplicarPlantillaWA('wa_tpl_pago', {
     nombre: c.nombre,
-    mascota: e.mascotas.join(', '),
+    mascota: ( e.mascotas||[] ).join(', '),
     habitacion: e.habitacion,
     entrada: e.entrada.split(' ')[0],
     salida: new Date().toLocaleDateString('es-MX'),
@@ -7366,7 +7379,7 @@ function globalSearch(val) {
     if (!tbody2) return;
     let rows = '';
     resultados.forEach(c => {
-      const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+      const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
       const colors = ['orange','blue','green'];
       const color = colors[c.id % 3];
       const mascsFiltradas = (c.mascotas||[]).filter(m => (m.nombre||'').toLowerCase().includes(v) || (m.raza||'').toLowerCase().includes(v));
@@ -7794,7 +7807,7 @@ function renderDeudasPendientes() {
   el.innerHTML = Object.entries(porCliente).map(([cid, cobs]) => {
     const c = clientes.find(cl=>cl.id===parseInt(cid));
     const total = cobs.reduce((s,co)=>s+co.monto,0);
-    const init = c ? c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('') : '??';
+    const init = c ? (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') : '??';
     return `<div style="padding:12px 16px;border-bottom:1px solid #fde68a;background:#fffbeb">
       <div style="display:flex;align-items:center;gap:12px">
         <div class="avatar" style="background:var(--orange)">${init}</div>
@@ -8312,7 +8325,7 @@ function renderCobrosEmpleado() {
   el.innerHTML = entradas2.map(([cid, cobs]) => {
     const c = clientes.find(cl => cl.id === parseInt(cid));
     const total = cobs.reduce((s, co) => s + co.monto, 0);
-    const init = c ? c.nombre.split(' ').map(w => w[0]).slice(0, 2).join('') : '??';
+    const init = c ? (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') : '??';
     const tel = c?.whatsapp || c?.telefono || '';
     return '<div style="padding:14px 16px;border-bottom:1px solid #fde68a;background:#fffbeb">' +
       '<div style="display:flex;align-items:flex-start;gap:12px">' +
@@ -8481,10 +8494,10 @@ function renderPendientes() {
     if (pendiente <= 0) return;
     count++;
     totalPendiente += pendiente;
-    const atrasado = new Date(e.salidaPrevista) < new Date();
+    const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
     rows += `<tr>
       <td><span style="font-weight:600;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cl?.id})">${cl?.nombre||'—'}</span></td>
-      <td><div style="font-size:11px">${e.mascotas.join(', ')}</div></td>
+      <td><div style="font-size:11px">${( e.mascotas||[] ).join(', ')}</div></td>
       <td><span style="${atrasado?'color:var(--red);font-weight:700':''}">${(e.salidaPrevista||'').split(' ')[0]} ${atrasado?'⚠️':''}</span></td>
       <td><span style="font-weight:600">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
       <td><span style="color:var(--blue)">$${adelE.toLocaleString('es-MX')} PM$</span></td>
@@ -8528,7 +8541,7 @@ function onCobroClienteChange() {
   entradas.filter(e=>e.clienteId===cid).forEach(e => {
     const opt = document.createElement('option');
     opt.value = e.id;
-    opt.textContent = `Hab.${e.habitacion} · ${e.mascotas.join(',')} · $${e.importe.toLocaleString()}`;
+    opt.textContent = `Hab.${e.habitacion} · ${( e.mascotas||[] ).join(',')} · $${e.importe.toLocaleString()}`;
     sel.appendChild(opt);
   });
   actualizarResumenCobro();
@@ -9330,7 +9343,7 @@ function renderRetencion() {
     } else {
       riesgoLista.innerHTML = riesgo.map(c => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
           <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
             <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · <span style="color:var(--orange);font-weight:700">${c.diasDesde} días sin venir</span></div>
@@ -9410,11 +9423,11 @@ function renderReportes() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">${entradas.filter(e=>new Date(e.salidaPrevista)<hoy).length}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">${entradas.filter(e=>new Date((e.salidaPrevista||"").replace(" ","T"))<hoy).length}</div>
         <div style="font-size:11px;color:var(--gray-400)">Atrasados</div>
       </div>
       <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--orange)">${entradas.filter(e=>{const d=new Date(e.salidaPrevista);return d>=hoy&&d<=en7Dias;}).length}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--orange)">${entradas.filter(e=>{const d=new Date((e.salidaPrevista||"").replace(" ","T"));return d>=hoy&&d<=en7Dias;}).length}</div>
         <div style="font-size:11px;color:var(--gray-400)">Salen en 7 días</div>
       </div>
     </div>
@@ -9478,13 +9491,13 @@ function renderReportes() {
 
   // Próximas salidas 7 días
   const proximas = entradas.filter(e => {
-    const d = new Date(e.salidaPrevista);
+    const d = new Date((e.salidaPrevista||"").replace(" ","T"));
     return d >= hoy && d <= en7Dias;
   }).sort((a,b) => new Date(a.salidaPrevista)-new Date(b.salidaPrevista));
   document.getElementById('rep-proximas-badge').textContent = proximas.length;
   document.getElementById('rep-proximas-tbody').innerHTML = proximas.map(e => {
     const c = clientes.find(cl=>cl.id===e.clienteId);
-    const diasRestantes = Math.ceil((new Date(e.salidaPrevista)-hoy)/(1000*60*60*24));
+    const diasRestantes = Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T"))-hoy)/(1000*60*60*24));
     return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:13px">${c?.nombre||'—'}</div></div></td>
       <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
@@ -9577,8 +9590,8 @@ function renderNuevaSalidaScreen(filtro='') {
 
   lista.innerHTML = filtradas.map(e => {
     const c = clientes.find(cl => cl.id === e.clienteId);
-    const diasHospedado = Math.ceil((hoy - new Date(e.entrada)) / (1000*60*60*24));
-    const atrasado = new Date(e.salidaPrevista) < hoy;
+    const diasHospedado = Math.ceil((hoy - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24));
+    const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < hoy;
     const adelantos = cobros.filter(co => co.entradaId === e.id).reduce((s,co) => s+co.monto, 0);
     const pendiente = Math.max(0, e.importe - adelantos);
     return `<div class="card" style="padding:0;overflow:hidden">
@@ -9651,18 +9664,18 @@ async function renderSalidas() {
     let totalIngresos = 0;
     tbody.innerHTML = filtradas.map(e => {
       const c = clientes.find(cl => cl.id === e.cliente_id);
-      const nombre = c?.nombre || '—';
+      const nombre = c?.nombre || e.nombre_cliente || e.cliente_nombre || '(cliente eliminado)';
       const mascs = (e.mascotas||[]).slice(0,2).join(', ');
       const fechaEnt = (e.fecha_entrada||'').slice(0,10);
       const fechaSal = (e.updated_at||'').slice(0,10);
       const dias = fechaEnt && fechaSal ? Math.max(1, Math.ceil((new Date(fechaSal)-new Date(fechaEnt))/(1000*60*60*24))) : '—';
       const importe = parseFloat(e.importe)||0;
       totalIngresos += importe;
-      // Buscar método de pago en cobros
       const cobrosSalida = cobros.filter(co => co.entradaId === e.id);
       const metodo = cobrosSalida[cobrosSalida.length-1]?.metodo || '—';
-      return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
-        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
+      const initials = nombre.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') || '?';
+      return `<tr onclick="verPerfilCliente(${c?.id||0})" style="cursor:${c?'pointer':'default'}">
+        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
         <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
         <td><div class="room-num">${e.habitacion||'—'}</div></td>
         <td><div class="date-cell"><div class="date">${fechaEnt}</div></div></td>
@@ -9690,9 +9703,9 @@ function renderRecordatorios() {
   const mesActual = hoy.getMonth();
 
   // --- KPIs ---
-  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
+  const atrasados = entradas.filter(e => new Date((e.salidaPrevista||"").replace(" ","T")) < hoy);
   const salenProx = entradas.filter(e => {
-    const d = new Date(e.salidaPrevista);
+    const d = new Date((e.salidaPrevista||"").replace(" ","T"));
     return d >= hoy && d <= new Date(hoy.getTime() + 2*86400000);
   });
   const reservasProx = (reservaciones||[]).filter(r => {
@@ -9737,7 +9750,7 @@ function renderRecordatorios() {
       <td><span class="badge ${esHoy?'badge-red':'badge-orange'}">${esHoy?'🔴 HOY':'🟡 Mañana'} ${(e.salidaPrevista||'').slice(0,10)}</span></td>
       <td><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
       <td><button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
+      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin salidas en las próximas 24 horas</td></tr>';
@@ -9746,7 +9759,7 @@ function renderRecordatorios() {
   document.getElementById('rec-atrasados-badge').textContent = atrasados.length;
   document.getElementById('rec-atrasados-tbody').innerHTML = atrasados.map(e => {
     const c = clientes.find(cl => cl.id === e.clienteId);
-    const diasExtra = Math.ceil((hoy - new Date(e.salidaPrevista)) / (1000*60*60*24));
+    const diasExtra = Math.ceil((hoy - new Date((e.salidaPrevista||"").replace(" ","T"))) / (1000*60*60*24));
     return `<tr>
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--red)">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
       <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
@@ -9755,7 +9768,7 @@ function renderRecordatorios() {
       <td><span class="badge badge-red">+${diasExtra} día${diasExtra!==1?'s':''}</span></td>
       <td>
         <button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
+        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin atrasados</td></tr>';
@@ -9784,12 +9797,12 @@ function renderRecordatorios() {
         const diasInactivo = ultimoCobro ? Math.ceil((hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24)) : '?';
         const mascs = (c.mascotas||[]).map(m => m.nombre||m).slice(0,2).join(', ');
         return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:13px">${c.nombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">🐕 ${mascs||'—'} · ${typeof diasInactivo === 'number' ? `${diasInactivo} días sin visita` : 'Sin historial'}</div>
           </div>
-          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
+          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
         </div>`;
       }).join('');
 
@@ -9797,7 +9810,7 @@ function renderRecordatorios() {
   const cumplesMes = [];
   clientes.forEach(c => {
     (c.mascotas||[]).forEach(m => {
-      const fechaNac = m.fechaNacimiento || m.fecha_nacimiento || '';
+      const fechaNac = m.nacimiento || m.fechaNacimiento || m.fecha_nacimiento || '';
       if (!fechaNac) return;
       const mes = parseInt((fechaNac||'').slice(5,7)) - 1;
       if (mes === mesActual) {
@@ -9843,7 +9856,7 @@ function renderReportesExtra() {
       : topRentables.map(({c, total}, i) => `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
           <div style="font-family:\'Nunito\',sans-serif;font-weight:900;font-size:14px;color:var(--gray-400);width:22px">#${i+1}</div>
-          <div class="avatar" style="width:32px;height:32px;font-size:12px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:32px;height:32px;font-size:12px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
           <div style="flex:1"><div style="font-weight:600;font-size:13px">${c.nombre}</div><div style="font-size:11px;color:var(--gray-400)">${c.alojamientos||0} estancias</div></div>
           <span class="amount">$${total.toLocaleString('es-MX')} PM$</span>
         </div>`).join('');
@@ -9900,7 +9913,7 @@ function buildContextoIA() {
 
   // === ESTADO ACTUAL ===
   const hospedadosActivos = entradas;
-  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
+  const atrasados = entradas.filter(e => new Date((e.salidaPrevista||"").replace(" ","T")) < hoy);
   const salidasHoy = entradas.filter(e => (e.salidaPrevista||'').startsWith(hoyStr));
   const totalAnimales = entradas.reduce((s,e) => s + (e.mascotas||[]).length, 0);
   const ocupacion = Math.round(entradas.length / parseInt(getConfig('hab_total','52')) * 100);
@@ -9951,7 +9964,7 @@ function buildContextoIA() {
   const todasEntradas = [...entradas]; // activos
   const duraciones = todasEntradas
     .filter(e => e.salidaPrevista && e.entrada)
-    .map(e => Math.max(0, Math.ceil((new Date(e.salidaPrevista)-new Date(e.entrada))/(1000*60*60*24))));
+    .map(e => Math.max(0, Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T"))-new Date((e.entrada||"").replace(" ","T")))/(1000*60*60*24))));
   const promNoches = duraciones.length
     ? Math.round(duraciones.reduce((s,n)=>s+n,0) / duraciones.length)
     : 0;
@@ -9997,7 +10010,7 @@ function buildContextoIA() {
 --- ESTADO ACTUAL ---
 Hospedajes activos: ${hospedadosActivos.length} | Animales en hotel: ${totalAnimales}
 Ocupación: ${ocupacion}% (${entradas.length}/${getConfig('hab_total','52')} espacios)
-Atrasados sin salida: ${atrasados.length} → ${atrasados.map(e=>{const c=clientes.find(cl=>cl.id===e.clienteId);return c?.nombre+'('+e.mascotas.join(',')+')'}).join(', ')||'ninguno'}
+Atrasados sin salida: ${atrasados.length} → ${atrasados.map(e=>{const c=clientes.find(cl=>cl.id===e.clienteId);return c?.nombre+'('+( e.mascotas||[] ).join(',')+')'}).join(', ')||'ninguno'}
 Salidas programadas hoy: ${salidasHoy.length}
 
 Hospedados activos detalle:
@@ -10005,7 +10018,7 @@ ${hospedadosActivos.map(e=>{
   const c=clientes.find(cl=>cl.id===e.clienteId);
   const pagado=cobros.filter(co=>co.entradaId===e.id).reduce((s,co)=>s+parseFloat(co.monto||0),0);
   const pend=Math.max(0,(e.importe||0)-pagado);
-  return `• ${c?.nombre} | ${e.mascotas.join(',')} | Hab${e.habitacion} | Entra:${(e.entrada||'').split('T')[0]} | Sale:${(e.salidaPrevista||'').split('T')[0]} | Total:$${e.importe} | Pagado:$${pagado} | Pendiente:$${pend}`;
+  return `• ${c?.nombre} | ${( e.mascotas||[] ).join(',')} | Hab${e.habitacion} | Entra:${(e.entrada||'').split('T')[0]} | Sale:${(e.salidaPrevista||'').split('T')[0]} | Total:$${e.importe} | Pagado:$${pagado} | Pendiente:$${pend}`;
 }).join('\n')}
 
 --- FACTURACIÓN HISTÓRICA ---

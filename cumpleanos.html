@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎂 Cumpleaños de tu mascota — PetGround</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange: #F47B20;
+      --blue:   #1B2F5B;
+      --green:  #27AE60;
+      --red:    #E74C3C;
+      --gray:   #6B7280;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Poppins',sans-serif;
+      background: linear-gradient(135deg,#1B2F5B 0%,#2A4480 50%,#F47B20 100%);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .card {
+      background:white;
+      border-radius:20px;
+      width:100%;
+      max-width:480px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3);
+      overflow:hidden;
+    }
+    .header {
+      background: var(--blue);
+      padding:28px 24px 20px;
+      text-align:center;
+      color:white;
+    }
+    .header .paw { font-size:40px; margin-bottom:8px; }
+    .header h1 { font-family:'Nunito',sans-serif; font-weight:900; font-size:22px; margin-bottom:4px; }
+    .header p { font-size:13px; opacity:0.8; line-height:1.5; }
+    .body { padding:24px; }
+    .step { display:none; }
+    .step.active { display:block; }
+
+    /* Buscador */
+    .search-wrap { position:relative; margin-bottom:8px; }
+    .search-wrap input {
+      width:100%;
+      padding:13px 16px 13px 44px;
+      border:2px solid var(--gray-200);
+      border-radius:12px;
+      font-size:15px;
+      font-family:'Poppins',sans-serif;
+      outline:none;
+      transition:border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color:var(--orange); }
+    .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:18px; }
+    .hint { font-size:12px; color:var(--gray); margin-bottom:16px; }
+
+    /* Resultados */
+    #resultados { margin-top:4px; }
+    .result-item {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:12px 14px;
+      border:2px solid var(--gray-200);
+      border-radius:12px;
+      margin-bottom:8px;
+      cursor:pointer;
+      transition:all 0.15s;
+    }
+    .result-item:hover { border-color:var(--orange); background:#fff8f3; }
+    .result-item.selected { border-color:var(--orange); background:#fff3e8; }
+    .pet-avatar {
+      width:44px; height:44px; border-radius:50%;
+      background:linear-gradient(135deg,var(--orange),#f59e0b);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; flex-shrink:0;
+    }
+    .pet-name { font-weight:700; font-size:15px; color:var(--blue); }
+    .pet-owner { font-size:12px; color:var(--gray); margin-top:2px; }
+    .no-results { text-align:center; padding:24px; color:var(--gray); font-size:14px; }
+    .searching { text-align:center; padding:20px; color:var(--gray); font-size:13px; }
+
+    /* Formulario de fecha */
+    .selected-pet-banner {
+      display:flex; align-items:center; gap:12px;
+      background:var(--gray-100); border-radius:12px;
+      padding:14px 16px; margin-bottom:20px;
+    }
+    .selected-pet-banner .pet-avatar { width:40px; height:40px; font-size:20px; }
+    .label { font-size:13px; font-weight:600; color:var(--blue); margin-bottom:6px; display:block; }
+    .date-input {
+      width:100%;
+      padding:13px 16px;
+      border:2px solid var(--gray-200);
+      border-radius:12px;
+      font-size:15px;
+      font-family:'Poppins',sans-serif;
+      outline:none;
+      margin-bottom:20px;
+      transition:border-color 0.2s;
+    }
+    .date-input:focus { border-color:var(--orange); }
+    .nota-privacidad {
+      background:#f0f9ff;
+      border:1px solid #bae6fd;
+      border-radius:10px;
+      padding:12px 14px;
+      font-size:12px;
+      color:#0369a1;
+      margin-bottom:20px;
+      line-height:1.5;
+    }
+
+    /* Botones */
+    .btn {
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      font-size:15px;
+      font-weight:700;
+      font-family:'Poppins',sans-serif;
+      cursor:pointer;
+      transition:all 0.15s;
+    }
+    .btn-primary { background:var(--orange); color:white; }
+    .btn-primary:hover { background:#e06b10; }
+    .btn-primary:disabled { background:#ccc; cursor:not-allowed; }
+    .btn-ghost { background:var(--gray-100); color:var(--blue); margin-top:8px; }
+    .btn-ghost:hover { background:var(--gray-200); }
+
+    /* Éxito */
+    .success-screen { text-align:center; padding:8px 0; }
+    .success-screen .emoji { font-size:64px; margin-bottom:16px; }
+    .success-screen h2 { font-family:'Nunito',sans-serif; font-weight:900; font-size:22px; color:var(--blue); margin-bottom:8px; }
+    .success-screen p { font-size:14px; color:var(--gray); line-height:1.6; margin-bottom:20px; }
+    .success-badge {
+      display:inline-block;
+      background:#f0fdf4;
+      border:1.5px solid var(--green);
+      color:var(--green);
+      border-radius:10px;
+      padding:10px 20px;
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:20px;
+    }
+
+    /* Error */
+    .error-msg { color:var(--red); font-size:13px; margin-top:6px; display:none; }
+
+    /* Spinner */
+    .spinner { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,0.4); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Footer */
+    .footer { text-align:center; padding:0 24px 20px; }
+    .footer p { font-size:11px; color:var(--gray); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="paw">🐾</div>
+    <h1>Cumpleaños de tu mascota</h1>
+    <p>Ayúdanos a felicitar a tu mascota en su día especial 🎂<br>Busca tu nombre o el de tu mascota para comenzar.</p>
+  </div>
+
+  <div class="body">
+
+    <!-- PASO 1: BUSCAR -->
+    <div class="step active" id="step-buscar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="input-buscar"
+          placeholder="Ej: Africa, Fernanda, 2225..."
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          oninput="onBuscar(this.value)">
+      </div>
+      <div class="hint">Puedes buscar por nombre de tu mascota, tu nombre o tu número de WhatsApp</div>
+      <div id="resultados"></div>
+    </div>
+
+    <!-- PASO 2: CONFIRMAR + FECHA -->
+    <div class="step" id="step-fecha">
+      <div class="selected-pet-banner" id="banner-mascota"></div>
+      <label class="label">📅 ¿Cuándo nació tu mascota?</label>
+      <input type="date" class="date-input" id="input-fecha" max="">
+      <div class="nota-privacidad">
+        🔒 <strong>Tu privacidad importa.</strong> Esta información solo será usada para felicitar a tu mascota en su cumpleaños. Los datos serán revisados por el equipo de PetGround antes de guardarse.
+      </div>
+      <div class="error-msg" id="err-fecha">Por favor selecciona una fecha válida</div>
+      <button class="btn btn-primary" id="btn-enviar" onclick="enviarSolicitud()">
+        🎂 Enviar fecha de cumpleaños
+      </button>
+      <button class="btn btn-ghost" onclick="volverBuscar()">← Buscar otra mascota</button>
+    </div>
+
+    <!-- PASO 3: ÉXITO -->
+    <div class="step" id="step-exito">
+      <div class="success-screen">
+        <div class="emoji">🎉</div>
+        <h2>¡Gracias!</h2>
+        <p>Recibimos la fecha de cumpleaños.<br>En cuanto la revisemos, <strong id="pet-nombre-exito">tu mascota</strong> recibirá felicitaciones especiales en su día 🐾</p>
+        <div class="success-badge">✅ Solicitud enviada correctamente</div>
+        <button class="btn btn-ghost" onclick="reiniciar()">Actualizar otra mascota</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>🐾 PetGround · Hotel y Guardería de Mascotas · Puebla, México</p>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://rekegzxcypltnlxhsevc.supabase.co';
+const SUPA_KEY = 'sb_publishable_vK7WA-wAcui1UbZKhUq6Pw_rH0nGGR0';
+
+let mascotaSeleccionada = null;
+let buscarTimeout = null;
+
+// ─── Utilidades ───────────────────────────────────────────
+async function api(method, table, body=null, params='') {
+  const url = `${SUPA_URL}/rest/v1/${table}${params}`;
+  const opts = {
+    method,
+    headers: {
+      'Content-Type':'application/json',
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.status === 204 ? null : res.json();
+}
+
+// Enmascarar nombre: "Fernanda Veana" → "F****** V****"
+function enmascararNombre(nombre) {
+  if (!nombre) return '—';
+  return nombre.trim().split(' ').map(w =>
+    w.length === 0 ? '' :
+    w[0].toUpperCase() + '*'.repeat(Math.min(w.length - 1, 4))
+  ).join(' ');
+}
+
+// Enmascarar teléfono: mostrar solo últimos 4 dígitos
+function enmascararTel(tel) {
+  if (!tel) return '';
+  const digits = (tel||'').replace(/\D/g,'');
+  return '****' + digits.slice(-4);
+}
+
+// ─── PASO 1: BUSCAR ───────────────────────────────────────
+function onBuscar(val) {
+  clearTimeout(buscarTimeout);
+  const q = val.trim();
+  if (q.length < 2) {
+    document.getElementById('resultados').innerHTML = '';
+    return;
+  }
+  document.getElementById('resultados').innerHTML = '<div class="searching">🔍 Buscando...</div>';
+  buscarTimeout = setTimeout(() => buscar(q), 500);
+}
+
+async function buscar(q) {
+  try {
+    // Buscar mascotas cuyo nombre coincide
+    const porMascota = await api('GET', 'mascotas', null,
+      `?nombre=ilike.*${encodeURIComponent(q)}*&select=id,nombre,raza,cliente_id&limit=10`);
+
+    // Buscar clientes cuyo nombre o teléfono coincide
+    const porCliente = await api('GET', 'clientes', null,
+      `?or=(nombre.ilike.*${encodeURIComponent(q)}*,whatsapp.ilike.*${encodeURIComponent(q)}*,telefono.ilike.*${encodeURIComponent(q)}*)&select=id,nombre,whatsapp&limit=10`);
+
+    // IDs de clientes encontrados directamente
+    const clienteIdsDirectos = (porCliente||[]).map(c => c.id);
+
+    // Mascotas de esos clientes
+    let mascotasDeClientes = [];
+    if (clienteIdsDirectos.length > 0) {
+      mascotasDeClientes = await api('GET', 'mascotas', null,
+        `?cliente_id=in.(${clienteIdsDirectos.join(',')})&select=id,nombre,raza,cliente_id&limit=20`);
+    }
+
+    // Unir y deduplicar
+    const todasMascotas = [...(porMascota||[])];
+    (mascotasDeClientes||[]).forEach(m => {
+      if (!todasMascotas.find(x => x.id === m.id)) todasMascotas.push(m);
+    });
+
+    if (todasMascotas.length === 0) {
+      document.getElementById('resultados').innerHTML =
+        `<div class="no-results">😕 No encontramos resultados para "<strong>${q}</strong>"<br><small>Intenta con el nombre completo o tu número de teléfono</small></div>`;
+      return;
+    }
+
+    // Obtener clientes de todas las mascotas
+    const clienteIds = [...new Set(todasMascotas.map(m => m.cliente_id).filter(Boolean))];
+    const clientesData = clienteIds.length > 0
+      ? await api('GET', 'clientes', null, `?id=in.(${clienteIds.join(',')})&select=id,nombre,whatsapp`)
+      : [];
+    const clienteMap = {};
+    (clientesData||[]).forEach(c => { clienteMap[c.id] = c; });
+
+    renderResultados(todasMascotas, clienteMap);
+  } catch(e) {
+    document.getElementById('resultados').innerHTML =
+      '<div class="no-results" style="color:#dc2626">⚠️ Error al buscar. Intenta de nuevo.</div>';
+  }
+}
+
+function renderResultados(mascotas, clienteMap) {
+  const cont = document.getElementById('resultados');
+  cont.innerHTML = mascotas.map(m => {
+    const c = clienteMap[m.cliente_id];
+    const nombreEnm = enmascararNombre(c?.nombre);
+    const telEnm = c?.whatsapp ? enmascararTel(c.whatsapp) : '';
+    const emoji = ['🐕','🐈','🐇','🦜','🐾'][Math.abs(m.id) % 5];
+    return `
+      <div class="result-item" onclick="seleccionarMascota(${m.id},'${(m.nombre||'').replace(/'/g,"\\'")}','${(m.raza||'').replace(/'/g,"\\'")}',${m.cliente_id},'${(c?.nombre||'').replace(/'/g,"\\'")}')">
+        <div class="pet-avatar">${emoji}</div>
+        <div>
+          <div class="pet-name">${m.nombre}</div>
+          <div class="pet-owner">👤 ${nombreEnm}${telEnm ? ' · 📱 '+telEnm : ''}${m.raza ? ' · '+m.raza : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── PASO 2: SELECCIONAR Y FECHA ─────────────────────────
+function seleccionarMascota(id, nombre, raza, clienteId, clienteNombre) {
+  mascotaSeleccionada = { id, nombre, raza, clienteId, clienteNombre };
+
+  document.getElementById('banner-mascota').innerHTML = `
+    <div class="pet-avatar" style="width:40px;height:40px;font-size:20px">🐾</div>
+    <div>
+      <div style="font-weight:700;font-size:15px;color:var(--blue)">${nombre}</div>
+      <div style="font-size:12px;color:var(--gray)">${raza||'Mascota'} · ${enmascararNombre(clienteNombre)}</div>
+    </div>
+  `;
+
+  // Máximo: hoy
+  document.getElementById('input-fecha').max = new Date().toISOString().split('T')[0];
+  document.getElementById('input-fecha').value = '';
+  document.getElementById('err-fecha').style.display = 'none';
+
+  irStep('step-fecha');
+}
+
+async function enviarSolicitud() {
+  const fecha = document.getElementById('input-fecha').value;
+  if (!fecha) {
+    document.getElementById('err-fecha').style.display = 'block';
+    return;
+  }
+  document.getElementById('err-fecha').style.display = 'none';
+
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+  try {
+    await api('POST', 'cumpleanos_requests', {
+      mascota_id:    mascotaSeleccionada.id,
+      mascota_nombre: mascotaSeleccionada.nombre,
+      cliente_id:    mascotaSeleccionada.clienteId,
+      cliente_nombre: mascotaSeleccionada.clienteNombre,
+      fecha_propuesta: fecha,
+      status:        'pendiente',
+      created_at:    new Date().toISOString()
+    });
+
+    document.getElementById('pet-nombre-exito').textContent = mascotaSeleccionada.nombre;
+    irStep('step-exito');
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '🎂 Enviar fecha de cumpleaños';
+    // Si la tabla no existe, mostrar error amigable
+    document.getElementById('err-fecha').textContent = 'Error al enviar. Por favor contáctanos directamente por WhatsApp.';
+    document.getElementById('err-fecha').style.display = 'block';
+    console.error(e);
+  }
+}
+
+// ─── NAVEGACIÓN ───────────────────────────────────────────
+function irStep(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function volverBuscar() {
+  mascotaSeleccionada = null;
+  irStep('step-buscar');
+}
+function reiniciar() {
+  mascotaSeleccionada = null;
+  document.getElementById('input-buscar').value = '';
+  document.getElementById('resultados').innerHTML = '';
+  irStep('step-buscar');
+}
+</script>
+</body>
+</html>

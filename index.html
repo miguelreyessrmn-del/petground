@@ -9919,7 +9919,7 @@ async function rechazarCumpleanos(reqId, mascotaNombre) {
 
 function copiarLinkCumpleanos() {
   const url = getConfig('negocio_url', 'petground.pages.dev');
- const link = window.location.origin + '/cumpleanos.html';
+ const link = window.location.href.replace('index.html','').replace(/\/$/, '') + '/cumpleanos.html';
   navigator.clipboard.writeText(link).then(() => {
     notify('🔗 Link copiado: ' + link, 'success');
   }).catch(() => {

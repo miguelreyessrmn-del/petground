@@ -1578,11 +1578,11 @@
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6f0e4;border:1.5px solid #86efac">
             <div class="stat-num" id="caja-entradas" style="color:#1a7a4a">$0</div>
-            <div class="stat-label">Entradas hoy</div>
+            <div class="stat-label" id="caja-label-entradas">Entradas hoy</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#fdecea;border:1.5px solid #fca5a5">
             <div class="stat-num" id="caja-salidas" style="color:#c0392b">$0</div>
-            <div class="stat-label">Salidas hoy</div>
+            <div class="stat-label" id="caja-label-salidas">Salidas hoy</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6e4f7;border:1.5px solid #93c5fd">
             <div class="stat-num" id="caja-total" style="color:#1a4f8a">$0</div>
@@ -8198,22 +8198,33 @@ async function renderMovimientosCaja() {
   const el = document.getElementById('caja-movimientos-lista');
   if (!el) return;
 
-  // Fecha filtro
+  // Fecha filtro para la lista
   const fechaInput = document.getElementById('caja-fecha-filtro');
-  if (!fechaInput.value) {
-    fechaInput.value = new Date().toISOString().split('T')[0];
-  }
+  if (!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
   const fecha = fechaInput.value;
   const desde = fecha + 'T00:00:00';
   const hasta = fecha + 'T23:59:59';
 
-  // KPIs: acumulado desde último corte
+  // Buscar último corte para los KPIs
   let desdeCorte = '';
+  let labelPeriodo = 'hoy';
   try {
     const uc = await sb('GET','caja_movimientos',null,
       '?motivo=eq.Corte+realizado&order=fecha.desc&limit=1&select=fecha');
-    if (uc && uc[0]) desdeCorte = '&fecha=gte.' + uc[0].fecha.replace(/\+/g,'%2B');
-  } catch(e) {}
+    if (uc && uc[0]) {
+      desdeCorte = '&fecha=gte.' + uc[0].fecha.replace(/\+/g,'%2B');
+      const fechaCorte = new Date(uc[0].fecha).toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+      labelPeriodo = `desde ${fechaCorte}`;
+    } else {
+      // Sin corte previo → mostrar solo hoy en los KPIs
+      const hoy = new Date().toISOString().split('T')[0];
+      desdeCorte = `&fecha=gte.${hoy}T00:00:00`;
+      labelPeriodo = 'hoy';
+    }
+  } catch(e) {
+    const hoy = new Date().toISOString().split('T')[0];
+    desdeCorte = `&fecha=gte.${hoy}T00:00:00`;
+  }
 
   let movsTotal = [];
   try {
@@ -8228,7 +8239,7 @@ async function renderMovimientosCaja() {
       `?fecha=gte.${desde}&fecha=lte.${hasta}&order=fecha.asc&select=*`);
   } catch(e) {}
 
-  // Calcular KPIs desde último corte
+  // Calcular KPIs
   const entradas = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
   const salidas  = movsTotal.filter(m=>m.tipo==='salida' && m.motivo!=='Corte realizado').reduce((s,m)=>s+parseFloat(m.monto||0),0);
   const total    = entradas - salidas;
@@ -8236,12 +8247,16 @@ async function renderMovimientosCaja() {
   const elE = document.getElementById('caja-entradas');
   const elS = document.getElementById('caja-salidas');
   const elT = document.getElementById('caja-total');
+  const elLE = document.getElementById('caja-label-entradas');
+  const elLS = document.getElementById('caja-label-salidas');
   if (elE) elE.textContent = '$' + entradas.toLocaleString('es-MX');
   if (elS) elS.textContent = '$' + salidas.toLocaleString('es-MX');
   if (elT) {
     elT.textContent = '$' + total.toLocaleString('es-MX');
     elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b';
   }
+  if (elLE) elLE.textContent = `Entradas ${labelPeriodo}`;
+  if (elLS) elLS.textContent = `Salidas ${labelPeriodo}`;
 
   if (!movs.length) {
     el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos este día</div></div>';

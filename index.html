@@ -2125,6 +2125,15 @@
       </div>
 
       <!-- NUEVAS SECCIONES AVANZADAS -->
+      <!-- Descuentos -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">🏷️ Descuentos otorgados</div>
+          <span class="badge badge-red">Dinero que no cobré</span>
+        </div>
+        <div id="rep-descuentos" style="padding:16px"></div>
+      </div>
+
       <div class="grid-2" style="margin-top:20px;margin-bottom:20px">
         <div class="card">
           <div class="card-header">
@@ -3216,6 +3225,8 @@ async function cargarTodo() {
       salidaPrevista: (e.fecha_salida_prevista||'').replace('T',' ').slice(0,16),
       importe: parseFloat(e.importe)||0,
       servicio: e.servicio||'',
+      servicios_json: e.servicios_json || null,
+      descuento_monto: parseFloat(e.descuento_monto)||0,
       notas: e.notas||'',
       status: e.status||'activo',
       responsiva: e.responsiva_firmada||false,
@@ -4293,26 +4304,42 @@ function verDetalleHospedaje(id) {
       const sels = mdsMasc.querySelectorAll('select');
       if (!sels[idx]) return;
 
-      // Prioridad: 1) servicio_id en mascota, 2) localStorage, 3) e.servicio (entrada), 4) último servicio global
-      let svcId = mascObj?.servicio_id
-        ? String(mascObj.servicio_id)
-        : (localStorage.getItem('pg_svc_'+m) || '');
+      // Prioridad: 1) servicios_json (por mascota), 2) servicio_id en mascota,
+      //            3) localStorage, 4) e.servicio (entrada), 5) último global
+      let svcId = '';
 
-      // Si no hay, intentar desde e.servicio (nombre o ID guardado en la entrada)
+      // 1) servicios_json — mapa {mascotaNombre: serviceId} guardado en la entrada
+      if (e.servicios_json) {
+        try {
+          const mapa = typeof e.servicios_json === 'string'
+            ? JSON.parse(e.servicios_json) : e.servicios_json;
+          if (mapa[m]) svcId = String(mapa[m]);
+        } catch(_) {}
+      }
+
+      // 2) servicio_id en el objeto mascota (tabla mascotas)
+      if (!svcId && mascObj?.servicio_id) svcId = String(mascObj.servicio_id);
+
+      // 3) localStorage
+      if (!svcId) svcId = localStorage.getItem('pg_svc_'+m) || '';
+
+      // 4) e.servicio (ID o nombre guardado en la entrada)
       if (!svcId && e.servicio) {
         const listaServs = getServicios();
-        const porId   = listaServs.find(s => String(s.id) === String(e.servicio));
-        const porNom  = listaServs.find(s => s.nombre === e.servicio || s.nombre.toLowerCase() === e.servicio.toLowerCase());
-        const match   = porId || porNom;
+        const porId  = listaServs.find(s => String(s.id) === String(e.servicio));
+        const porNom = listaServs.find(s => s.nombre === e.servicio ||
+          s.nombre.toLowerCase() === (e.servicio||'').toLowerCase());
+        const match = porId || porNom;
         if (match) svcId = String(match.id);
       }
-      // Último fallback: último servicio global
+
+      // 5) Último servicio global
       if (!svcId) svcId = localStorage.getItem('pg_ultimo_servicio') || '';
 
       if (svcId) {
         sels[idx].value = svcId;
-        // Si el select no reconoció el valor (opción no existe), dejar vacío
         if (sels[idx].value !== svcId) sels[idx].value = '';
+        else mdh_calcResumen();
       }
     });
   }
@@ -6903,15 +6930,30 @@ async function guardarEntrada() {
 
   const filas = document.querySelectorAll('#conceptos-tbody tr');
   let totalFinal = 0;
+  let totalSinDescuento = 0;
   let hayPrecioVacio = false;
+  let primerServicioId = '';
+  let serviciosPorMascota = {};
+
   filas.forEach(tr => {
-    const inputs = tr.querySelectorAll('input');
-    const uds = parseFloat(inputs[0]?.value)||0;
-    const precio = parseFloat(inputs[1]?.value)||0;
-    const desc = parseFloat(inputs[2]?.value)||0;
+    const servSel = tr.querySelector('select');
+    const inputs  = tr.querySelectorAll('input');
+    const uds     = parseFloat(inputs[0]?.value)||0;
+    const precio  = parseFloat(inputs[1]?.value)||0;
+    const desc    = parseFloat(inputs[2]?.value)||0;
     if (precio === 0) hayPrecioVacio = true;
-    totalFinal += (uds * precio) * (1 - desc/100);
+    const bruto = uds * precio;
+    totalSinDescuento += bruto;
+    totalFinal        += bruto * (1 - desc/100);
+    // Guardar servicio por mascota
+    const svcId = servSel?.value || '';
+    if (svcId && !primerServicioId) primerServicioId = svcId;
+    const mascNombre = tr.dataset?.mascota || tr.querySelector('td')?.textContent?.replace('🐕','').trim() || '';
+    if (svcId && mascNombre) serviciosPorMascota[mascNombre] = svcId;
   });
+
+  const descuentoMonto = Math.round((totalSinDescuento - totalFinal) * 100) / 100;
+
   // Si editando sin conceptos, mantener importe original
   if (!filas.length && entradaEditandoId) {
     const eOrig = entradas.find(en=>en.id===entradaEditandoId);
@@ -6925,7 +6967,10 @@ async function guardarEntrada() {
   const datos = {
     cliente_id: clienteEntradaSeleccionado.id, mascotas, habitacion: hab,
     fecha_entrada: `${fe}T${he}:00`, fecha_salida_prevista: `${fs}T${hs}:00`,
-    importe: totalFinal, servicio: '',
+    importe: totalFinal,
+    servicio: primerServicioId,
+    servicios_json: Object.keys(serviciosPorMascota).length > 0 ? JSON.stringify(serviciosPorMascota) : null,
+    descuento_monto: descuentoMonto,
     notas: document.getElementById('ne-notas').value, status: 'activo',
     responsiva_firmada: document.getElementById('ne-responsiva')?.checked || false
   };
@@ -9918,8 +9963,7 @@ async function rechazarCumpleanos(reqId, mascotaNombre) {
 }
 
 function copiarLinkCumpleanos() {
-  const url = getConfig('negocio_url', 'petground.pages.dev');
- const link = window.location.href.replace('index.html','').replace(/\/$/, '') + '/cumpleanos.html';
+  const link = window.location.origin + '/cumpleanos.html';
   navigator.clipboard.writeText(link).then(() => {
     notify('🔗 Link copiado: ' + link, 'success');
   }).catch(() => {
@@ -10008,7 +10052,62 @@ function renderReportesExtra() {
         </div>`).join('');
   }
 
-  // Servicios más usados
+  // Descuentos otorgados (desde historial de cobros + entradas activas)
+  const contDescuentos = document.getElementById('rep-descuentos');
+  if (contDescuentos) {
+    // Usar entradas activas + buscar completadas si hay datos
+    const todasConDesc = entradas.filter(e => e.descuento_monto > 0);
+    const totalDesc = todasConDesc.reduce((s,e) => s + e.descuento_monto, 0);
+    const totalBruto = todasConDesc.reduce((s,e) => s + e.importe + e.descuento_monto, 0);
+    const pctPromedio = totalBruto > 0 ? (totalDesc / totalBruto * 100).toFixed(1) : 0;
+
+    // Top clientes con más descuento
+    const descPorCliente = {};
+    todasConDesc.forEach(e => {
+      const k = e.clienteId;
+      if (!descPorCliente[k]) descPorCliente[k] = { monto: 0, visitas: 0 };
+      descPorCliente[k].monto   += e.descuento_monto;
+      descPorCliente[k].visitas += 1;
+    });
+    const topDesc = Object.entries(descPorCliente)
+      .map(([id, d]) => ({ c: clientes.find(cl => cl.id == id), ...d }))
+      .filter(x => x.c)
+      .sort((a,b) => b.monto - a.monto)
+      .slice(0, 8);
+
+    contDescuentos.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">
+        <div style="background:var(--red-light);border:1.5px solid var(--red);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">$${totalDesc.toLocaleString('es-MX')}</div>
+          <div style="font-size:11px;color:var(--red);font-weight:600">PM$ descontados</div>
+        </div>
+        <div style="background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:#92400e">${pctPromedio}%</div>
+          <div style="font-size:11px;color:#92400e;font-weight:600">Descuento promedio</div>
+        </div>
+        <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--blue)">${todasConDesc.length}</div>
+          <div style="font-size:11px;color:var(--gray-500);font-weight:600">Entradas con descuento</div>
+        </div>
+        <div style="background:var(--green-light);border:1.5px solid var(--green);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">$${totalBruto.toLocaleString('es-MX')}</div>
+          <div style="font-size:11px;color:var(--green);font-weight:600">Sin descuentos serían</div>
+        </div>
+      </div>
+      <div style="font-weight:700;font-size:12px;color:var(--gray-500);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Top clientes con descuento</div>
+      ${topDesc.length === 0
+        ? '<div style="color:var(--gray-400);font-size:13px;padding:12px 0">Sin descuentos registrados aún — aplican a entradas nuevas</div>'
+        : topDesc.map(({c,monto,visitas},i) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+            <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;color:var(--gray-400);width:20px">#${i+1}</div>
+            <div class="avatar" style="width:30px;height:30px;font-size:11px">${(c.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:600">${c.nombre}</div><div style="font-size:11px;color:var(--gray-400)">${visitas} visita${visitas!==1?'s':''} con descuento</div></div>
+            <span style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--red);font-size:14px">-$${monto.toLocaleString('es-MX')}</span>
+          </div>`).join('')}
+      <div style="margin-top:12px;padding:10px;background:var(--yellow-light);border-radius:8px;font-size:11px;color:#92400e">
+        💡 Solo se contabilizan entradas registradas desde esta actualización. Los registros anteriores no tienen descuento guardado.
+      </div>`;
+  }
   const usoPorServ = {};
   entradas.forEach(e => { if(e.servicio) usoPorServ[e.servicio] = (usoPorServ[e.servicio]||0)+1; });
   cobros.forEach(co => { if(co.concepto) usoPorServ[co.concepto] = (usoPorServ[co.concepto]||0)+1; });

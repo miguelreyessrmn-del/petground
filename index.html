@@ -1600,16 +1600,17 @@
           </button>
         </div>
 
-        <!-- Movimientos del día -->
+        <!-- Movimientos desde último corte -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📋 Movimientos de caja hoy</div>
-            <input type="date" id="caja-fecha-filtro" class="form-input" 
-              style="width:160px;padding:6px 10px;font-size:13px"
-              onchange="renderMovimientosCaja()">
+            <div>
+              <div class="card-title">📋 Movimientos desde último corte</div>
+              <div id="caja-periodo-label" style="font-size:11px;color:var(--gray-400);margin-top:2px"></div>
+            </div>
+            <span class="badge badge-blue" id="caja-sin-ticket-badge" style="display:none">⚠️ Sin ticket</span>
           </div>
           <div id="caja-movimientos-lista">
-            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos hoy</div></div>
+            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos</div></div>
           </div>
         </div>
 
@@ -3021,6 +3022,45 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-servicio')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarServicio()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OBLIGATORIO POST-COBRO -->
+<div id="modal-cobro-confirmacion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <!-- Header verde -->
+    <div style="background:var(--green);padding:20px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:6px">💵</div>
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:white">COBRO REGISTRADO</div>
+    </div>
+    <!-- Detalle del cobro -->
+    <div id="cobro-detalle" style="padding:20px 24px;border-bottom:1px solid var(--gray-100)"></div>
+    <!-- Botones -->
+    <div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
+      <button id="cobro-btn-imprimir" onclick="cobro_imprimirYContinuar()"
+        style="width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
+        🖨️ IMPRIMIR TICKET Y CONTINUAR
+      </button>
+      <div id="cobro-sin-ticket-wrap" style="display:none">
+        <div style="font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:8px">¿Por qué no se imprime el ticket?</div>
+        <select id="cobro-motivo-sin-ticket" class="form-input" style="margin-bottom:8px;font-size:13px">
+          <option value="">— Selecciona motivo —</option>
+          <option value="Impresora sin papel">Impresora sin papel</option>
+          <option value="QZ Tray no conectado">QZ Tray no conectado</option>
+          <option value="Impresora apagada">Impresora apagada</option>
+          <option value="Cliente no quiso ticket">Cliente no quiso ticket</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <button onclick="cobro_continuarSinTicket()"
+          style="width:100%;padding:11px;background:var(--gray-100);color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          Continuar sin ticket
+        </button>
+      </div>
+      <button onclick="cobro_mostrarSinTicket()" id="cobro-btn-sin-ticket"
+        style="background:none;border:none;color:var(--gray-400);font-size:12px;cursor:pointer;text-decoration:underline">
+        No puedo imprimir →
+      </button>
     </div>
   </div>
 </div>
@@ -7235,23 +7275,17 @@ async function confirmarSalida() {
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
-    // Si pagó en efectivo → abrir cajón + imprimir ticket
-    if (metodo === 'Efectivo' && cobrado > 0 && c) {
-      const mascotasNombre = (e.mascotas||[]).join(', ');
-      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual);
-    }
-
-    if (c?.whatsapp && cobrado > 0) {
-      setTimeout(() => {
-        if (confirm(`¿Enviar comprobante de pago por WhatsApp a ${c.nombre}?`)) {
-          enviarComprobanteWA(e, c, cobrado, metodo, pendiente);
-        }
-      }, 400);
-    }
-    if (pendiente > 0) {
-      notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
+    // Abrir cajón (efectivo) + modal obligatorio de ticket para todos los cobros
+    if (cobrado > 0 && c) {
+      const mascotasNombre = ( e.mascotas||[] ).join(', ');
+      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual, metodo);
+      // El notify y WA se hacen al cerrar el modal
     } else {
-      notify('✅ Salida registrada y cobro completo', 'success');
+      if (pendiente > 0) {
+        notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
+      } else {
+        notify('✅ Salida registrada', 'success');
+      }
     }
   } catch(err) {
     notify('❌ Error al registrar salida: ' + err.message, 'error');
@@ -8192,13 +8226,137 @@ async function confirmarAperturaCaja() {
   renderMovimientosCaja();
 }
 
-// Apertura automática al cobrar en efectivo
-async function abrirCajonPorCobro(cliente, mascota, monto, entradaId) {
-  const ticket = buildTicketCaja('cobro_efectivo', {cliente, mascota, monto});
-  await imprimirConCajon(ticket);
-  await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
-    `${cliente} - ${mascota}`, entradaId);
+// ===================== MODAL OBLIGATORIO POST-COBRO =====================
+let _cobroActual = null; // datos del cobro pendiente de confirmar ticket
+
+function mostrarModalCobro(datos) {
+  // datos: {cliente, mascota, monto, metodo, movimientoId, entradaId}
+  _cobroActual = datos;
+  const qzOk = typeof qz !== 'undefined' && qz.websocket?.isActive();
+
+  document.getElementById('cobro-detalle').innerHTML = `
+    <div style="display:grid;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--gray-500)">Cliente</span>
+        <span style="font-weight:700;font-size:14px">${datos.cliente||'—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--gray-500)">Mascota(s)</span>
+        <span style="font-weight:700;font-size:14px">${datos.mascota||'—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--gray-500)">Método</span>
+        <span style="font-weight:700">${datos.metodo||'Efectivo'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--gray-100)">
+        <span style="font-size:15px;font-weight:700">Total cobrado</span>
+        <span style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">$${(datos.monto||0).toLocaleString('es-MX')} PM$</span>
+      </div>
+      ${!qzOk ? '<div style="background:#fef3c7;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-top:4px">⚠️ Impresora no conectada — abre QZ Tray para imprimir</div>' : ''}
+    </div>`;
+
+  // Actualizar botón según estado QZ
+  const btnImp = document.getElementById('cobro-btn-imprimir');
+  if (qzOk) {
+    btnImp.style.background = 'var(--blue)';
+    btnImp.innerHTML = '🖨️ IMPRIMIR TICKET Y CONTINUAR';
+  } else {
+    btnImp.style.background = '#94a3b8';
+    btnImp.innerHTML = '🖨️ Imprimir (QZ no conectado)';
+  }
+  document.getElementById('cobro-sin-ticket-wrap').style.display = 'none';
+  document.getElementById('cobro-btn-sin-ticket').style.display = '';
+  document.getElementById('cobro-motivo-sin-ticket').value = '';
+
+  const modal = document.getElementById('modal-cobro-confirmacion');
+  modal.style.display = 'flex';
+}
+
+async function cobro_imprimirYContinuar() {
+  if (!_cobroActual) return;
+  const ok = await conectarQZ();
+  if (ok) {
+    const ticket = buildTicketCaja('cobro_efectivo', _cobroActual);
+    await imprimirConCajon(ticket);
+    // Marcar ticket como impreso en Supabase
+    if (_cobroActual.movimientoId) {
+      try { await sb('PATCH','caja_movimientos',{ticket_impreso:true},`?id=eq.${_cobroActual.movimientoId}`); } catch(e) {}
+    }
+    cerrarModalCobro();
+    notify('✅ Ticket impreso', 'success');
+  } else {
+    // Mostrar sección sin ticket
+    cobro_mostrarSinTicket();
+    notify('⚠️ No se pudo conectar a QZ Tray', 'error');
+  }
+}
+
+function cobro_mostrarSinTicket() {
+  document.getElementById('cobro-sin-ticket-wrap').style.display = '';
+  document.getElementById('cobro-btn-sin-ticket').style.display = 'none';
+}
+
+async function cobro_continuarSinTicket() {
+  const motivo = document.getElementById('cobro-motivo-sin-ticket').value;
+  if (!motivo) { notify('Selecciona el motivo', 'error'); return; }
+  // Guardar motivo_sin_ticket en Supabase
+  if (_cobroActual?.movimientoId) {
+    try {
+      await sb('PATCH','caja_movimientos',
+        { ticket_impreso: false, motivo_sin_ticket: motivo },
+        `?id=eq.${_cobroActual.movimientoId}`);
+    } catch(e) {}
+  }
+  cerrarModalCobro();
+  notify('⚠️ Cobro registrado sin ticket — ' + motivo, 'info');
+}
+
+function cerrarModalCobro() {
+  document.getElementById('modal-cobro-confirmacion').style.display = 'none';
+  _cobroActual = null;
   renderMovimientosCaja();
+}
+
+// Apertura automática al cobrar — ahora muestra modal obligatorio
+async function abrirCajonPorCobro(cliente, mascota, monto, entradaId, metodo) {
+  // 1. Abrir cajón si es efectivo
+  if (!metodo || metodo === 'Efectivo') abrirCajonSilencioso();
+
+  // 2. Guardar movimiento y obtener el ID para poder actualizarlo
+  let movimientoId = null;
+  try {
+    const result = await sb('POST','caja_movimientos',{
+      tipo: 'entrada',
+      motivo: 'Cobro en efectivo',
+      monto,
+      nota: `${cliente} - ${mascota}`,
+      usuario_id: usuarioActual?.id || null,
+      usuario_nombre: usuarioActual?.nombre || 'Sistema',
+      entrada_id: entradaId,
+      fecha: fechaLocal(),
+      ticket_impreso: false
+    });
+    movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
+  } catch(e) {}
+
+  // 3. Mostrar modal obligatorio — empleado DEBE confirmar ticket
+  mostrarModalCobro({ cliente, mascota, monto, metodo: metodo||'Efectivo', movimientoId, entradaId });
+}
+
+async function abrirCajonSilencioso() {
+  if (typeof qz === 'undefined') return;
+  try {
+    if (!qz.websocket.isActive()) {
+      await Promise.race([
+        qz.websocket.connect({ host:'localhost', port:{ primary:8181, fallback:8383 }}),
+        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 4000))
+      ]);
+    }
+    if (qz.websocket.isActive()) {
+      const config = qz.configs.create(getNombreImpresora());
+      await qz.print(config, [{ type:'raw', format:'hex', data:'1B700019FA' }]);
+    }
+  } catch(e) { /* silencioso */ }
 }
 
 // Cargar movimientos del día
@@ -8206,12 +8364,92 @@ async function renderMovimientosCaja() {
   const el = document.getElementById('caja-movimientos-lista');
   if (!el) return;
 
-  // Fecha filtro para la lista
-  const fechaInput = document.getElementById('caja-fecha-filtro');
-  if (!fechaInput.value) fechaInput.value = new Date().toISOString().split('T')[0];
-  const fecha = fechaInput.value;
-  const desde = fecha + 'T00:00:00';
-  const hasta = fecha + 'T23:59:59';
+  // Buscar último corte para delimitar el período
+  let desdeCorte = '';
+  let labelPeriodo = 'desde el inicio';
+  try {
+    const uc = await sb('GET','caja_movimientos',null,
+      '?motivo=eq.Corte+realizado&order=fecha.desc&limit=1&select=fecha');
+    if (uc && uc[0]) {
+      desdeCorte = '&fecha=gte.' + encodeURIComponent(uc[0].fecha);
+      const fc = new Date(uc[0].fecha);
+      labelPeriodo = `desde ${fc.toLocaleDateString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+    }
+  } catch(e) {}
+
+  // Cargar TODOS los movimientos desde el último corte
+  let movs = [];
+  try {
+    movs = await sb('GET','caja_movimientos',null,
+      '?motivo=neq.Corte+realizado&order=fecha.asc' + desdeCorte + '&select=*');
+  } catch(e) {}
+
+  // KPIs
+  const totalEnt  = movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const totalSal  = movs.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const totalCaja = totalEnt - totalSal;
+  const sinTicket = movs.filter(m=>m.tipo==='entrada' && !m.ticket_impreso).length;
+
+  const elE = document.getElementById('caja-entradas');
+  const elS = document.getElementById('caja-salidas');
+  const elT = document.getElementById('caja-total');
+  const elLE = document.getElementById('caja-label-entradas');
+  const elLS = document.getElementById('caja-label-salidas');
+  const elPer = document.getElementById('caja-periodo-label');
+  const elBadge = document.getElementById('caja-sin-ticket-badge');
+
+  if (elE) elE.textContent = '$' + totalEnt.toLocaleString('es-MX');
+  if (elS) elS.textContent = '$' + totalSal.toLocaleString('es-MX');
+  if (elT) { elT.textContent = '$' + totalCaja.toLocaleString('es-MX'); elT.style.color = totalCaja >= 0 ? '#1a4f8a' : '#c0392b'; }
+  if (elLE) elLE.textContent = 'Entradas período';
+  if (elLS) elLS.textContent = 'Salidas período';
+  if (elPer) elPer.textContent = `📅 Período activo: ${labelPeriodo}`;
+  if (elBadge) { elBadge.style.display = sinTicket > 0 ? '' : 'none'; elBadge.textContent = `⚠️ ${sinTicket} sin ticket`; }
+
+  if (!movs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos en este período</div></div>';
+    return;
+  }
+
+  // Agrupar por día para mejor lectura
+  const porDia = {};
+  movs.forEach(m => {
+    const dia = (m.fecha||'').slice(0,10);
+    if (!porDia[dia]) porDia[dia] = [];
+    porDia[dia].push(m);
+  });
+
+  el.innerHTML = Object.entries(porDia).reverse().map(([dia, items]) => {
+    const fechaLabel = new Date(dia + 'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+    const subtotalDia = items.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0)
+                      - items.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+    return `
+      <div style="background:var(--gray-50);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100)">
+        <span style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:capitalize">${fechaLabel}</span>
+        <span style="font-size:12px;font-weight:700;color:${subtotalDia>=0?'var(--green)':'var(--red)'}">
+          ${subtotalDia>=0?'+':''}$${subtotalDia.toLocaleString('es-MX')}
+        </span>
+      </div>
+      ${items.map(m => {
+        const esEnt = m.tipo === 'entrada';
+        const monto = parseFloat(m.monto||0);
+        const hora = new Date(m.fecha).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        const sinTk = esEnt && !m.ticket_impreso;
+        return `<div style="padding:11px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${sinTk?'#fffbeb':esEnt?'#f0fdf4':'#fef2f2'}">
+          <div style="font-size:18px">${esEnt?'💵':'📤'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;color:${esEnt?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}
+              ${sinTk?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600">⚠️ SIN TICKET${m.motivo_sin_ticket?' · '+m.motivo_sin_ticket:''}</span>`:''}
+            </div>
+            <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${hora}${m.nota?' · '+m.nota:''}</div>
+          </div>
+          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:${esEnt?'#1a7a4a':'#c0392b'}">
+            ${esEnt?'+':'-'}$${monto.toLocaleString('es-MX')}
+          </div>
+        </div>`;
+      }).join('')}`;
+  }).join('');
+}
 
   // Buscar último corte para los KPIs
   let desdeCorte = '';

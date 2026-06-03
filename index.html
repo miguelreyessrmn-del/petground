@@ -8214,16 +8214,37 @@ async function confirmarAperturaCaja() {
   }
   cerrarModalCaja();
   const notaFinal = mascota ? (mascota + (nota ? ' — ' + nota : '')) : nota;
-  const ticket = buildTicketCaja('apertura_manual', {motivo, monto, nota: notaFinal, tipo: _cajaTipo});
-  await imprimirConCajon(ticket);
+
+  // Abrir cajón silencioso
+  if (_cajaTipo !== 'salida') abrirCajonSilencioso();
+
+  // Guardar movimiento y obtener ID para poder actualizarlo desde el modal
+  let movimientoId = null;
+  try {
+    const result = await sb('POST','caja_movimientos',{
+      tipo: _cajaTipo === 'salida' ? 'salida' : 'entrada',
+      motivo, monto: monto||0, nota: notaFinal,
+      usuario_id: usuarioActual?.id||null,
+      usuario_nombre: usuarioActual?.nombre||'Sistema',
+      fecha: fechaLocal(), ticket_impreso: false
+    });
+    movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
+  } catch(e) {}
+
   if (_cajaTipo === 'salida') {
-    await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
-    notify('✅ Cajón abierto — ' + motivo, 'success');
+    // Salidas: no requieren ticket, solo notificar
+    notify('✅ ' + motivo + ' registrado', 'success');
+    renderMovimientosCaja();
   } else {
-    await guardarMovimientoCaja('entrada', motivo, monto, notaFinal);
-    notify('✅ Ingreso registrado — ' + motivo + (mascota ? ' · ' + mascota : ''), 'success');
+    // Entradas: mostrar modal obligatorio de ticket
+    mostrarModalCobro({
+      cliente: mascota || 'PetGround',
+      mascota: notaFinal || motivo,
+      monto, metodo: 'Efectivo',
+      movimientoId,
+      concepto: motivo
+    });
   }
-  renderMovimientosCaja();
 }
 
 // ===================== MODAL OBLIGATORIO POST-COBRO =====================

@@ -9231,7 +9231,23 @@ function entrarAlSistema() {
   if (!esAdmin) setTimeout(renderCobrosEmpleado, 500);
   // Cargar datos
   cargarTodo();
+
+  // Restaurar pantalla desde hash si existe (ej. recarga en #clientes)
+  const hashScreen = window.location.hash.replace('#','');
+  if (hashScreen && document.getElementById('screen-' + hashScreen)) {
+    setTimeout(() => showScreen(hashScreen), 300);
+  } else {
+    history.replaceState({ screen: 'dashboard' }, '', '#dashboard');
+  }
 }
+
+// Flecha ← del navegador: volver a la pantalla anterior dentro del sistema
+window.addEventListener('popstate', e => {
+  const name = e.state?.screen;
+  if (name && document.getElementById('screen-' + name)) {
+    showScreen(name, false); // false = no volver a pushState
+  }
+});
 
 function cerrarSesion() {
   detenerAutoLogout();
@@ -9268,11 +9284,17 @@ document.getElementById('clave-sistema')?.addEventListener('keydown', e => {
 });
 
 // ===================== GESTIÓN DE USUARIOS =====================
-function showScreen(name) {
+function showScreen(name, addHistory = true) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
+
+  // Registrar en historial del navegador para que ← funcione
+  if (addHistory && history.state?.screen !== name) {
+    history.pushState({ screen: name }, '', '#' + name);
+  }
+
   const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin','mapa-ocupacion':'mapa-ocupacion','nueva-salida':'nueva-salida',salidas:'salidas',recordatorios:'recordatorios'};
   const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','nueva-salida':'Registrar salida','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio','mapa-ocupacion':'Mapa de Ocupación',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas'};
   document.getElementById('page-title').textContent = titles[name] || name;

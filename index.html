@@ -2419,7 +2419,7 @@
       <div style="display:flex;gap:10px">
         <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-salida')">Cancelar</button>
         <button class="btn btn-red" style="flex:1" onclick="eliminarEntrada()">🗑️ Eliminar</button>
-        <button class="btn btn-green" style="flex:2" onclick="confirmarSalida()">📤 Confirmar salida</button>
+        <button class="btn btn-green" id="btn-confirmar-salida" style="flex:2;font-size:14px" onclick="confirmarSalida()">📤 Confirmar salida</button>
       </div>
     </div>
   </div>
@@ -6957,18 +6957,52 @@ function editarEntrada(id) {
   }, 200);
 }
 async function guardarEntrada() {
-  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); return; }
+  // Protección doble guardado (#3)
+  const btnGuardar = document.querySelector('#screen-nueva-entrada .btn-primary[onclick="guardarEntrada()"]');
+  if (btnGuardar?.disabled) return;
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = '⏳ Guardando...'; }
+  const rehabilitarBtn = () => { if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = '✅ Confirmar entrada'; }};
+
+  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); rehabilitarBtn(); return; }
   const mascotas = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); return; }
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); rehabilitarBtn(); return; }
   const fe = document.getElementById('ne-fecha-entrada').value;
   const fs = document.getElementById('ne-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); rehabilitarBtn(); return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); rehabilitarBtn(); return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); rehabilitarBtn(); return; }
   const hab = document.getElementById('ne-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); rehabilitarBtn(); return; }
 
+  // Validación #4 — servicio seleccionado
   const filas = document.querySelectorAll('#conceptos-tbody tr');
+  const algunServicio = [...filas].some(tr => tr.querySelector('select')?.value);
+  if (filas.length > 0 && !algunServicio && !entradaEditandoId) {
+    notify('⚠️ Selecciona el servicio (tipo de habitación)', 'error'); rehabilitarBtn(); return;
+  }
+
+  // Validación #1 — habitación ya ocupada
+  if (!entradaEditandoId) {
+    const habOcupada = entradas.find(e => e.habitacion === hab);
+    if (habOcupada) {
+      const cOc = clientes.find(cl => cl.id === habOcupada.clienteId);
+      const ok = window.confirm(`⚠️ Habitación ${hab} ya está ocupada\n\nTiene a: ${(habOcupada.mascotas||[]).join(', ')} (${cOc?.nombre||'—'})\nSale: ${(habOcupada.salidaPrevista||'').slice(0,10)}\n\n¿Confirmas asignarla de todas formas?`);
+      if (!ok) { rehabilitarBtn(); return; }
+    }
+  }
+
+  // Validación #2 — mascota ya hospedada
+  if (!entradaEditandoId) {
+    for (const m of mascotas) {
+      const yaAdentro = entradas.find(e => (e.mascotas||[]).includes(m));
+      if (yaAdentro) {
+        const cYa = clientes.find(cl => cl.id === yaAdentro.clienteId);
+        notify(`⚠️ ${m} ya está hospedada en Hab. ${yaAdentro.habitacion} (${cYa?.nombre||'—'}). Registra su salida primero.`, 'error');
+        rehabilitarBtn(); return;
+      }
+    }
+  }
+
   let totalFinal = 0;
   let totalSinDescuento = 0;
   let hayPrecioVacio = false;
@@ -7054,6 +7088,11 @@ async function guardarEntrada() {
 
     await cargarTodo();
 
+    // Audit log
+    registrarAuditoria(entradaEditandoId ? 'ENTRADA_EDITADA' : 'ENTRADA_CREADA',
+      'entradas', null,
+      `${clienteEntradaSeleccionado?.nombre} · ${mascotas.join(', ')} · Hab.${hab} · $${totalFinal.toLocaleString('es-MX')}`);
+
     // Ticket de entrada eliminado — la impresora se usa solo para caja
     clearClienteSeleccionado();
     document.getElementById('ne-notas').value='';
@@ -7062,11 +7101,12 @@ async function guardarEntrada() {
     document.getElementById('conceptos-tbody').innerHTML='';
     calcResumen();
     const btn = document.querySelector('#screen-nueva-entrada .btn-primary');
-    if (btn) { btn.textContent='💾 Guardar entrada'; btn.style.background=''; }
+    if (btn) { btn.textContent='✅ Confirmar entrada'; btn.disabled=false; btn.style.background=''; }
     const titulo = document.getElementById('page-title');
     if (titulo) titulo.textContent = 'Nueva Entrada';
     showScreen('entradas');
   } catch(e) {
+    rehabilitarBtn();
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
@@ -7200,6 +7240,17 @@ function hacerSalida(nombre, id) {
     </div>
   `;
   document.getElementById('modal-salida').classList.add('open');
+  // Actualizar botón con monto exacto a cobrar
+  const btnConf = document.getElementById('btn-confirmar-salida');
+  if (btnConf) {
+    if (pendienteActual > 0) {
+      btnConf.textContent = `📤 Cobrar $${pendienteActual.toLocaleString('es-MX')} PM$ y dar salida`;
+      btnConf.style.background = 'var(--green)';
+    } else {
+      btnConf.textContent = '📤 Dar salida (ya pagado)';
+      btnConf.style.background = '#3b82f6';
+    }
+  }
   actualizarResumenSalida();
 }
 
@@ -7252,6 +7303,8 @@ async function confirmarSalida() {
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
+    registrarAuditoria('SALIDA_REGISTRADA', 'entradas', salidaActual,
+      `${c?.nombre} · ${(e.mascotas||[]).join(', ')} · Hab.${e.habitacion} · $${cobrado.toLocaleString('es-MX')} ${metodo}`);
     if (cobrado > 0 && c) {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
@@ -7385,13 +7438,17 @@ function enviarConfirmacionWA() {
 
 async function eliminarEntrada() {
   if (!confirm('⚠️ ¿Eliminar este hospedaje? Esta acción no se puede deshacer.')) return;
+  const e = entradas.find(en=>en.id===salidaActual);
+  const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'eliminado' });
+    registrarAuditoria('ENTRADA_ELIMINADA', 'entradas', salidaActual,
+      `${c?.nombre||'—'} · ${(e?.mascotas||[]).join(', ')} · Hab.${e?.habitacion||'—'}`);
     await cargarTodo();
     closeModal('modal-salida');
     notify('🗑️ Hospedaje eliminado','success');
-  } catch(e) {
+  } catch(err) {
     entradas = entradas.filter(en=>en.id!==salidaActual);
     actualizarDashboard(); renderEntradas();
     closeModal('modal-salida');
@@ -7403,9 +7460,24 @@ async function eliminarEntrada() {
 // ===================== NUEVO CLIENTE =====================
 // ===================== WHATSAPP =====================
 async function guardarNuevoCliente() {
+  const btn = document.querySelector('#modal-nuevo-cliente .btn-primary');
+  if (btn?.disabled) return;
   const nombre = document.getElementById('nc-nombre').value.trim();
   const whatsapp = document.getElementById('nc-whatsapp').value.trim();
   if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
+
+  // Validación #6 — duplicado por teléfono
+  const waSin = whatsapp.replace(/\D/g,'');
+  const duplicado = clientes.find(c => c.whatsapp && c.whatsapp.replace(/\D/g,'') === waSin);
+  if (duplicado) {
+    const ok = window.confirm(`⚠️ Ya existe un cliente con ese WhatsApp\n\n"${duplicado.nombre}" tiene registrado el número ${whatsapp}.\n\n¿Deseas crear otro cliente con el mismo número?`);
+    if (!ok) return;
+  }
+
+  // Protección doble guardado
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  const rehabilitar = () => { if(btn){ btn.disabled=false; btn.textContent='💾 Guardar cliente'; }};
+
   const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
   setLoading(true);
   try {
@@ -7425,12 +7497,16 @@ async function guardarNuevoCliente() {
         nacimiento: m.nacimiento || null
       });
     }
+    registrarAuditoria('CLIENTE_CREADO', 'clientes', nuevoCliente.id,
+      `${nombre} · ${whatsapp} · ${mascotas.length} mascota${mascotas.length!==1?'s':''}`);
     await cargarTodo();
     closeModal('modal-nuevo-cliente');
     notify(`✅ Cliente "${nombre}" registrado con ${mascotas.length} mascota${mascotas.length!==1?'s':''}`, 'success');
     ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>document.getElementById(id).value='');
     mascotasNuevas = [];
+    rehabilitar();
   } catch(e) {
+    rehabilitar();
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
@@ -7988,22 +8064,34 @@ function getNombreImpresora() {
   return getConfig('impresora_nombre', 'EPSON_TM_T88V');
 }
 
+let _qzConectando = false; // prevenir múltiples intentos simultáneos
+
 async function conectarQZ() {
   if (typeof qz === 'undefined') return false;
+  // Si ya está conectado, reusar sin reconectar
+  try { if (qz.websocket.isActive()) return true; } catch(e) {}
+  // Si ya hay un intento en curso, esperar
+  if (_qzConectando) {
+    await new Promise(r => setTimeout(r, 3000));
+    try { return qz.websocket.isActive(); } catch(e) { return false; }
+  }
+  _qzConectando = true;
   try {
-    qz.security.setCertificatePromise(function(resolve) { resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----'); });
+    qz.security.setCertificatePromise(function(resolve) {
+      resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----');
+    });
     qz.security.setSignatureAlgorithm('SHA512');
     qz.security.setSignaturePromise(function(toSign) {
       return function(resolve) { resolve(); };
     });
-    if (!qz.websocket.isActive()) {
-      await Promise.race([
-        qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
-        new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
-      ]);
-    }
+    await Promise.race([
+      qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
+      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
+    _qzConectando = false;
     return true;
   } catch(e) {
+    _qzConectando = false;
     return false;
   }
 }
@@ -8245,6 +8333,20 @@ async function confirmarAperturaCaja() {
       concepto: motivo
     });
   }
+}
+
+// ===================== AUDITORÍA =====================
+async function registrarAuditoria(accion, entidad, entidadId, detalle) {
+  try {
+    await sb('POST', 'audit_log', {
+      usuario_nombre: usuarioActual?.nombre || 'Sistema',
+      usuario_id: usuarioActual?.id || null,
+      accion, entidad,
+      entidad_id: entidadId || null,
+      detalle: detalle || '',
+      fecha: fechaLocal()
+    });
+  } catch(e) { /* silencioso — auditoría no debe interrumpir el flujo */ }
 }
 
 // ===================== MODAL OBLIGATORIO POST-COBRO =====================
@@ -8835,25 +8937,43 @@ function actualizarResumenCobro() {
 async function guardarCobro() {
   const cid = parseInt(document.getElementById('cobro-cliente').value);
   const monto = parseFloat(document.getElementById('cobro-monto').value);
+  const metodo = document.getElementById('cobro-metodo').value;
   if (!cid) { notify('Selecciona un cliente','error'); return; }
   if (!monto || monto <= 0) { notify('Ingresa un monto válido','error'); return; }
+
+  // Doble guardado protection
+  const btn = document.querySelector('#modal-nuevo-cobro .btn-green');
+  if (btn?.disabled) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+  const rehabilitar = () => { if(btn){ btn.disabled=false; btn.textContent='💾 Guardar cobro'; }};
+
   setLoading(true);
   try {
+    const entId = parseInt(document.getElementById('cobro-entrada').value)||null;
     await sb('POST', 'cobros', {
       cliente_id: cid,
-      entrada_id: parseInt(document.getElementById('cobro-entrada').value)||null,
+      entrada_id: entId,
       fecha: document.getElementById('cobro-fecha').value,
-      metodo: document.getElementById('cobro-metodo').value,
-      monto,
+      metodo, monto,
       concepto: document.getElementById('cobro-concepto').value || 'Hospedaje',
       notas: document.getElementById('cobro-notas').value,
       status: 'pagado'
     });
     await cargarTodo();
     closeModal('modal-nuevo-cobro');
-    notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     initFacturacion();
+    rehabilitar();
+
+    // Cajón + modal obligatorio de ticket (igual que en salida)
+    const c = clientes.find(cl => cl.id === cid);
+    const e = entId ? entradas.find(en => en.id === entId) : null;
+    await abrirCajonPorCobro(
+      c?.nombre || 'Cliente',
+      (e?.mascotas||[]).join(', ') || document.getElementById('cobro-concepto').value || 'Cobro',
+      monto, entId, metodo
+    );
   } catch(e) {
+    rehabilitar();
     notify('Error: '+e.message,'error');
   }
   setLoading(false);

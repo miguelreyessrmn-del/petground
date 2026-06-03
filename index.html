@@ -983,7 +983,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Hora entrada</label>
-                <input type="time" class="form-input" id="ne-hora-entrada" value="10:00">
+                <input type="time" class="form-input" id="ne-hora-entrada">
               </div>
               <div class="form-group">
                 <label class="form-label">Fecha salida prevista</label>
@@ -8086,6 +8086,14 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
 }
 
 // Guardar movimiento en Supabase
+// Fecha/hora local sin conversión UTC (fix zona horaria para caja)
+function fechaLocal() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
+         `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) {
   try {
     await sb('POST', 'caja_movimientos', {
@@ -8096,7 +8104,7 @@ async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) 
       usuario_id: usuarioActual?.id || null,
       usuario_nombre: usuarioActual?.nombre || 'Sistema',
       entrada_id: entradaId,
-      fecha: new Date().toISOString()
+      fecha: fechaLocal()   // ← hora local, no UTC
     });
   } catch(e) {
     console.error('Error guardando movimiento caja:', e);
@@ -9297,9 +9305,15 @@ function showScreen(name) {
   if (name === 'nueva-entrada') {
     actualizarDropdownsHabitacion();
     poblarSelectServicios();
-    const hoy = new Date().toISOString().split('T')[0];
+    const ahora = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const hoy = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())}`;
+    const horaActual = `${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
     document.getElementById('ne-fecha-entrada').value = hoy;
     document.getElementById('ne-fecha-salida').value = hoy;
+    if (!entradaEditandoId) {
+      document.getElementById('ne-hora-entrada').value = horaActual;
+    }
     // Siempre limpiar buscador y estado al entrar
     const buscarEl = document.getElementById('buscar-cliente-entrada');
     if (buscarEl) buscarEl.value = '';

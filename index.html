@@ -41,7 +41,7 @@
   }
 
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Poppins',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; display:flex; overflow-y:auto; }
+  body { font-family:'Poppins',sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; display:flex; }
 
   /* SIDEBAR */
   .sidebar {
@@ -100,7 +100,7 @@
   .user-info .user-role { font-size:10px; color:rgba(255,255,255,0.4); }
 
   /* MAIN */
-  .main { margin-left: 240px; flex:1; min-height:100vh; overflow-y:visible; }
+  .main { margin-left: 240px; flex:1; min-height:100vh; }
 
   /* TOPBAR */
   .topbar {
@@ -751,7 +751,7 @@
             <div class="card-title" style="font-size:13px">📥 Entradas de hoy</div>
             <span class="badge badge-orange" id="badge-ent-hoy">0</span>
           </div>
-          <div id="entradas-hoy-list">
+          <div id="entradas-hoy-list" style="max-height:200px;overflow-y:auto">
             <div class="empty-state" style="padding:20px">
               <div class="es-icon" style="font-size:24px">📭</div>
               <div class="es-text">Sin entradas hoy</div>
@@ -766,7 +766,7 @@
             <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
             <span class="badge badge-red" id="badge-sal-hoy">0</span>
           </div>
-          <div id="salidas-hoy-list"></div>
+          <div id="salidas-hoy-list" style="max-height:200px;overflow-y:auto"></div>
         </div>
       </div>
 
@@ -983,7 +983,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Hora entrada</label>
-                <input type="time" class="form-input" id="ne-hora-entrada">
+                <input type="time" class="form-input" id="ne-hora-entrada" value="10:00">
               </div>
               <div class="form-group">
                 <label class="form-label">Fecha salida prevista</label>
@@ -1560,8 +1560,8 @@
         <div id="banner-qz" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <span style="font-size:20px">🖨️</span>
           <div style="flex:1">
-            <div style="font-weight:700;font-size:13px;color:#92400e">Servidor de impresión no conectado</div>
-            <div style="font-size:12px;color:#b45309">Abre Terminal y corre: <code style="background:#fde68a;padding:1px 5px;border-radius:3px">python3 ~/Desktop/servidor_petground.py</code></div>
+            <div style="font-weight:700;font-size:13px;color:#92400e">Impresora no conectada</div>
+            <div style="font-size:12px;color:#b45309">Abre QZ Tray para imprimir tickets y abrir el cajón. Los movimientos se siguen registrando normalmente.</div>
           </div>
           <button onclick="intentarConectarQZ()" style="background:#f59e0b;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🔄 Reconectar</button>
         </div>
@@ -1578,11 +1578,11 @@
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6f0e4;border:1.5px solid #86efac">
             <div class="stat-num" id="caja-entradas" style="color:#1a7a4a">$0</div>
-            <div class="stat-label" id="caja-label-entradas">Entradas hoy</div>
+            <div class="stat-label">Entradas hoy</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#fdecea;border:1.5px solid #fca5a5">
             <div class="stat-num" id="caja-salidas" style="color:#c0392b">$0</div>
-            <div class="stat-label" id="caja-label-salidas">Salidas hoy</div>
+            <div class="stat-label">Salidas hoy</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6e4f7;border:1.5px solid #93c5fd">
             <div class="stat-num" id="caja-total" style="color:#1a4f8a">$0</div>
@@ -1600,17 +1600,16 @@
           </button>
         </div>
 
-        <!-- Movimientos desde último corte -->
+        <!-- Movimientos del día -->
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">📋 Movimientos desde último corte</div>
-              <div id="caja-periodo-label" style="font-size:11px;color:var(--gray-400);margin-top:2px"></div>
-            </div>
-            <span class="badge badge-blue" id="caja-sin-ticket-badge" style="display:none">⚠️ Sin ticket</span>
+            <div class="card-title">📋 Movimientos de caja hoy</div>
+            <input type="date" id="caja-fecha-filtro" class="form-input" 
+              style="width:160px;padding:6px 10px;font-size:13px"
+              onchange="renderMovimientosCaja()">
           </div>
           <div id="caja-movimientos-lista">
-            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos</div></div>
+            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos hoy</div></div>
           </div>
         </div>
 
@@ -2126,15 +2125,6 @@
       </div>
 
       <!-- NUEVAS SECCIONES AVANZADAS -->
-      <!-- Descuentos -->
-      <div class="card" style="margin-bottom:20px">
-        <div class="card-header">
-          <div class="card-title">🏷️ Descuentos otorgados</div>
-          <span class="badge badge-red">Dinero que no cobré</span>
-        </div>
-        <div id="rep-descuentos" style="padding:16px"></div>
-      </div>
-
       <div class="grid-2" style="margin-top:20px;margin-bottom:20px">
         <div class="card">
           <div class="card-header">
@@ -2286,23 +2276,6 @@
           </div>
           <div id="rec-cumple-lista" style="padding:8px 16px 16px"></div>
         </div>
-
-        <!-- Solicitudes de cumpleaños pendientes de aprobar -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">📬 Solicitudes de cumpleaños por aprobar</div>
-            <span class="badge badge-orange" id="rec-solicitudes-badge" style="display:none">0</span>
-          </div>
-          <div style="padding:10px 20px 4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div style="font-size:12px;color:var(--gray-600)">Fechas enviadas por los clientes desde la página pública</div>
-            <button class="btn btn-ghost btn-sm" onclick="copiarLinkCumpleanos()" title="Copiar link para compartir con clientes">
-              🔗 Copiar link para clientes
-            </button>
-          </div>
-          <div id="rec-solicitudes-lista" style="padding:0 16px 16px">
-            <div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -2419,7 +2392,7 @@
       <div style="display:flex;gap:10px">
         <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-salida')">Cancelar</button>
         <button class="btn btn-red" style="flex:1" onclick="eliminarEntrada()">🗑️ Eliminar</button>
-        <button class="btn btn-green" id="btn-confirmar-salida" style="flex:2;font-size:14px" onclick="confirmarSalida()">📤 Confirmar salida</button>
+        <button class="btn btn-green" style="flex:2" onclick="confirmarSalida()">📤 Confirmar salida</button>
       </div>
     </div>
   </div>
@@ -3026,45 +2999,6 @@
   </div>
 </div>
 
-<!-- MODAL OBLIGATORIO POST-COBRO -->
-<div id="modal-cobro-confirmacion" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:white;border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
-    <!-- Header verde -->
-    <div style="background:var(--green);padding:20px 24px;text-align:center">
-      <div style="font-size:36px;margin-bottom:6px">💵</div>
-      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:white">COBRO REGISTRADO</div>
-    </div>
-    <!-- Detalle del cobro -->
-    <div id="cobro-detalle" style="padding:20px 24px;border-bottom:1px solid var(--gray-100)"></div>
-    <!-- Botones -->
-    <div style="padding:16px 24px;display:flex;flex-direction:column;gap:10px">
-      <button id="cobro-btn-imprimir" onclick="cobro_imprimirYContinuar()"
-        style="width:100%;padding:15px;background:var(--blue);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
-        🖨️ IMPRIMIR TICKET Y CONTINUAR
-      </button>
-      <div id="cobro-sin-ticket-wrap" style="display:none">
-        <div style="font-size:12px;color:var(--gray-400);text-align:center;margin-bottom:8px">¿Por qué no se imprime el ticket?</div>
-        <select id="cobro-motivo-sin-ticket" class="form-input" style="margin-bottom:8px;font-size:13px">
-          <option value="">— Selecciona motivo —</option>
-          <option value="Impresora sin papel">Impresora sin papel</option>
-          <option value="QZ Tray no conectado">QZ Tray no conectado</option>
-          <option value="Impresora apagada">Impresora apagada</option>
-          <option value="Cliente no quiso ticket">Cliente no quiso ticket</option>
-          <option value="Otro">Otro</option>
-        </select>
-        <button onclick="cobro_continuarSinTicket()"
-          style="width:100%;padding:11px;background:var(--gray-100);color:var(--gray-600);border:1.5px solid var(--gray-200);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
-          Continuar sin ticket
-        </button>
-      </div>
-      <button onclick="cobro_mostrarSinTicket()" id="cobro-btn-sin-ticket"
-        style="background:none;border:none;color:var(--gray-400);font-size:12px;cursor:pointer;text-decoration:underline">
-        No puedo imprimir →
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- NOTIFICATION -->
 <div class="notif" id="notif"></div>
 
@@ -3184,7 +3118,6 @@ let salidaActual = null;
 let entradaEditandoId = null;
 let reservaciones = [];
 let loading = false;
-let _colaPendiente = []; // cola de tickets pendientes de imprimir (QZ Tray)
 
 // ===================== LOADING STATE =====================
 function setLoading(on) {
@@ -3265,8 +3198,6 @@ async function cargarTodo() {
       salidaPrevista: (e.fecha_salida_prevista||'').replace('T',' ').slice(0,16),
       importe: parseFloat(e.importe)||0,
       servicio: e.servicio||'',
-      servicios_json: e.servicios_json || null,
-      descuento_monto: parseFloat(e.descuento_monto)||0,
       notas: e.notas||'',
       status: e.status||'activo',
       responsiva: e.responsiva_firmada||false,
@@ -3517,7 +3448,7 @@ function res_buscarCliente(q) {
   if (!found.length) { el.innerHTML='<div style="font-size:12px;color:var(--gray-400);padding:8px">Sin resultados</div>'; return; }
   el.innerHTML = found.map(c=>`
     <div onclick="res_seleccionarCliente(${c.id})" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:4px;cursor:pointer;background:white">
-      <div class="avatar" style="width:30px;height:30px;font-size:11px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+      <div class="avatar" style="width:30px;height:30px;font-size:11px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
       <div style="flex:1">
         <div style="font-weight:600;font-size:13px">${c.nombre}</div>
         <div style="font-size:11px;color:var(--gray-400)">📱 ${c.whatsapp||'—'} · 🐕 ${(c.mascotas||[]).map(m=>m.nombre||m).join(', ')||'Sin mascotas'}</div>
@@ -3584,7 +3515,7 @@ function nr_buscarCliente(val) {
   if (!res.length) { box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML = res.map(c => {
-    const init = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+    const init = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
     const macs = (c.mascotas||[]).map(m=>m.nombre||m).join(', ');
     return `<div onclick="nr_seleccionarCliente(${c.id})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--gray-100)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background='white'">
       <div class="avatar" style="width:32px;height:32px;font-size:12px;flex-shrink:0">${init}</div>
@@ -4084,7 +4015,7 @@ function verHistorialMascota(clienteId, mascotaNombre) {
 
         <!-- Historial de hospedajes -->
         <div style="font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.8px;margin-bottom:8px">HOSPEDAJES REGISTRADOS EN EL SISTEMA</div>
-        ${todasEntradas.length ? todasEntradas.sort((a,b)=>new Date((b.entrada||"").replace(" ","T"))-new Date((a.entrada||"").replace(" ","T"))).map(e => {
+        ${todasEntradas.length ? todasEntradas.sort((a,b)=>new Date(b.entrada)-new Date(a.entrada)).map(e => {
           const fe = e.entrada?.split(' ')[0]||'—';
           const fs = e.salidaPrevista?.split(' ')[0]||'—';
           const noches = Math.max(0, Math.ceil((new Date(fs)-new Date(fe))/(1000*60*60*24)));
@@ -4229,8 +4160,8 @@ function verDetalleHospedaje(id) {
   if (!e || !c) return;
   detalleHospedajeId = id;
 
-  const diasHospedado = Math.max(0, Math.ceil((new Date() - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24)));
-  const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
+  const diasHospedado = Math.max(0, Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24)));
+  const atrasado = new Date(e.salidaPrevista) < new Date();
   const adelantos = cobros.filter(co=>co.entradaId===id).reduce((s,co)=>s+co.monto,0);
 
   // Título
@@ -4239,7 +4170,7 @@ function verDetalleHospedaje(id) {
   // Info cliente
   document.getElementById('mdh-cliente').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:15px;color:var(--blue)">${c.nombre}</div>
         <div style="font-size:12px;color:var(--gray-400)">📱 ${c.whatsapp||'Sin WhatsApp'} · ⏱️ ${diasHospedado} día${diasHospedado!==1?'s':''} hospedado${adelantos>0?` · ✅ Adelantos: $${adelantos.toLocaleString('es-MX')} PM$`:''}</div>
@@ -4341,45 +4272,10 @@ function verDetalleHospedaje(id) {
     // Restaurar servicios guardados
     (e.mascotas||[]).forEach((m, idx) => {
       const mascObj = getMascotaObj(m);
-      const sels = mdsMasc.querySelectorAll('select');
-      if (!sels[idx]) return;
-
-      // Prioridad: 1) servicios_json (por mascota), 2) servicio_id en mascota,
-      //            3) localStorage, 4) e.servicio (entrada), 5) último global
-      let svcId = '';
-
-      // 1) servicios_json — mapa {mascotaNombre: serviceId} guardado en la entrada
-      if (e.servicios_json) {
-        try {
-          const mapa = typeof e.servicios_json === 'string'
-            ? JSON.parse(e.servicios_json) : e.servicios_json;
-          if (mapa[m]) svcId = String(mapa[m]);
-        } catch(_) {}
-      }
-
-      // 2) servicio_id en el objeto mascota (tabla mascotas)
-      if (!svcId && mascObj?.servicio_id) svcId = String(mascObj.servicio_id);
-
-      // 3) localStorage
-      if (!svcId) svcId = localStorage.getItem('pg_svc_'+m) || '';
-
-      // 4) e.servicio (ID o nombre guardado en la entrada)
-      if (!svcId && e.servicio) {
-        const listaServs = getServicios();
-        const porId  = listaServs.find(s => String(s.id) === String(e.servicio));
-        const porNom = listaServs.find(s => s.nombre === e.servicio ||
-          s.nombre.toLowerCase() === (e.servicio||'').toLowerCase());
-        const match = porId || porNom;
-        if (match) svcId = String(match.id);
-      }
-
-      // 5) Último servicio global
-      if (!svcId) svcId = localStorage.getItem('pg_ultimo_servicio') || '';
-
+      const svcId = mascObj?.servicio_id || localStorage.getItem('pg_svc_'+m) || '';
       if (svcId) {
-        sels[idx].value = svcId;
-        if (sels[idx].value !== svcId) sels[idx].value = '';
-        else mdh_calcResumen();
+        const sels = mdsMasc.querySelectorAll('select');
+        if (sels[idx]) sels[idx].value = String(svcId);
       }
     });
   }
@@ -4410,13 +4306,11 @@ function mdh_getImporteConDescuento() {
   const servicios = getServicios();
   const noches = parseInt((document.getElementById('mdh-noches')?.value||'0').replace(/\D/g,'')) || 0;
   let total = 0;
-  let algunServicioSeleccionado = false;
   if (sels.length > 0 && noches > 0) {
     sels.forEach((sel, idx) => {
       const svcId = parseInt(sel.value);
       const svc = servicios.find(s => s.id === svcId);
       if (svc) {
-        algunServicioSeleccionado = true;
         const descInput = descs[idx];
         const descVal = parseFloat(descInput?.value||0) || 0;
         const descTipo = descInput?.dataset?.tipo || 'pct';
@@ -4425,14 +4319,9 @@ function mdh_getImporteConDescuento() {
         total += linea - descMonto;
       }
     });
-    if (algunServicioSeleccionado) return Math.round(total * 100) / 100;
+    return Math.round(total * 100) / 100;
   }
-  // Fallback: usar importe guardado en la entrada si no hay servicio seleccionado
-  const importeGuardado = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
-  if (importeGuardado > 0) return importeGuardado;
-  // Fallback final: importe del objeto entrada en memoria
-  const e = entradas.find(en => en.id === detalleHospedajeId);
-  return e?.importe || 0;
+  return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
 }
 
 function mdh_getDescuentoObj() {
@@ -4654,7 +4543,7 @@ async function abrirComprobantePendiente(entradaId, clienteId) {
     if (res && res[0]) { generarComprobantePDF(res[0].id); return; }
   } catch(e) {}
   // Fallback: buscar en array local
-  const ent = entradas.filter(e=>e.clienteId===clienteId).sort((a,b)=>new Date((b.entrada||"").replace(" ","T"))-new Date((a.entrada||"").replace(" ","T")))[0];
+  const ent = entradas.filter(e=>e.clienteId===clienteId).sort((a,b)=>new Date(b.entrada)-new Date(a.entrada))[0];
   if (ent) generarComprobantePDF(ent.id);
   else notify('No se encontró la entrada asociada','error');
 }
@@ -4737,7 +4626,7 @@ async function generarComprobantePDF(entradaId) {
   actBar.innerHTML = '<span style="font-weight:700;color:#E8622A;font-size:13px">📄 Comprobante</span><div style="display:flex;gap:8px"><button onclick="window.print()" style="background:#E8622A;color:white;border:none;border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">🖨️ Imprimir</button><button onclick="cerrarModalComprobante()" style="background:#f3f4f6;border:none;border-radius:8px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:12px">✕</button></div>';
   compWrapper.appendChild(actBar);
 
-  const noches = Math.max(0, Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T")) - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24)));
+  const noches = Math.max(0, Math.ceil((new Date(e.salidaPrevista) - new Date(e.entrada)) / (1000*60*60*24)));
 
   const compContent = document.createElement('div');
   compContent.style.cssText = 'padding:20px 18px;font-family:Arial,sans-serif;font-size:12px;color:#222;';
@@ -5851,29 +5740,23 @@ function sortTabla(tabla, campo) {
 function aplicarSort(arr, tabla) {
   const s = sortState[tabla];
   if (!s) return arr;
-  const toTs = v => {
-    if (!v) return 0;
-    // Safari necesita T como separador, no espacio
-    return new Date(String(v).replace(' ','T')).getTime() || 0;
-  };
   return [...arr].sort((a, b) => {
     let va, vb;
     if (tabla === 'clientes') {
-      if (s.campo === 'nombre')       { va = a.nombre?.toLowerCase()||''; vb = b.nombre?.toLowerCase()||''; }
-      else if (s.campo === 'mascotas')    { va = a.mascotas?.length||0;      vb = b.mascotas?.length||0; }
-      else if (s.campo === 'alojamientos'){ va = a.alojamientos||0;          vb = b.alojamientos||0; }
-      else if (s.campo === 'facturacion') { va = a.facturacion||0;           vb = b.facturacion||0; }
+      if (s.campo === 'nombre') { va = a.nombre?.toLowerCase(); vb = b.nombre?.toLowerCase(); }
+      else if (s.campo === 'mascotas') { va = a.mascotas?.length||0; vb = b.mascotas?.length||0; }
+      else if (s.campo === 'alojamientos') { va = a.alojamientos||0; vb = b.alojamientos||0; }
+      else if (s.campo === 'facturacion') { va = a.facturacion||0; vb = b.facturacion||0; }
     } else if (tabla === 'entradas') {
       const ca = clientes.find(cl=>cl.id===a.clienteId);
       const cb = clientes.find(cl=>cl.id===b.clienteId);
-      if      (s.campo === 'nombre')    { va = ca?.nombre?.toLowerCase()||''; vb = cb?.nombre?.toLowerCase()||''; }
-      else if (s.campo === 'habitacion'){ va = a.habitacion||'';  vb = b.habitacion||''; }
-      else if (s.campo === 'entrada')   { va = toTs(a.entrada);   vb = toTs(b.entrada); }
-      else if (s.campo === 'salida')    { va = toTs(a.salidaPrevista); vb = toTs(b.salidaPrevista); }
-      else if (s.campo === 'importe')   { va = a.importe||0;      vb = b.importe||0; }
+      if (s.campo === 'nombre') { va = ca?.nombre?.toLowerCase(); vb = cb?.nombre?.toLowerCase(); }
+      else if (s.campo === 'habitacion') { va = a.habitacion; vb = b.habitacion; }
+      else if (s.campo === 'entrada') { va = a.entrada; vb = b.entrada; }
+      else if (s.campo === 'salida') { va = a.salidaPrevista; vb = b.salidaPrevista; }
+      else if (s.campo === 'importe') { va = a.importe||0; vb = b.importe||0; }
     }
-    if (va === undefined || va === null) va = typeof vb === 'number' ? 0 : '';
-    if (vb === undefined || vb === null) vb = typeof va === 'number' ? 0 : '';
+    if (va === undefined || vb === undefined) return 0;
     if (typeof va === 'string') return s.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
     return s.dir === 'asc' ? va - vb : vb - va;
   });
@@ -5966,7 +5849,7 @@ function mostrarEventosDia(fecha) {
       const ini=c?.nombre?.split(' ').map(w=>w[0]).slice(0,2).join('')||'?';
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${( e.mascotas||[] ).join(', ')} · Hab.${e.habitacion} · ${e.entrada.split(' ')[1]||''}</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${e.mascotas.join(', ')} · Hab.${e.habitacion} · ${e.entrada.split(' ')[1]||''}</div></div>
         <span class="badge badge-orange" style="font-size:10px">Entrada</span>
       </div>`;
     });
@@ -5976,10 +5859,10 @@ function mostrarEventosDia(fecha) {
     salidas_dia.forEach(e=>{
       const c=clientes.find(cl=>cl.id===e.clienteId);
       const ini=c?.nombre?.split(' ').map(w=>w[0]).slice(0,2).join('')||'?';
-      const atrasado=new Date((e.salidaPrevista||"").replace(" ","T"))<new Date();
+      const atrasado=new Date(e.salidaPrevista)<new Date();
       html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${( e.mascotas||[] ).join(', ')} · Hab.${e.habitacion}</div></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${e.mascotas.join(', ')} · Hab.${e.habitacion}</div></div>
         <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
           ${atrasado?'<span class="badge badge-red" style="font-size:10px">⚠️ Atrasado</span>':'<span class="badge badge-blue" style="font-size:10px">Salida</span>'}
           <button class="btn btn-sm btn-green" style="padding:3px 8px;font-size:11px" onclick="hacerSalida('${c?.nombre}',${e.id})">📤</button>
@@ -6046,7 +5929,7 @@ function actualizarPanelesHoy(fecha) {
     } else {
       listSal.innerHTML = `<table><tbody>${sals.map(e => {
         const c = clientes.find(cl => cl.id === e.clienteId);
-        const atrasado = esHoy && new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
+        const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
         return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
       }).join('')}</tbody></table>`;
     }
@@ -6060,8 +5943,8 @@ function actualizarDashboard() {
   document.getElementById('stat-entradas').textContent = entradasHoy;
   document.getElementById('stat-salidas').textContent = salidasHoy;
   document.getElementById('stat-alojamientos').textContent = entradas.length;
-  document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+(e.mascotas||[]).length,0);
-  const totalAnimales = entradas.reduce((s,e)=>s+(e.mascotas||[]).length,0);
+  document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
+  const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
   document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';
   document.getElementById('badge-sal-hoy').textContent = salidasHoy+' salidas';
@@ -6115,7 +5998,7 @@ function renderEntradas(filtro='', habFiltro='') {
     const c = clientes.find(cl => cl.id === e.clienteId);
     if (!c) return false;
     if (habFiltro && e.habitacion !== habFiltro) return false;
-    if (filtro) return c.nombre.toLowerCase().includes(filtro.toLowerCase()) || ( e.mascotas||[] ).join(' ').toLowerCase().includes(filtro.toLowerCase());
+    if (filtro) return c.nombre.toLowerCase().includes(filtro.toLowerCase()) || e.mascotas.join(' ').toLowerCase().includes(filtro.toLowerCase());
     return true;
   });
   lista = aplicarSort(lista, 'entradas');
@@ -6123,102 +6006,49 @@ function renderEntradas(filtro='', habFiltro='') {
   if (badge) badge.textContent = lista.length + (lista.length !== entradas.length ? ` de ${entradas.length}` : '');
   let rows = '';
   lista.forEach(e => {
-    try {
-      const c = clientes.find(cl => cl.id === e.clienteId);
-      if (!c) return;
-      const mascotas = e.mascotas || [];
-      const initials = (c.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
-      const salidaTs = new Date((e.salidaPrevista||'').replace(' ','T'));
-      const atrasado = !isNaN(salidaTs) && salidaTs < new Date();
-      const statusBadge = atrasado
-        ? '<span class="badge badge-red">⚠️ Atrasado</span>'
-        : '<span class="badge badge-green">✅ Activo</span>';
-      rows += `<tr style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
-        <td>
-          <div class="client-cell">
-            <div class="avatar">${initials}</div>
-            <div>
-              <div class="client-link">${c.nombre}</div>
-              <div class="client-sub">${c.whatsapp||''}</div>
-            </div>
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const salida = new Date(e.salidaPrevista);
+    const atrasado = salida < new Date();
+    const statusBadge = atrasado
+      ? '<span class="badge badge-red">⚠️ Atrasado</span>'
+      : '<span class="badge badge-green">✅ Activo</span>';
+    rows += `<tr style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
+      <td>
+        <div class="client-cell">
+          <div class="avatar">${initials}</div>
+          <div>
+            <div class="client-link">${c.nombre}</div>
+            <div class="client-sub">${c.whatsapp}</div>
           </div>
-        </td>
-        <td><div class="dogs-list">${mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
-        <td><div class="room-num">${e.habitacion}</div></td>
-        <td><div class="date-cell"><div class="date">${(e.entrada||'').split(' ')[0]}</div><div class="time">${(e.entrada||'').split(' ')[1]||''}</div></div></td>
-        <td><div class="date-cell"><div class="date" style="${atrasado?'color:var(--red);font-weight:700':''}">${(e.salidaPrevista||'').split(' ')[0]}</div><div class="time">${(e.salidaPrevista||'').split(' ')[1]||''}</div></div></td>
-        <td>${(() => {
-          const pagosEnt = cobros.filter(co=>co.entradaId===e.id);
-          const pagado = pagosEnt.reduce((s,co)=>s+(co.monto||0),0);
-          const pendiente = Math.max(0,e.importe-pagado);
-          if (pagado > 0) return `<div><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')}</span></div>
-            <div style="font-size:10px;color:${pendiente===0?'var(--green)':'var(--red)'}">
-              ${pendiente===0?'🎉 Saldado':'⚠️ Pend: $'+pendiente.toLocaleString('es-MX')}
-            </div>`;
-          return `<span class="amount">$${e.importe.toLocaleString('es-MX')} PM$</span>`;
-        })()}</td>
-        <td>${statusBadge}</td>
-        <td onclick="event.stopPropagation()"><div class="action-btns">
-          <button class="btn btn-sm btn-green" onclick="hacerSalida('${(c.nombre||'').replace(/'/g,"\\'")}',${e.id})" title="Registrar salida del perro">📤 Hacer salida</button>
-          <button class="btn btn-sm btn-ghost" title="Enviar confirmación por WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬 WA</button>
-        </div></td>
-      </tr>`;
-    } catch(err) {
-      console.warn('Error renderizando fila de hospedaje id=' + e?.id, err);
-    }
+        </div>
+      </td>
+      <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="room-num">${e.habitacion}</div></td>
+      <td><div class="date-cell"><div class="date">${e.entrada.split(' ')[0]}</div><div class="time">${e.entrada.split(' ')[1]}</div></div></td>
+      <td><div class="date-cell"><div class="date" style="${atrasado?'color:var(--red);font-weight:700':''}">${e.salidaPrevista.split(' ')[0]}</div><div class="time">${e.salidaPrevista.split(' ')[1]}</div></div></td>
+      <td>${(() => {
+        const pagosEnt = cobros.filter(co=>co.entradaId===e.id);
+        const pagado = pagosEnt.reduce((s,co)=>s+(co.monto||0),0);
+        const pendiente = Math.max(0,e.importe-pagado);
+        if (pagado > 0) return `<div><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')}</span></div>
+          <div style="font-size:10px;color:${pendiente===0?'var(--green)':'var(--red)'}">
+            ${pendiente===0?'🎉 Saldado':'⚠️ Pend: $'+pendiente.toLocaleString('es-MX')}
+          </div>`;
+        return `<span class="amount">$${e.importe.toLocaleString('es-MX')} PM$</span>`;
+      })()}</td>
+      <td>${statusBadge}</td>
+      <td onclick="event.stopPropagation()"><div class="action-btns">
+        <button class="btn btn-sm btn-green" onclick="hacerSalida('${c.nombre}',${e.id})" title="Registrar salida del perro">📤 Hacer salida</button>
+        <button class="btn btn-sm btn-ghost" title="Enviar confirmación por WhatsApp" onclick="enviarConfirmacionEntradaWA(${e.id})">💬 WA</button>
+      </div></td>
+    </tr>`;
   });
   tbody.innerHTML = rows || `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">🐕</div><div class="es-text">No hay perros hospedados ahora</div><button onclick="showScreen('nueva-entrada')" style="margin-top:12px;background:var(--orange);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer">➕ Registrar primera entrada</button></div></td></tr>`;
 }
 
 function filterEntradas(v) { renderEntradas(v, document.getElementById('filter-habitacion')?.value||''); }
-function filterSalidas() {
-  showScreen('entradas');
-  const hoy = new Date().toISOString().split('T')[0];
-  // Pre-filtrar solo los que salen hoy o están atrasados
-  const input = document.getElementById('search-entradas');
-  if (input) { input.value = ''; }
-  // Usar filtro especial de fecha
-  const hayAtrasados = entradas.filter(e => {
-    const sal = (e.salidaPrevista||'').slice(0,10);
-    return sal <= hoy;
-  });
-  // Aplicar filtro visual
-  setTimeout(() => {
-    const tbody = document.getElementById('tbody-entradas');
-    if (!tbody) return;
-    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
-      const salidaCell = tr.cells?.[4]?.textContent?.trim() || '';
-      // Extraer fecha YYYY-MM-DD del texto de la celda
-      const matchFecha = salidaCell.match(/(\d{4}-\d{2}-\d{2})/);
-      if (matchFecha) {
-        tr.style.display = matchFecha[1] <= hoy ? '' : 'none';
-      }
-    });
-    // Actualizar badge
-    const badge = document.getElementById('badge-entradas-count');
-    const visibles = hayAtrasados.length;
-    if (badge) badge.textContent = visibles;
-    // Mostrar aviso de filtro activo
-    const hint = document.querySelector('#screen-entradas .filter-hint');
-    if (!hint) {
-      const div = document.createElement('div');
-      div.className = 'filter-hint';
-      div.style.cssText = 'background:#fef3c7;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12px;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:8px';
-      div.innerHTML = `<span>⚠️ Mostrando solo salidas de hoy y atrasadas (${visibles})</span><button class="btn btn-ghost btn-sm" onclick="quitarFiltroSalidas()">✕ Ver todos</button>`;
-      const card = document.querySelector('#screen-entradas .card');
-      if (card) card.parentNode.insertBefore(div, card);
-    }
-  }, 100);
-}
-
-function quitarFiltroSalidas() {
-  const hint = document.querySelector('#screen-entradas .filter-hint');
-  if (hint) hint.remove();
-  const tbody = document.getElementById('tbody-entradas');
-  if (tbody) Array.from(tbody.querySelectorAll('tr')).forEach(tr => tr.style.display = '');
-  const badge = document.getElementById('badge-entradas-count');
-  if (badge) badge.textContent = entradas.length;
-}
+function filterSalidas() { showScreen('entradas'); document.getElementById('search-entradas').value='atras'; filterEntradas(''); }
 
 // ===================== RENDER CLIENTES =====================
 function renderClientes(filtro='') {
@@ -6230,7 +6060,7 @@ function renderClientes(filtro='') {
   lista = aplicarSort(lista, 'clientes');
   let rows = '';
   lista.forEach(c => {
-    const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
     const colors = ['orange','blue','green'];
     const color = colors[c.id % 3];
     rows += `<tr onclick="verPerfilCliente(${c.id})" style="cursor:pointer">
@@ -6260,7 +6090,7 @@ function filterClientes(v) {
   const tbody = document.getElementById('tbody-clientes');
   let rows = '';
   clientes.filter(filtro).forEach(c => {
-    const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+    const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
     const colors = ['orange','blue','green'];
     const color = colors[c.id % 3];
     const mascsBadge = (c.mascotas||[]).map(m => {
@@ -6301,7 +6131,7 @@ async function marcarResponsivaCliente(clienteId) {
 async function verPerfilCliente(id) {
   const c = clientes.find(cl => cl.id === id);
   if (!c) return;
-  const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+  const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
   // Cargar responsiva_firmada del cliente desde Supabase
   try {
     const cDB = await sb('GET','clientes',null,`?id=eq.${id}&select=responsiva_firmada`);
@@ -6331,7 +6161,7 @@ async function verPerfilCliente(id) {
 
   const historial = todasEntradas;
   const totalDias = historial.reduce((acc,e) => {
-    const d1=new Date((e.entrada||"").replace(" ","T")), d2=new Date((e.salidaPrevista||"").replace(" ","T"));
+    const d1=new Date(e.entrada), d2=new Date(e.salidaPrevista);
     return acc + Math.max(0, Math.round((d2-d1)/(1000*60*60*24)));
   }, 0);
 
@@ -6957,77 +6787,28 @@ function editarEntrada(id) {
   }, 200);
 }
 async function guardarEntrada() {
-  // Protección doble guardado (#3)
-  const btnGuardar = document.querySelector('#screen-nueva-entrada .btn-primary[onclick="guardarEntrada()"]');
-  if (btnGuardar?.disabled) return;
-  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = '⏳ Guardando...'; }
-  const rehabilitarBtn = () => { if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = '✅ Confirmar entrada'; }};
-
-  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); rehabilitarBtn(); return; }
+  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); return; }
   const mascotas = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); rehabilitarBtn(); return; }
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); return; }
   const fe = document.getElementById('ne-fecha-entrada').value;
   const fs = document.getElementById('ne-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); rehabilitarBtn(); return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); rehabilitarBtn(); return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); rehabilitarBtn(); return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); return; }
   const hab = document.getElementById('ne-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); rehabilitarBtn(); return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
 
-  // Validación #4 — servicio seleccionado
   const filas = document.querySelectorAll('#conceptos-tbody tr');
-  const algunServicio = [...filas].some(tr => tr.querySelector('select')?.value);
-  if (filas.length > 0 && !algunServicio && !entradaEditandoId) {
-    notify('⚠️ Selecciona el servicio (tipo de habitación)', 'error'); rehabilitarBtn(); return;
-  }
-
-  // Validación #1 — habitación ya ocupada
-  if (!entradaEditandoId) {
-    const habOcupada = entradas.find(e => e.habitacion === hab);
-    if (habOcupada) {
-      const cOc = clientes.find(cl => cl.id === habOcupada.clienteId);
-      const ok = window.confirm(`⚠️ Habitación ${hab} ya está ocupada\n\nTiene a: ${(habOcupada.mascotas||[]).join(', ')} (${cOc?.nombre||'—'})\nSale: ${(habOcupada.salidaPrevista||'').slice(0,10)}\n\n¿Confirmas asignarla de todas formas?`);
-      if (!ok) { rehabilitarBtn(); return; }
-    }
-  }
-
-  // Validación #2 — mascota ya hospedada
-  if (!entradaEditandoId) {
-    for (const m of mascotas) {
-      const yaAdentro = entradas.find(e => (e.mascotas||[]).includes(m));
-      if (yaAdentro) {
-        const cYa = clientes.find(cl => cl.id === yaAdentro.clienteId);
-        notify(`⚠️ ${m} ya está hospedada en Hab. ${yaAdentro.habitacion} (${cYa?.nombre||'—'}). Registra su salida primero.`, 'error');
-        rehabilitarBtn(); return;
-      }
-    }
-  }
-
   let totalFinal = 0;
-  let totalSinDescuento = 0;
   let hayPrecioVacio = false;
-  let primerServicioId = '';
-  let serviciosPorMascota = {};
-
   filas.forEach(tr => {
-    const servSel = tr.querySelector('select');
-    const inputs  = tr.querySelectorAll('input');
-    const uds     = parseFloat(inputs[0]?.value)||0;
-    const precio  = parseFloat(inputs[1]?.value)||0;
-    const desc    = parseFloat(inputs[2]?.value)||0;
+    const inputs = tr.querySelectorAll('input');
+    const uds = parseFloat(inputs[0]?.value)||0;
+    const precio = parseFloat(inputs[1]?.value)||0;
+    const desc = parseFloat(inputs[2]?.value)||0;
     if (precio === 0) hayPrecioVacio = true;
-    const bruto = uds * precio;
-    totalSinDescuento += bruto;
-    totalFinal        += bruto * (1 - desc/100);
-    // Guardar servicio por mascota
-    const svcId = servSel?.value || '';
-    if (svcId && !primerServicioId) primerServicioId = svcId;
-    const mascNombre = tr.dataset?.mascota || tr.querySelector('td')?.textContent?.replace('🐕','').trim() || '';
-    if (svcId && mascNombre) serviciosPorMascota[mascNombre] = svcId;
+    totalFinal += (uds * precio) * (1 - desc/100);
   });
-
-  const descuentoMonto = Math.round((totalSinDescuento - totalFinal) * 100) / 100;
-
   // Si editando sin conceptos, mantener importe original
   if (!filas.length && entradaEditandoId) {
     const eOrig = entradas.find(en=>en.id===entradaEditandoId);
@@ -7041,10 +6822,7 @@ async function guardarEntrada() {
   const datos = {
     cliente_id: clienteEntradaSeleccionado.id, mascotas, habitacion: hab,
     fecha_entrada: `${fe}T${he}:00`, fecha_salida_prevista: `${fs}T${hs}:00`,
-    importe: totalFinal,
-    servicio: primerServicioId,
-    servicios_json: Object.keys(serviciosPorMascota).length > 0 ? JSON.stringify(serviciosPorMascota) : null,
-    descuento_monto: descuentoMonto,
+    importe: totalFinal, servicio: '',
     notas: document.getElementById('ne-notas').value, status: 'activo',
     responsiva_firmada: document.getElementById('ne-responsiva')?.checked || false
   };
@@ -7088,11 +6866,6 @@ async function guardarEntrada() {
 
     await cargarTodo();
 
-    // Audit log
-    registrarAuditoria(entradaEditandoId ? 'ENTRADA_EDITADA' : 'ENTRADA_CREADA',
-      'entradas', null,
-      `${clienteEntradaSeleccionado?.nombre} · ${mascotas.join(', ')} · Hab.${hab} · $${totalFinal.toLocaleString('es-MX')}`);
-
     // Ticket de entrada eliminado — la impresora se usa solo para caja
     clearClienteSeleccionado();
     document.getElementById('ne-notas').value='';
@@ -7101,12 +6874,11 @@ async function guardarEntrada() {
     document.getElementById('conceptos-tbody').innerHTML='';
     calcResumen();
     const btn = document.querySelector('#screen-nueva-entrada .btn-primary');
-    if (btn) { btn.textContent='✅ Confirmar entrada'; btn.disabled=false; btn.style.background=''; }
+    if (btn) { btn.textContent='💾 Guardar entrada'; btn.style.background=''; }
     const titulo = document.getElementById('page-title');
     if (titulo) titulo.textContent = 'Nueva Entrada';
     showScreen('entradas');
   } catch(e) {
-    rehabilitarBtn();
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
@@ -7119,8 +6891,8 @@ function hacerSalida(nombre, id) {
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   if (!c || !e) return;
 
-  const diasHospedado = Math.ceil((new Date() - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24));
-  const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
+  const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
+  const atrasado = new Date(e.salidaPrevista) < new Date();
   const adelantosPrevios = cobros.filter(co => co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
   const pendienteActual = Math.max(0, e.importe - adelantosPrevios);
 
@@ -7155,7 +6927,7 @@ function hacerSalida(nombre, id) {
     ${flagsBanner}
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;border:1px solid var(--gray-200)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:15px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:15px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
         <div>
           <div style="font-weight:700;color:var(--blue);font-size:15px">${c.nombre}</div>
           <div style="font-size:12px;color:var(--gray-400)">📱 ${c.whatsapp||'Sin WhatsApp'}</div>
@@ -7240,17 +7012,6 @@ function hacerSalida(nombre, id) {
     </div>
   `;
   document.getElementById('modal-salida').classList.add('open');
-  // Actualizar botón con monto exacto a cobrar
-  const btnConf = document.getElementById('btn-confirmar-salida');
-  if (btnConf) {
-    if (pendienteActual > 0) {
-      btnConf.textContent = `📤 Cobrar $${pendienteActual.toLocaleString('es-MX')} PM$ y dar salida`;
-      btnConf.style.background = 'var(--green)';
-    } else {
-      btnConf.textContent = '📤 Dar salida (ya pagado)';
-      btnConf.style.background = '#3b82f6';
-    }
-  }
   actualizarResumenSalida();
 }
 
@@ -7303,8 +7064,6 @@ async function confirmarSalida() {
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
-    registrarAuditoria('SALIDA_REGISTRADA', 'entradas', salidaActual,
-      `${c?.nombre} · ${(e.mascotas||[]).join(', ')} · Hab.${e.habitacion} · $${cobrado.toLocaleString('es-MX')} ${metodo}`);
     if (cobrado > 0 && c) {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
@@ -7328,16 +7087,23 @@ async function confirmarSalida() {
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
-    // Cajón + modal de ticket (cajón solo para Efectivo, modal para todos)
-    if (cobrado > 0 && c) {
+    // Si pagó en efectivo → abrir cajón + imprimir ticket
+    if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
-      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual, metodo);
+      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual);
+    }
+
+    if (c?.whatsapp && cobrado > 0) {
+      setTimeout(() => {
+        if (confirm(`¿Enviar comprobante de pago por WhatsApp a ${c.nombre}?`)) {
+          enviarComprobanteWA(e, c, cobrado, metodo, pendiente);
+        }
+      }, 400);
+    }
+    if (pendiente > 0) {
+      notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
     } else {
-      if (pendiente > 0) {
-        notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
-      } else {
-        notify('✅ Salida registrada', 'success');
-      }
+      notify('✅ Salida registrada y cobro completo', 'success');
     }
   } catch(err) {
     notify('❌ Error al registrar salida: ' + err.message, 'error');
@@ -7366,7 +7132,7 @@ function enviarConfirmacionEntradaWA(entradaId) {
   if (!c || !e) return;
   const msg = aplicarPlantillaWA('wa_tpl_ingreso', {
     nombre: c.nombre,
-    mascota: ( e.mascotas||[] ).join(', '),
+    mascota: e.mascotas.join(', '),
     habitacion: e.habitacion,
     entrada: e.entrada.split(' ')[0],
     salida: e.salidaPrevista.split(' ')[0],
@@ -7415,7 +7181,7 @@ function enviarComprobanteWA(e, c, cobrado, metodo, pendiente) {
     + (pendiente > 0 ? `⏳ Saldo pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '✅ *Saldo: $0 — Pagado completo*');
   let msg = aplicarPlantillaWA('wa_tpl_pago', {
     nombre: c.nombre,
-    mascota: ( e.mascotas||[] ).join(', '),
+    mascota: e.mascotas.join(', '),
     habitacion: e.habitacion,
     entrada: e.entrada.split(' ')[0],
     salida: new Date().toLocaleDateString('es-MX'),
@@ -7437,17 +7203,13 @@ function enviarConfirmacionWA() {
 
 async function eliminarEntrada() {
   if (!confirm('⚠️ ¿Eliminar este hospedaje? Esta acción no se puede deshacer.')) return;
-  const e = entradas.find(en=>en.id===salidaActual);
-  const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'eliminado' });
-    registrarAuditoria('ENTRADA_ELIMINADA', 'entradas', salidaActual,
-      `${c?.nombre||'—'} · ${(e?.mascotas||[]).join(', ')} · Hab.${e?.habitacion||'—'}`);
     await cargarTodo();
     closeModal('modal-salida');
     notify('🗑️ Hospedaje eliminado','success');
-  } catch(err) {
+  } catch(e) {
     entradas = entradas.filter(en=>en.id!==salidaActual);
     actualizarDashboard(); renderEntradas();
     closeModal('modal-salida');
@@ -7459,24 +7221,9 @@ async function eliminarEntrada() {
 // ===================== NUEVO CLIENTE =====================
 // ===================== WHATSAPP =====================
 async function guardarNuevoCliente() {
-  const btn = document.querySelector('#modal-nuevo-cliente .btn-primary');
-  if (btn?.disabled) return;
   const nombre = document.getElementById('nc-nombre').value.trim();
   const whatsapp = document.getElementById('nc-whatsapp').value.trim();
   if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
-
-  // Validación #6 — duplicado por teléfono
-  const waSin = whatsapp.replace(/\D/g,'');
-  const duplicado = clientes.find(c => c.whatsapp && c.whatsapp.replace(/\D/g,'') === waSin);
-  if (duplicado) {
-    const ok = window.confirm(`⚠️ Ya existe un cliente con ese WhatsApp\n\n"${duplicado.nombre}" tiene registrado el número ${whatsapp}.\n\n¿Deseas crear otro cliente con el mismo número?`);
-    if (!ok) return;
-  }
-
-  // Protección doble guardado
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
-  const rehabilitar = () => { if(btn){ btn.disabled=false; btn.textContent='💾 Guardar cliente'; }};
-
   const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
   setLoading(true);
   try {
@@ -7496,16 +7243,12 @@ async function guardarNuevoCliente() {
         nacimiento: m.nacimiento || null
       });
     }
-    registrarAuditoria('CLIENTE_CREADO', 'clientes', nuevoCliente.id,
-      `${nombre} · ${whatsapp} · ${mascotas.length} mascota${mascotas.length!==1?'s':''}`);
     await cargarTodo();
     closeModal('modal-nuevo-cliente');
     notify(`✅ Cliente "${nombre}" registrado con ${mascotas.length} mascota${mascotas.length!==1?'s':''}`, 'success');
     ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>document.getElementById(id).value='');
     mascotasNuevas = [];
-    rehabilitar();
   } catch(e) {
-    rehabilitar();
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
@@ -7550,7 +7293,7 @@ function globalSearch(val) {
     if (!tbody2) return;
     let rows = '';
     resultados.forEach(c => {
-      const initials = (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('');
+      const initials = c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
       const colors = ['orange','blue','green'];
       const color = colors[c.id % 3];
       const mascsFiltradas = (c.mascotas||[]).filter(m => (m.nombre||'').toLowerCase().includes(v) || (m.raza||'').toLowerCase().includes(v));
@@ -7978,7 +7721,7 @@ function renderDeudasPendientes() {
   el.innerHTML = Object.entries(porCliente).map(([cid, cobs]) => {
     const c = clientes.find(cl=>cl.id===parseInt(cid));
     const total = cobs.reduce((s,co)=>s+co.monto,0);
-    const init = c ? (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') : '??';
+    const init = c ? c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('') : '??';
     return `<div style="padding:12px 16px;border-bottom:1px solid #fde68a;background:#fffbeb">
       <div style="display:flex;align-items:center;gap:12px">
         <div class="avatar" style="background:var(--orange)">${init}</div>
@@ -7999,6 +7742,8 @@ function renderDeudasPendientes() {
 
 
 // ===================== COLA DE IMPRESIÓN =====================
+let _colaPendiente = []; // {tipo, datos}
+
 function actualizarBannerQZ(conectado) {
   const banner = document.getElementById('banner-qz');
   if (!banner) return;
@@ -8059,110 +7804,34 @@ async function verificarEstadoQZ() {
 
 // ===================== SISTEMA DE CAJA =====================
 
+// Nombre exacto de la impresora (se puede cambiar desde Mi Negocio)
 function getNombreImpresora() {
   return getConfig('impresora_nombre', 'EPSON_TM_T88V');
 }
 
-// ===================== SERVIDOR LOCAL DE IMPRESIÓN (reemplaza QZ Tray) =====================
-const PRINT_SERVER = 'http://localhost:9090';
-let _servidorConectado = false;
-
-async function verificarServidorImpresion() {
-  try {
-    const r = await Promise.race([
-      fetch(PRINT_SERVER + '/status'),
-      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 3000))
-    ]);
-    const data = await r.json();
-    _servidorConectado = data.ok;
-    actualizarBannerQZ(_servidorConectado);
-    return data;
-  } catch(e) {
-    _servidorConectado = false;
-    actualizarBannerQZ(false);
-    return { ok: false };
-  }
-}
-
-async function imprimirEnServidor(bytes) {
-  try {
-    const r = await fetch(PRINT_SERVER + '/imprimir', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bytes: Array.from(bytes) })
-    });
-    const data = await r.json();
-    return data.ok;
-  } catch(e) { return false; }
-}
-
-async function abrirCajonServidor() {
-  try {
-    const r = await fetch(PRINT_SERVER + '/cajon', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}'
-    });
-    const data = await r.json();
-    return data.ok;
-  } catch(e) { return false; }
-}
-
-// Función principal de impresión (reemplaza imprimirConCajon de QZ)
-async function imprimirConCajon(lineas) {
-  // Convertir string ESC/POS a bytes
-  const bytes = new Uint8Array(lineas.length);
-  for (let i = 0; i < lineas.length; i++) bytes[i] = lineas.charCodeAt(i) & 0xFF;
-  const ok = await imprimirEnServidor(bytes);
-  if (!ok) {
-    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
-    actualizarBannerCola();
-    notify('⏳ Ticket guardado — servidor de impresión no disponible', 'info');
-  }
-}
-
-// Cajón silencioso — abre solo, sin ticket
-async function abrirCajonSilencioso() {
-  await abrirCajonServidor();
-}
-
-// Compatibilidad — conectarQZ ahora verifica el servidor local
+// Conectar a QZ Tray
 async function conectarQZ() {
-  const data = await verificarServidorImpresion();
-  return data.ok;
-}
-
-async function intentarConectarQZ() {
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (ok) {
-    notify('✅ Servidor de impresión conectado', 'success');
-    if (_colaPendiente.length > 0) await imprimirColaPendiente();
-  } else {
-    notify('⚠️ Servidor no disponible — corre servidor_petground.py en Terminal', 'error');
+  if (typeof qz === 'undefined') return false;
+  try {
+    qz.security.setCertificatePromise(function(resolve) { resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----'); });
+    qz.security.setSignatureAlgorithm('SHA512');
+    qz.security.setSignaturePromise(function(toSign) {
+      return function(resolve) { resolve(); };
+    });
+    if (!qz.websocket.isActive()) {
+      await Promise.race([
+        qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
+        new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      ]);
+    }
+    return true;
+  } catch(e) {
+    return false;
   }
 }
 
-async function imprimirColaPendiente() {
-  if (!_colaPendiente.length) return;
-  const cola = [..._colaPendiente];
-  _colaPendiente = [];
-  actualizarBannerCola();
-  for (const job of cola) {
-    if (job.lineas) await imprimirConCajon(job.lineas);
-  }
-  notify('🖨️ Tickets pendientes enviados', 'success');
-}
-
-async function verificarEstadoQZ() { await verificarServidorImpresion(); }
-
-let _qzConectando = false;
-function getNombreImpresora() { return 'EPSON_TM-T88V'; }
-
-// En cobro_imprimirYContinuar — usar servidor en lugar de QZ
-async function tvImprimirFisico() { /* no se usa */ }
-async function abrirCajon() { return await abrirCajonServidor(); }
-
+// Abrir cajón de dinero vía ESC/POS
+// Abrir cajón + imprimir ticket en UNA SOLA llamada QZ = 1 solo popup
 async function imprimirConCajon(lineas) {
   const ok = await conectarQZ();
   actualizarBannerQZ(ok);
@@ -8174,6 +7843,7 @@ async function imprimirConCajon(lineas) {
   }
   try {
     const config = qz.configs.create(getNombreImpresora());
+    // Comando cajón + ticket en un solo array de datos = 1 popup
     const cajonCmd = '\x1B\x70\x00\x19\xFA';
     const b64 = btoa(unescape(encodeURIComponent(cajonCmd + lineas)));
     await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
@@ -8188,7 +7858,8 @@ async function abrirCajon() {
   if (!ok) return false;
   try {
     const config = qz.configs.create(getNombreImpresora());
-    await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+    const data = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
+    await qz.print(config, data);
     return true;
   } catch(e) {
     notify('Error al abrir cajón: ' + e.message, 'error');
@@ -8196,6 +7867,7 @@ async function abrirCajon() {
   }
 }
 
+// Imprimir ticket ESC/POS
 async function imprimirTicketCaja(lineas) {
   const ok = await conectarQZ();
   actualizarBannerQZ(ok);
@@ -8208,81 +7880,81 @@ async function imprimirTicketCaja(lineas) {
   try {
     const config = qz.configs.create(getNombreImpresora());
     const b64 = btoa(unescape(encodeURIComponent(lineas)));
-    await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
+    const data = [{ type: 'raw', format: 'base64', data: b64 }];
+    await qz.print(config, data);
   } catch(e) {
     notify('Error al imprimir: ' + e.message, 'error');
   }
 }
 
+// Construir ticket ESC/POS
 function buildTicketCaja(tipo, datos) {
   const negocio = getConfig('negocio_nombre', 'PetGround');
   const usuario = usuarioActual?.nombre || 'Sistema';
   const fecha = new Date().toLocaleDateString('es-MX');
   const hora  = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
   const sep   = '--------------------------------\n';
+
   let t = '';
-  t += '\x1B\x40';
-  t += '\x1B\x61\x01';
-  t += '\x1B\x45\x01';
+  t += '\x1B\x40';          // Init
+  t += '\x1B\x61\x01';      // Center
+  t += '\x1B\x45\x01';      // Bold ON
   t += negocio + '\n';
-  t += '\x1B\x45\x00';
-  t += '\x1B\x61\x00';
+  t += '\x1B\x45\x00';      // Bold OFF
+  t += '\x1B\x61\x00';      // Left
+
   if (tipo === 'apertura_manual') {
-    t += sep + ' APERTURA DE CAJON\n' + sep;
+    t += sep;
+    t += ' APERTURA DE CAJON\n';
+    t += sep;
     t += ` Usuario:  ${usuario}\n`;
     t += ` Motivo:   ${datos.motivo}\n`;
     if (datos.monto > 0) t += ` Retiro:   $${datos.monto.toLocaleString('es-MX')}\n`;
     if (datos.nota) t += ` Nota:     ${datos.nota}\n`;
-    t += ` Fecha:    ${fecha}  ${hora}\n` + sep;
+    t += ` Fecha:    ${fecha}  ${hora}\n`;
+    t += sep;
   }
+
   if (tipo === 'cobro_efectivo') {
-    t += sep + ' COBRO EN EFECTIVO\n' + sep;
+    t += sep;
+    t += ' COBRO EN EFECTIVO\n';
+    t += sep;
     t += ` Cliente:  ${datos.cliente}\n`;
     t += ` Mascota:  ${datos.mascota}\n`;
     t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
     t += ` Cobro:    ${usuario}\n`;
-    t += ` Fecha:    ${fecha}  ${hora}\n` + sep;
+    t += ` Fecha:    ${fecha}  ${hora}\n`;
+    t += sep;
   }
+
   if (tipo === 'corte') {
-    t += sep + '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n' + sep;
+    t += sep;
+    t += '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n';
+    t += sep;
     t += ` Fecha:    ${fecha}\n`;
-    t += ` Usuario:  ${usuario}\n` + sep;
+    t += ` Usuario:  ${usuario}\n`;
+    t += sep;
     t += ' ENTRADAS\n';
     t += ` Cobros del período: $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')}\n`;
-    t += ` Fondo inicial:      $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n` + sep;
+    t += ` Fondo inicial:      $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n`;
+    t += sep;
     t += ' SALIDAS\n';
     (datos.salidas||[]).forEach(s => {
       t += ` ${s.motivo.padEnd(18)} -$${s.monto.toLocaleString('es-MX')}\n`;
     });
-    t += sep + '\x1B\x45\x01';
+    t += sep;
+    t += '\x1B\x45\x01';
     t += ` TOTAL EN CAJA: $${(datos.totalCaja||0).toLocaleString('es-MX')}\n`;
-    t += '\x1B\x45\x00' + sep;
+    t += '\x1B\x45\x00';
+    t += sep;
   }
+
   t += '\n\n\n';
+  
   return t;
 }
 
-// ===================== SISTEMA DE CAJA =====================
-
-async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
-  const ticket = buildTicketCaja('corte', {cobrosEfectivo, fondoInicial, salidas, totalCaja});
-  await imprimirConCajon(ticket);
-  await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
-    `Retiro de $${totalCaja.toLocaleString('es-MX')} al hacer corte`);
-  cerrarModalComprobante();
-  notify('✅ Corte impreso y caja reiniciada en $0', 'success');
-  renderMovimientosCaja();
-}
-
 // Guardar movimiento en Supabase
-// Fecha/hora local sin conversión UTC (fix zona horaria para caja)
-function fechaLocal() {
-  const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
-         `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) {
   try {
     await sb('POST', 'caja_movimientos', {
@@ -8293,7 +7965,7 @@ async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) 
       usuario_id: usuarioActual?.id || null,
       usuario_nombre: usuarioActual?.nombre || 'Sistema',
       entrada_id: entradaId,
-      fecha: fechaLocal()   // ← hora local, no UTC
+      fecha: new Date().toISOString()
     });
   } catch(e) {
     console.error('Error guardando movimiento caja:', e);
@@ -8362,200 +8034,40 @@ async function confirmarAperturaCaja() {
   const monto   = parseFloat(document.getElementById('caja-monto').value) || 0;
   const nota    = document.getElementById('caja-nota').value.trim();
   const mascota = document.getElementById('caja-mascota')?.value.trim() || '';
+
   if (!motivo) { notify('Selecciona un concepto', 'error'); return; }
+  // Solo requerir monto si no es conteo o cambio de billetes
   const motivosSinMonto = ['Conteo de caja', 'Cambio de billetes'];
   if (!monto && !motivosSinMonto.includes(motivo)) {
     notify('Ingresa el monto', 'error'); return;
   }
+
   cerrarModalCaja();
+
   const notaFinal = mascota ? (mascota + (nota ? ' — ' + nota : '')) : nota;
+  const ticket = buildTicketCaja('apertura_manual', {motivo, monto, nota: notaFinal, tipo: _cajaTipo});
 
-  // Abrir cajón silencioso
-  if (_cajaTipo !== 'salida') abrirCajonSilencioso();
-
-  // Guardar movimiento y obtener ID para poder actualizarlo desde el modal
-  let movimientoId = null;
-  try {
-    const result = await sb('POST','caja_movimientos',{
-      tipo: _cajaTipo === 'salida' ? 'salida' : 'entrada',
-      motivo, monto: monto||0, nota: notaFinal,
-      usuario_id: usuarioActual?.id||null,
-      usuario_nombre: usuarioActual?.nombre||'Sistema',
-      fecha: fechaLocal(), ticket_impreso: false
-    });
-    movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
-  } catch(e) {}
+  // Cajón + ticket en una sola llamada QZ → 1 solo popup
+  await imprimirConCajon(ticket);
 
   if (_cajaTipo === 'salida') {
-    // Salidas: no requieren ticket, solo notificar
-    notify('✅ ' + motivo + ' registrado', 'success');
-    renderMovimientosCaja();
+    await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
+    notify('✅ Cajón abierto — ' + motivo, 'success');
   } else {
-    // Entradas: mostrar modal obligatorio de ticket
-    mostrarModalCobro({
-      cliente: mascota || 'PetGround',
-      mascota: notaFinal || motivo,
-      monto, metodo: 'Efectivo',
-      movimientoId,
-      concepto: motivo
-    });
+    await guardarMovimientoCaja('entrada', motivo, monto, notaFinal);
+    notify('✅ Ingreso registrado — ' + motivo + (mascota ? ' · ' + mascota : ''), 'success');
   }
-}
 
-// ===================== AUDITORÍA =====================
-async function registrarAuditoria(accion, entidad, entidadId, detalle) {
-  try {
-    await sb('POST', 'audit_log', {
-      usuario_nombre: usuarioActual?.nombre || 'Sistema',
-      usuario_id: usuarioActual?.id || null,
-      accion, entidad,
-      entidad_id: entidadId || null,
-      detalle: detalle || '',
-      fecha: fechaLocal()
-    });
-  } catch(e) { /* silencioso — auditoría no debe interrumpir el flujo */ }
-}
-
-// ===================== MODAL OBLIGATORIO POST-COBRO =====================
-let _cobroActual = null; // datos del cobro pendiente de confirmar ticket
-
-async function mostrarModalCobro(datos) {
-  _cobroActual = datos;
-
-  // Verificar estado del servidor local (no QZ Tray)
-  const statusData = await verificarServidorImpresion();
-  const servidorOk = statusData.ok;
-
-  document.getElementById('cobro-detalle').innerHTML = `
-    <div style="display:grid;gap:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--gray-500)">Cliente</span>
-        <span style="font-weight:700;font-size:14px">${datos.cliente||'—'}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--gray-500)">Mascota(s)</span>
-        <span style="font-weight:700;font-size:14px">${datos.mascota||'—'}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;color:var(--gray-500)">Método</span>
-        <span style="font-weight:700">${datos.metodo||'Efectivo'}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--gray-100)">
-        <span style="font-size:15px;font-weight:700">Total cobrado</span>
-        <span style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">$${(datos.monto||0).toLocaleString('es-MX')} PM$</span>
-      </div>
-      ${servidorOk
-        ? '<div style="background:#d1fae5;border-radius:8px;padding:8px 12px;font-size:12px;color:#065f46;margin-top:4px">✅ Impresora lista</div>'
-        : '<div style="background:#fef3c7;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-top:4px">⚠️ Servidor no activo — corre servidor_petground.py</div>'}
-    </div>`;
-
-  const btnImp = document.getElementById('cobro-btn-imprimir');
-  btnImp.disabled = false;
-  if (servidorOk) {
-    btnImp.style.background = '#1B2F5B';
-    btnImp.innerHTML = '🖨️ IMPRIMIR TICKET Y CONTINUAR';
-  } else {
-    btnImp.style.background = '#94a3b8';
-    btnImp.innerHTML = '🖨️ Intentar imprimir igual';
-  }
-  document.getElementById('cobro-sin-ticket-wrap').style.display = 'none';
-  document.getElementById('cobro-btn-sin-ticket').style.display = '';
-  document.getElementById('cobro-motivo-sin-ticket').value = '';
-  document.getElementById('modal-cobro-confirmacion').style.display = 'flex';
-}
-
-async function cobro_imprimirYContinuar() {
-  if (!_cobroActual) return;
-  const data = await verificarServidorImpresion();
-  if (data.ok) {
-    const ticket = buildTicketCaja('cobro_efectivo', _cobroActual);
-    await imprimirConCajon(ticket);
-    if (_cobroActual.movimientoId) {
-      try { await sb('PATCH','caja_movimientos',{ticket_impreso:true},`?id=eq.${_cobroActual.movimientoId}`); } catch(e) {}
-    }
-    cerrarModalCobro();
-    notify('🖨️ Ticket impreso', 'success');
-  } else {
-    cobro_mostrarSinTicket();
-    notify('⚠️ Servidor de impresión no disponible — corre servidor_petground.py', 'error');
-  }
-}
-
-function cobro_mostrarSinTicket() {
-  document.getElementById('cobro-sin-ticket-wrap').style.display = '';
-  document.getElementById('cobro-btn-sin-ticket').style.display = 'none';
-}
-
-async function cobro_continuarSinTicket() {
-  const motivo = document.getElementById('cobro-motivo-sin-ticket').value;
-  if (!motivo) { notify('Selecciona el motivo', 'error'); return; }
-  // Guardar motivo_sin_ticket en Supabase
-  if (_cobroActual?.movimientoId) {
-    try {
-      await sb('PATCH','caja_movimientos',
-        { ticket_impreso: false, motivo_sin_ticket: motivo },
-        `?id=eq.${_cobroActual.movimientoId}`);
-    } catch(e) {}
-  }
-  cerrarModalCobro();
-  notify('⚠️ Cobro registrado sin ticket — ' + motivo, 'info');
-}
-
-function cerrarModalCobro() {
-  document.getElementById('modal-cobro-confirmacion').style.display = 'none';
-  _cobroActual = null;
   renderMovimientosCaja();
 }
 
-// Apertura automática al cobrar — ahora muestra modal obligatorio
-async function abrirCajonPorCobro(cliente, mascota, monto, entradaId, metodo) {
-  const esEfectivo = !metodo || metodo === 'Efectivo';
-  const motivoCaja = esEfectivo ? 'Cobro en efectivo' : `Cobro ${metodo}`;
-
-  // Abrir cajón SOLO si es efectivo
-  if (esEfectivo) abrirCajonSilencioso();
-
-  // Guardar movimiento en caja (efectivo) o solo en cobros (tarjeta/transferencia)
-  let movimientoId = null;
-  if (esEfectivo) {
-    try {
-      const result = await sb('POST','caja_movimientos',{
-        tipo: 'entrada',
-        motivo: motivoCaja,
-        monto,
-        nota: `${cliente} - ${mascota}`,
-        usuario_id: usuarioActual?.id || null,
-        usuario_nombre: usuarioActual?.nombre || 'Sistema',
-        entrada_id: entradaId,
-        fecha: fechaLocal(),
-        ticket_impreso: false
-      });
-      movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
-    } catch(e) {}
-  }
-
-  // Mostrar modal de ticket para todos los pagos (efectivo y no efectivo)
-  mostrarModalCobro({
-    cliente, mascota, monto,
-    metodo: metodo || 'Efectivo',
-    movimientoId, entradaId
-  });
-}
-
-async function abrirCajonSilencioso() {
-  if (typeof qz === 'undefined') return;
-  try {
-    if (!qz.websocket.isActive()) {
-      await Promise.race([
-        qz.websocket.connect({ host:'localhost', port:{ primary:8181, fallback:8383 }}),
-        new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 4000))
-      ]);
-    }
-    if (qz.websocket.isActive()) {
-      const config = qz.configs.create(getNombreImpresora());
-      await qz.print(config, [{ type:'raw', format:'hex', data:'1B700019FA' }]);
-    }
-  } catch(e) { /* silencioso */ }
+// Apertura automática al cobrar en efectivo
+async function abrirCajonPorCobro(cliente, mascota, monto, entradaId) {
+  const ticket = buildTicketCaja('cobro_efectivo', {cliente, mascota, monto});
+  await imprimirConCajon(ticket);
+  await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
+    `${cliente} - ${mascota}`, entradaId);
+  renderMovimientosCaja();
 }
 
 // Cargar movimientos del día
@@ -8563,90 +8075,70 @@ async function renderMovimientosCaja() {
   const el = document.getElementById('caja-movimientos-lista');
   if (!el) return;
 
-  // Buscar último corte para delimitar el período
+  // Fecha filtro
+  const fechaInput = document.getElementById('caja-fecha-filtro');
+  if (!fechaInput.value) {
+    fechaInput.value = new Date().toISOString().split('T')[0];
+  }
+  const fecha = fechaInput.value;
+  const desde = fecha + 'T00:00:00';
+  const hasta = fecha + 'T23:59:59';
+
+  // KPIs: acumulado desde último corte
   let desdeCorte = '';
-  let labelPeriodo = 'desde el inicio';
   try {
     const uc = await sb('GET','caja_movimientos',null,
       '?motivo=eq.Corte+realizado&order=fecha.desc&limit=1&select=fecha');
-    if (uc && uc[0]) {
-      desdeCorte = '&fecha=gte.' + encodeURIComponent(uc[0].fecha);
-      const fc = new Date(uc[0].fecha);
-      labelPeriodo = `desde ${fc.toLocaleDateString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}`;
-    }
+    if (uc && uc[0]) desdeCorte = '&fecha=gte.' + uc[0].fecha.replace(/\+/g,'%2B');
   } catch(e) {}
 
-  // Cargar TODOS los movimientos desde el último corte
-  let movs = [];
+  let movsTotal = [];
   try {
-    movs = await sb('GET','caja_movimientos',null,
+    movsTotal = await sb('GET', 'caja_movimientos', null,
       '?motivo=neq.Corte+realizado&order=fecha.asc' + desdeCorte + '&select=*');
   } catch(e) {}
 
-  // KPIs
-  const totalEnt  = movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const totalSal  = movs.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const totalCaja = totalEnt - totalSal;
-  const sinTicket = movs.filter(m=>m.tipo==='entrada' && !m.ticket_impreso).length;
+  // Lista: solo la fecha seleccionada
+  let movs = [];
+  try {
+    movs = await sb('GET', 'caja_movimientos', null,
+      `?fecha=gte.${desde}&fecha=lte.${hasta}&order=fecha.asc&select=*`);
+  } catch(e) {}
+
+  // Calcular KPIs desde último corte
+  const entradas = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const salidas  = movsTotal.filter(m=>m.tipo==='salida' && m.motivo!=='Corte realizado').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const total    = entradas - salidas;
 
   const elE = document.getElementById('caja-entradas');
   const elS = document.getElementById('caja-salidas');
   const elT = document.getElementById('caja-total');
-  const elLE = document.getElementById('caja-label-entradas');
-  const elLS = document.getElementById('caja-label-salidas');
-  const elPer = document.getElementById('caja-periodo-label');
-  const elBadge = document.getElementById('caja-sin-ticket-badge');
-
-  if (elE) elE.textContent = '$' + totalEnt.toLocaleString('es-MX');
-  if (elS) elS.textContent = '$' + totalSal.toLocaleString('es-MX');
-  if (elT) { elT.textContent = '$' + totalCaja.toLocaleString('es-MX'); elT.style.color = totalCaja >= 0 ? '#1a4f8a' : '#c0392b'; }
-  if (elLE) elLE.textContent = 'Entradas período';
-  if (elLS) elLS.textContent = 'Salidas período';
-  if (elPer) elPer.textContent = `📅 Período activo: ${labelPeriodo}`;
-  if (elBadge) { elBadge.style.display = sinTicket > 0 ? '' : 'none'; elBadge.textContent = `⚠️ ${sinTicket} sin ticket`; }
+  if (elE) elE.textContent = '$' + entradas.toLocaleString('es-MX');
+  if (elS) elS.textContent = '$' + salidas.toLocaleString('es-MX');
+  if (elT) {
+    elT.textContent = '$' + total.toLocaleString('es-MX');
+    elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b';
+  }
 
   if (!movs.length) {
-    el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos en este período</div></div>';
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos este día</div></div>';
     return;
   }
 
-  // Agrupar por día para mejor lectura
-  const porDia = {};
-  movs.forEach(m => {
-    const dia = (m.fecha||'').slice(0,10);
-    if (!porDia[dia]) porDia[dia] = [];
-    porDia[dia].push(m);
-  });
-
-  el.innerHTML = Object.entries(porDia).reverse().map(([dia, items]) => {
-    const fechaLabel = new Date(dia + 'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
-    const subtotalDia = items.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0)
-                      - items.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-    return `
-      <div style="background:var(--gray-50);padding:8px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--gray-100)">
-        <span style="font-size:12px;font-weight:700;color:var(--gray-500);text-transform:capitalize">${fechaLabel}</span>
-        <span style="font-size:12px;font-weight:700;color:${subtotalDia>=0?'var(--green)':'var(--red)'}">
-          ${subtotalDia>=0?'+':''}$${subtotalDia.toLocaleString('es-MX')}
-        </span>
+  el.innerHTML = movs.filter(m => m.motivo !== 'Corte realizado').map(m => {
+    const es_entrada = m.tipo === 'entrada';
+    const monto = parseFloat(m.monto||0);
+    const hora = new Date(m.fecha).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    return `<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${es_entrada?'#f0fdf4':'#fef2f2'}">
+      <div style="font-size:20px">${es_entrada?'💵':'📤'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px;color:${es_entrada?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${hora}${m.nota?' · '+m.nota:''}</div>
       </div>
-      ${items.map(m => {
-        const esEnt = m.tipo === 'entrada';
-        const monto = parseFloat(m.monto||0);
-        const hora = new Date(m.fecha).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-        const sinTk = esEnt && !m.ticket_impreso;
-        return `<div style="padding:11px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${sinTk?'#fffbeb':esEnt?'#f0fdf4':'#fef2f2'}">
-          <div style="font-size:18px">${esEnt?'💵':'📤'}</div>
-          <div style="flex:1">
-            <div style="font-weight:700;font-size:13px;color:${esEnt?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}
-              ${sinTk?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600">⚠️ SIN TICKET${m.motivo_sin_ticket?' · '+m.motivo_sin_ticket:''}</span>`:''}
-            </div>
-            <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${hora}${m.nota?' · '+m.nota:''}</div>
-          </div>
-          <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:${esEnt?'#1a7a4a':'#c0392b'}">
-            ${esEnt?'+':'-'}$${monto.toLocaleString('es-MX')}
-          </div>
-        </div>`;
-      }).join('')}`;
+      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:${es_entrada?'#1a7a4a':'#c0392b'}">
+        ${es_entrada?'+':'-'}$${monto.toLocaleString('es-MX')}
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -8722,6 +8214,18 @@ async function hacerCorteCaja() {
   modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:400px">${resumen}</div>`;
 }
 
+async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
+  const ticket = buildTicketCaja('corte', {cobrosEfectivo, fondoInicial, salidas, totalCaja});
+  await imprimirConCajon(ticket);
+  // Registrar el corte como movimiento para marcar el punto de reinicio
+  await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
+    `Retiro de $${totalCaja.toLocaleString('es-MX')} al hacer corte`);
+  cerrarModalComprobante();
+  notify('✅ Corte impreso y caja reiniciada en $0', 'success');
+  renderMovimientosCaja();
+}
+
+
 // ===================== COBROS EMPLEADO =====================
 function renderCobrosEmpleado() {
   const el = document.getElementById('ce-lista');
@@ -8772,7 +8276,7 @@ function renderCobrosEmpleado() {
   el.innerHTML = entradas2.map(([cid, cobs]) => {
     const c = clientes.find(cl => cl.id === parseInt(cid));
     const total = cobs.reduce((s, co) => s + co.monto, 0);
-    const init = c ? (c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') : '??';
+    const init = c ? c.nombre.split(' ').map(w => w[0]).slice(0, 2).join('') : '??';
     const tel = c?.whatsapp || c?.telefono || '';
     return '<div style="padding:14px 16px;border-bottom:1px solid #fde68a;background:#fffbeb">' +
       '<div style="display:flex;align-items:flex-start;gap:12px">' +
@@ -8930,21 +8434,20 @@ function renderPendientes() {
   const tbody = document.getElementById('tbody-pendientes');
   let rows = '';
   let count = 0;
-  let totalPendiente = 0;
   entradas.forEach(e => {
     const cl = clientes.find(c=>c.id===e.clienteId);
+    // Solo cobros pagados o adelantos reales (no los pendientes diferidos)
     const adelE = cobros.filter(c=>
-      (c.entradaId===e.id) &&
+      (c.entradaId===e.id || c.entradaId===e.id) &&
       (c.status==='pagado' || c.status==='adelanto')
     ).reduce((s,c)=>s+c.monto,0);
     const pendiente = e.importe - adelE;
     if (pendiente <= 0) return;
     count++;
-    totalPendiente += pendiente;
-    const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < new Date();
+    const atrasado = new Date(e.salidaPrevista) < new Date();
     rows += `<tr>
       <td><span style="font-weight:600;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cl?.id})">${cl?.nombre||'—'}</span></td>
-      <td><div style="font-size:11px">${( e.mascotas||[] ).join(', ')}</div></td>
+      <td><div style="font-size:11px">${e.mascotas.join(', ')}</div></td>
       <td><span style="${atrasado?'color:var(--red);font-weight:700':''}">${(e.salidaPrevista||'').split(' ')[0]} ${atrasado?'⚠️':''}</span></td>
       <td><span style="font-weight:600">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
       <td><span style="color:var(--blue)">$${adelE.toLocaleString('es-MX')} PM$</span></td>
@@ -8954,23 +8457,7 @@ function renderPendientes() {
   });
   const badge = document.getElementById('badge-pendientes-count');
   if (badge) badge.textContent = count+' pendientes';
-  if (!rows) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">¡Todo cobrado! Sin pendientes activos.</div></div></td></tr>';
-    return;
-  }
-  // Fila de total al final
-  rows += `<tr style="background:var(--gray-50);border-top:2px solid var(--gray-200)">
-    <td colspan="5" style="text-align:right;font-weight:700;font-size:13px;color:var(--gray-600);padding:10px 14px">
-      TOTAL PENDIENTE POR COBRAR (${count} hospedajes):
-    </td>
-    <td style="padding:10px 14px">
-      <span style="font-family:'Nunito',sans-serif;font-weight:900;font-size:16px;color:var(--red)">
-        $${totalPendiente.toLocaleString('es-MX')} PM$
-      </span>
-    </td>
-    <td></td>
-  </tr>`;
-  tbody.innerHTML = rows;
+  tbody.innerHTML = rows || '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">¡Todo cobrado! Sin pendientes activos.</div></div></td></tr>';
 }
 
 // ===================== NUEVO COBRO =====================
@@ -8988,7 +8475,7 @@ function onCobroClienteChange() {
   entradas.filter(e=>e.clienteId===cid).forEach(e => {
     const opt = document.createElement('option');
     opt.value = e.id;
-    opt.textContent = `Hab.${e.habitacion} · ${( e.mascotas||[] ).join(',')} · $${e.importe.toLocaleString()}`;
+    opt.textContent = `Hab.${e.habitacion} · ${e.mascotas.join(',')} · $${e.importe.toLocaleString()}`;
     sel.appendChild(opt);
   });
   actualizarResumenCobro();
@@ -9013,43 +8500,25 @@ function actualizarResumenCobro() {
 async function guardarCobro() {
   const cid = parseInt(document.getElementById('cobro-cliente').value);
   const monto = parseFloat(document.getElementById('cobro-monto').value);
-  const metodo = document.getElementById('cobro-metodo').value;
   if (!cid) { notify('Selecciona un cliente','error'); return; }
   if (!monto || monto <= 0) { notify('Ingresa un monto válido','error'); return; }
-
-  // Doble guardado protection
-  const btn = document.querySelector('#modal-nuevo-cobro .btn-green');
-  if (btn?.disabled) return;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
-  const rehabilitar = () => { if(btn){ btn.disabled=false; btn.textContent='💾 Guardar cobro'; }};
-
   setLoading(true);
   try {
-    const entId = parseInt(document.getElementById('cobro-entrada').value)||null;
     await sb('POST', 'cobros', {
       cliente_id: cid,
-      entrada_id: entId,
+      entrada_id: parseInt(document.getElementById('cobro-entrada').value)||null,
       fecha: document.getElementById('cobro-fecha').value,
-      metodo, monto,
+      metodo: document.getElementById('cobro-metodo').value,
+      monto,
       concepto: document.getElementById('cobro-concepto').value || 'Hospedaje',
       notas: document.getElementById('cobro-notas').value,
       status: 'pagado'
     });
     await cargarTodo();
     closeModal('modal-nuevo-cobro');
+    notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     initFacturacion();
-    rehabilitar();
-
-    // Cajón + modal obligatorio de ticket (igual que en salida)
-    const c = clientes.find(cl => cl.id === cid);
-    const e = entId ? entradas.find(en => en.id === entId) : null;
-    await abrirCajonPorCobro(
-      c?.nombre || 'Cliente',
-      (e?.mascotas||[]).join(', ') || document.getElementById('cobro-concepto').value || 'Cobro',
-      monto, entId, metodo
-    );
   } catch(e) {
-    rehabilitar();
     notify('Error: '+e.message,'error');
   }
   setLoading(false);
@@ -9611,23 +9080,7 @@ function entrarAlSistema() {
   if (!esAdmin) setTimeout(renderCobrosEmpleado, 500);
   // Cargar datos
   cargarTodo();
-
-  // Restaurar pantalla desde hash si existe (ej. recarga en #clientes)
-  const hashScreen = window.location.hash.replace('#','');
-  if (hashScreen && document.getElementById('screen-' + hashScreen)) {
-    setTimeout(() => showScreen(hashScreen), 300);
-  } else {
-    history.replaceState({ screen: 'dashboard' }, '', '#dashboard');
-  }
 }
-
-// Flecha ← del navegador: volver a la pantalla anterior dentro del sistema
-window.addEventListener('popstate', e => {
-  const name = e.state?.screen;
-  if (name && document.getElementById('screen-' + name)) {
-    showScreen(name, false); // false = no volver a pushState
-  }
-});
 
 function cerrarSesion() {
   detenerAutoLogout();
@@ -9664,17 +9117,11 @@ document.getElementById('clave-sistema')?.addEventListener('keydown', e => {
 });
 
 // ===================== GESTIÓN DE USUARIOS =====================
-function showScreen(name, addHistory = true) {
+function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
-
-  // Registrar en historial del navegador para que ← funcione
-  if (addHistory && history.state?.screen !== name) {
-    history.pushState({ screen: name }, '', '#' + name);
-  }
-
   const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin','mapa-ocupacion':'mapa-ocupacion','nueva-salida':'nueva-salida',salidas:'salidas',recordatorios:'recordatorios'};
   const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','nueva-salida':'Registrar salida','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio','mapa-ocupacion':'Mapa de Ocupación',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas'};
   document.getElementById('page-title').textContent = titles[name] || name;
@@ -9707,15 +9154,9 @@ function showScreen(name, addHistory = true) {
   if (name === 'nueva-entrada') {
     actualizarDropdownsHabitacion();
     poblarSelectServicios();
-    const ahora = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const hoy = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())}`;
-    const horaActual = `${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`;
+    const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('ne-fecha-entrada').value = hoy;
     document.getElementById('ne-fecha-salida').value = hoy;
-    if (!entradaEditandoId) {
-      document.getElementById('ne-hora-entrada').value = horaActual;
-    }
     // Siempre limpiar buscador y estado al entrar
     const buscarEl = document.getElementById('buscar-cliente-entrada');
     if (buscarEl) buscarEl.value = '';
@@ -9836,7 +9277,7 @@ function renderRetencion() {
     } else {
       riesgoLista.innerHTML = riesgo.map(c => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
           <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
             <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · <span style="color:var(--orange);font-weight:700">${c.diasDesde} días sin venir</span></div>
@@ -9916,11 +9357,11 @@ function renderReportes() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">${entradas.filter(e=>new Date((e.salidaPrevista||"").replace(" ","T"))<hoy).length}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">${entradas.filter(e=>new Date(e.salidaPrevista)<hoy).length}</div>
         <div style="font-size:11px;color:var(--gray-400)">Atrasados</div>
       </div>
       <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--orange)">${entradas.filter(e=>{const d=new Date((e.salidaPrevista||"").replace(" ","T"));return d>=hoy&&d<=en7Dias;}).length}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--orange)">${entradas.filter(e=>{const d=new Date(e.salidaPrevista);return d>=hoy&&d<=en7Dias;}).length}</div>
         <div style="font-size:11px;color:var(--gray-400)">Salen en 7 días</div>
       </div>
     </div>
@@ -9984,13 +9425,13 @@ function renderReportes() {
 
   // Próximas salidas 7 días
   const proximas = entradas.filter(e => {
-    const d = new Date((e.salidaPrevista||"").replace(" ","T"));
+    const d = new Date(e.salidaPrevista);
     return d >= hoy && d <= en7Dias;
   }).sort((a,b) => new Date(a.salidaPrevista)-new Date(b.salidaPrevista));
   document.getElementById('rep-proximas-badge').textContent = proximas.length;
   document.getElementById('rep-proximas-tbody').innerHTML = proximas.map(e => {
     const c = clientes.find(cl=>cl.id===e.clienteId);
-    const diasRestantes = Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T"))-hoy)/(1000*60*60*24));
+    const diasRestantes = Math.ceil((new Date(e.salidaPrevista)-hoy)/(1000*60*60*24));
     return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:13px">${c?.nombre||'—'}</div></div></td>
       <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
@@ -10083,8 +9524,8 @@ function renderNuevaSalidaScreen(filtro='') {
 
   lista.innerHTML = filtradas.map(e => {
     const c = clientes.find(cl => cl.id === e.clienteId);
-    const diasHospedado = Math.ceil((hoy - new Date((e.entrada||"").replace(" ","T"))) / (1000*60*60*24));
-    const atrasado = new Date((e.salidaPrevista||"").replace(" ","T")) < hoy;
+    const diasHospedado = Math.ceil((hoy - new Date(e.entrada)) / (1000*60*60*24));
+    const atrasado = new Date(e.salidaPrevista) < hoy;
     const adelantos = cobros.filter(co => co.entradaId === e.id).reduce((s,co) => s+co.monto, 0);
     const pendiente = Math.max(0, e.importe - adelantos);
     return `<div class="card" style="padding:0;overflow:hidden">
@@ -10157,18 +9598,18 @@ async function renderSalidas() {
     let totalIngresos = 0;
     tbody.innerHTML = filtradas.map(e => {
       const c = clientes.find(cl => cl.id === e.cliente_id);
-      const nombre = c?.nombre || e.nombre_cliente || e.cliente_nombre || '(cliente eliminado)';
+      const nombre = c?.nombre || '—';
       const mascs = (e.mascotas||[]).slice(0,2).join(', ');
       const fechaEnt = (e.fecha_entrada||'').slice(0,10);
       const fechaSal = (e.updated_at||'').slice(0,10);
       const dias = fechaEnt && fechaSal ? Math.max(1, Math.ceil((new Date(fechaSal)-new Date(fechaEnt))/(1000*60*60*24))) : '—';
       const importe = parseFloat(e.importe)||0;
       totalIngresos += importe;
+      // Buscar método de pago en cobros
       const cobrosSalida = cobros.filter(co => co.entradaId === e.id);
       const metodo = cobrosSalida[cobrosSalida.length-1]?.metodo || '—';
-      const initials = nombre.split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('') || '?';
-      return `<tr onclick="verPerfilCliente(${c?.id||0})" style="cursor:${c?'pointer':'default'}">
-        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
+      return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
+        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
         <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
         <td><div class="room-num">${e.habitacion||'—'}</div></td>
         <td><div class="date-cell"><div class="date">${fechaEnt}</div></div></td>
@@ -10196,9 +9637,9 @@ function renderRecordatorios() {
   const mesActual = hoy.getMonth();
 
   // --- KPIs ---
-  const atrasados = entradas.filter(e => new Date((e.salidaPrevista||"").replace(" ","T")) < hoy);
+  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
   const salenProx = entradas.filter(e => {
-    const d = new Date((e.salidaPrevista||"").replace(" ","T"));
+    const d = new Date(e.salidaPrevista);
     return d >= hoy && d <= new Date(hoy.getTime() + 2*86400000);
   });
   const reservasProx = (reservaciones||[]).filter(r => {
@@ -10243,7 +9684,7 @@ function renderRecordatorios() {
       <td><span class="badge ${esHoy?'badge-red':'badge-orange'}">${esHoy?'🔴 HOY':'🟡 Mañana'} ${(e.salidaPrevista||'').slice(0,10)}</span></td>
       <td><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
       <td><button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
+      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin salidas en las próximas 24 horas</td></tr>';
@@ -10252,7 +9693,7 @@ function renderRecordatorios() {
   document.getElementById('rec-atrasados-badge').textContent = atrasados.length;
   document.getElementById('rec-atrasados-tbody').innerHTML = atrasados.map(e => {
     const c = clientes.find(cl => cl.id === e.clienteId);
-    const diasExtra = Math.ceil((hoy - new Date((e.salidaPrevista||"").replace(" ","T"))) / (1000*60*60*24));
+    const diasExtra = Math.ceil((hoy - new Date(e.salidaPrevista)) / (1000*60*60*24));
     return `<tr>
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--red)">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
       <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
@@ -10261,7 +9702,7 @@ function renderRecordatorios() {
       <td><span class="badge badge-red">+${diasExtra} día${diasExtra!==1?'s':''}</span></td>
       <td>
         <button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
+        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin atrasados</td></tr>';
@@ -10290,124 +9731,20 @@ function renderRecordatorios() {
         const diasInactivo = ultimoCobro ? Math.ceil((hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24)) : '?';
         const mascs = (c.mascotas||[]).map(m => m.nombre||m).slice(0,2).join(', ');
         return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:13px">${c.nombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">🐕 ${mascs||'—'} · ${typeof diasInactivo === 'number' ? `${diasInactivo} días sin visita` : 'Sin historial'}</div>
           </div>
-          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
+          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
         </div>`;
       }).join('');
 
   // --- Cumpleaños mascotas este mes ---
-  renderCumpleanosMes(mesActual);
-
-  // --- Solicitudes de cumpleaños ---
-  cargarSolicitudesCumpleanos();
-}
-
-async function cargarSolicitudesCumpleanos() {
-  const lista = document.getElementById('rec-solicitudes-lista');
-  const badge = document.getElementById('rec-solicitudes-badge');
-  if (!lista) return;
-  try {
-    const rows = await sb('GET', 'cumpleanos_requests', null,
-      '?status=eq.pendiente&order=created_at.desc&limit=50');
-    if (!rows || rows.length === 0) {
-      badge.style.display = 'none';
-      lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">✅ Sin solicitudes pendientes</div>';
-      return;
-    }
-    badge.textContent = rows.length;
-    badge.style.display = '';
-    // Actualizar badge en nav
-    const navBadge = document.getElementById('badge-recordatorios');
-    if (navBadge) {
-      const atrasados = entradas.filter(e => new Date((e.salidaPrevista||'').replace(' ','T')) < new Date()).length;
-      const total = atrasados + rows.length;
-      navBadge.textContent = total;
-      navBadge.style.display = total > 0 ? '' : 'none';
-    }
-    lista.innerHTML = rows.map(r => {
-      const fechaLeg = r.fecha_propuesta
-        ? new Date(r.fecha_propuesta + 'T12:00:00').toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'})
-        : '—';
-      const recibido = r.created_at
-        ? new Date(r.created_at).toLocaleDateString('es-MX', {day:'2-digit',month:'2-digit',year:'numeric'})
-        : '';
-      return `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray-100);flex-wrap:wrap" id="sol-row-${r.id}">
-          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#f59e0b);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🐾</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:14px;color:var(--blue)">${r.mascota_nombre||'—'}</div>
-            <div style="font-size:12px;color:var(--gray-500)">
-              👤 ${r.cliente_nombre||'—'} · 📅 Nació el <strong>${fechaLeg}</strong>
-            </div>
-            <div style="font-size:11px;color:var(--gray-400)">Recibido: ${recibido}</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
-            <button class="btn btn-sm btn-green" onclick="aprobarCumpleanos(${r.id},${r.mascota_id},'${r.fecha_propuesta}','${(r.mascota_nombre||'').replace(/'/g,"\\'")}')">
-              ✅ Aprobar
-            </button>
-            <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="rechazarCumpleanos(${r.id},'${(r.mascota_nombre||'').replace(/'/g,"\\'")}')">
-              ✕
-            </button>
-          </div>
-        </div>`;
-    }).join('');
-  } catch(e) {
-    lista.innerHTML = '<div style="padding:16px;color:var(--gray-400);font-size:13px;text-align:center">No se pudo cargar (tabla pendiente de crear)</div>';
-    badge.style.display = 'none';
-  }
-}
-
-async function aprobarCumpleanos(reqId, mascotaId, fecha, mascotaNombre) {
-  try {
-    // 1. Actualizar mascota en Supabase
-    await sb('PATCH', 'mascotas', { nacimiento: fecha }, `?id=eq.${mascotaId}`);
-    // 2. Marcar solicitud como aprobada
-    await sb('PATCH', 'cumpleanos_requests', { status: 'aprobado' }, `?id=eq.${reqId}`);
-    // 3. Actualizar en memoria
-    clientes.forEach(c => {
-      (c.mascotas||[]).forEach(m => {
-        if (m.id === mascotaId) m.nacimiento = fecha;
-      });
-    });
-    // 4. Quitar fila
-    document.getElementById('sol-row-' + reqId)?.remove();
-    notify(`✅ Cumpleaños de ${mascotaNombre} guardado: ${fecha}`, 'success');
-    cargarSolicitudesCumpleanos();
-  } catch(e) {
-    notify('Error al aprobar: ' + e.message, 'error');
-  }
-}
-
-async function rechazarCumpleanos(reqId, mascotaNombre) {
-  try {
-    await sb('PATCH', 'cumpleanos_requests', { status: 'rechazado' }, `?id=eq.${reqId}`);
-    document.getElementById('sol-row-' + reqId)?.remove();
-    notify(`Solicitud de ${mascotaNombre} rechazada`, 'info');
-    cargarSolicitudesCumpleanos();
-  } catch(e) {
-    notify('Error: ' + e.message, 'error');
-  }
-}
-
-function copiarLinkCumpleanos() {
-  const link = window.location.origin + '/cumpleanos.html';
-  navigator.clipboard.writeText(link).then(() => {
-    notify('🔗 Link copiado: ' + link, 'success');
-  }).catch(() => {
-    notify('Link: ' + link, 'info');
-  });
-}
-
-// Cumpleaños de mascotas este mes (parte final de renderRecordatorios, llamada desde cargarSolicitudesCumpleanos vía renderRecordatorios)
-function renderCumpleanosMes(mesActual) {
   const cumplesMes = [];
   clientes.forEach(c => {
     (c.mascotas||[]).forEach(m => {
-      const fechaNac = m.nacimiento || m.fechaNacimiento || m.fecha_nacimiento || '';
+      const fechaNac = m.fechaNacimiento || m.fecha_nacimiento || '';
       if (!fechaNac) return;
       const mes = parseInt((fechaNac||'').slice(5,7)) - 1;
       if (mes === mesActual) {
@@ -10427,7 +9764,7 @@ function renderCumpleanosMes(mesActual) {
             <div style="font-weight:600;font-size:13px">🐕 ${mascotaNombre}</div>
             <div style="font-size:11px;color:var(--gray-400)">Dueño: ${clienteNombre} · Día ${dia}</div>
           </div>
-          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((clienteNombre||'').split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
+          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(clienteNombre.split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
         </div>`
       ).join('');
 }
@@ -10453,7 +9790,7 @@ function renderReportesExtra() {
       : topRentables.map(({c, total}, i) => `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
           <div style="font-family:\'Nunito\',sans-serif;font-weight:900;font-size:14px;color:var(--gray-400);width:22px">#${i+1}</div>
-          <div class="avatar" style="width:32px;height:32px;font-size:12px">${(c?.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
+          <div class="avatar" style="width:32px;height:32px;font-size:12px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
           <div style="flex:1"><div style="font-weight:600;font-size:13px">${c.nombre}</div><div style="font-size:11px;color:var(--gray-400)">${c.alojamientos||0} estancias</div></div>
           <span class="amount">$${total.toLocaleString('es-MX')} PM$</span>
         </div>`).join('');
@@ -10483,62 +9820,7 @@ function renderReportesExtra() {
         </div>`).join('');
   }
 
-  // Descuentos otorgados (desde historial de cobros + entradas activas)
-  const contDescuentos = document.getElementById('rep-descuentos');
-  if (contDescuentos) {
-    // Usar entradas activas + buscar completadas si hay datos
-    const todasConDesc = entradas.filter(e => e.descuento_monto > 0);
-    const totalDesc = todasConDesc.reduce((s,e) => s + e.descuento_monto, 0);
-    const totalBruto = todasConDesc.reduce((s,e) => s + e.importe + e.descuento_monto, 0);
-    const pctPromedio = totalBruto > 0 ? (totalDesc / totalBruto * 100).toFixed(1) : 0;
-
-    // Top clientes con más descuento
-    const descPorCliente = {};
-    todasConDesc.forEach(e => {
-      const k = e.clienteId;
-      if (!descPorCliente[k]) descPorCliente[k] = { monto: 0, visitas: 0 };
-      descPorCliente[k].monto   += e.descuento_monto;
-      descPorCliente[k].visitas += 1;
-    });
-    const topDesc = Object.entries(descPorCliente)
-      .map(([id, d]) => ({ c: clientes.find(cl => cl.id == id), ...d }))
-      .filter(x => x.c)
-      .sort((a,b) => b.monto - a.monto)
-      .slice(0, 8);
-
-    contDescuentos.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">
-        <div style="background:var(--red-light);border:1.5px solid var(--red);border-radius:12px;padding:14px;text-align:center">
-          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--red)">$${totalDesc.toLocaleString('es-MX')}</div>
-          <div style="font-size:11px;color:var(--red);font-weight:600">PM$ descontados</div>
-        </div>
-        <div style="background:var(--yellow-light);border:1.5px solid var(--yellow);border-radius:12px;padding:14px;text-align:center">
-          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:#92400e">${pctPromedio}%</div>
-          <div style="font-size:11px;color:#92400e;font-weight:600">Descuento promedio</div>
-        </div>
-        <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:12px;padding:14px;text-align:center">
-          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--blue)">${todasConDesc.length}</div>
-          <div style="font-size:11px;color:var(--gray-500);font-weight:600">Entradas con descuento</div>
-        </div>
-        <div style="background:var(--green-light);border:1.5px solid var(--green);border-radius:12px;padding:14px;text-align:center">
-          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">$${totalBruto.toLocaleString('es-MX')}</div>
-          <div style="font-size:11px;color:var(--green);font-weight:600">Sin descuentos serían</div>
-        </div>
-      </div>
-      <div style="font-weight:700;font-size:12px;color:var(--gray-500);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Top clientes con descuento</div>
-      ${topDesc.length === 0
-        ? '<div style="color:var(--gray-400);font-size:13px;padding:12px 0">Sin descuentos registrados aún — aplican a entradas nuevas</div>'
-        : topDesc.map(({c,monto,visitas},i) => `
-          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-            <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;color:var(--gray-400);width:20px">#${i+1}</div>
-            <div class="avatar" style="width:30px;height:30px;font-size:11px">${(c.nombre||'').split(' ').map(w=>w[0]).filter(Boolean).slice(0,2).join('')}</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:600">${c.nombre}</div><div style="font-size:11px;color:var(--gray-400)">${visitas} visita${visitas!==1?'s':''} con descuento</div></div>
-            <span style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--red);font-size:14px">-$${monto.toLocaleString('es-MX')}</span>
-          </div>`).join('')}
-      <div style="margin-top:12px;padding:10px;background:var(--yellow-light);border-radius:8px;font-size:11px;color:#92400e">
-        💡 Solo se contabilizan entradas registradas desde esta actualización. Los registros anteriores no tienen descuento guardado.
-      </div>`;
-  }
+  // Servicios más usados
   const usoPorServ = {};
   entradas.forEach(e => { if(e.servicio) usoPorServ[e.servicio] = (usoPorServ[e.servicio]||0)+1; });
   cobros.forEach(co => { if(co.concepto) usoPorServ[co.concepto] = (usoPorServ[co.concepto]||0)+1; });
@@ -10565,7 +9847,7 @@ function buildContextoIA() {
 
   // === ESTADO ACTUAL ===
   const hospedadosActivos = entradas;
-  const atrasados = entradas.filter(e => new Date((e.salidaPrevista||"").replace(" ","T")) < hoy);
+  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
   const salidasHoy = entradas.filter(e => (e.salidaPrevista||'').startsWith(hoyStr));
   const totalAnimales = entradas.reduce((s,e) => s + (e.mascotas||[]).length, 0);
   const ocupacion = Math.round(entradas.length / parseInt(getConfig('hab_total','52')) * 100);
@@ -10616,7 +9898,7 @@ function buildContextoIA() {
   const todasEntradas = [...entradas]; // activos
   const duraciones = todasEntradas
     .filter(e => e.salidaPrevista && e.entrada)
-    .map(e => Math.max(0, Math.ceil((new Date((e.salidaPrevista||"").replace(" ","T"))-new Date((e.entrada||"").replace(" ","T")))/(1000*60*60*24))));
+    .map(e => Math.max(0, Math.ceil((new Date(e.salidaPrevista)-new Date(e.entrada))/(1000*60*60*24))));
   const promNoches = duraciones.length
     ? Math.round(duraciones.reduce((s,n)=>s+n,0) / duraciones.length)
     : 0;
@@ -10662,7 +9944,7 @@ function buildContextoIA() {
 --- ESTADO ACTUAL ---
 Hospedajes activos: ${hospedadosActivos.length} | Animales en hotel: ${totalAnimales}
 Ocupación: ${ocupacion}% (${entradas.length}/${getConfig('hab_total','52')} espacios)
-Atrasados sin salida: ${atrasados.length} → ${atrasados.map(e=>{const c=clientes.find(cl=>cl.id===e.clienteId);return c?.nombre+'('+( e.mascotas||[] ).join(',')+')'}).join(', ')||'ninguno'}
+Atrasados sin salida: ${atrasados.length} → ${atrasados.map(e=>{const c=clientes.find(cl=>cl.id===e.clienteId);return c?.nombre+'('+e.mascotas.join(',')+')'}).join(', ')||'ninguno'}
 Salidas programadas hoy: ${salidasHoy.length}
 
 Hospedados activos detalle:
@@ -10670,7 +9952,7 @@ ${hospedadosActivos.map(e=>{
   const c=clientes.find(cl=>cl.id===e.clienteId);
   const pagado=cobros.filter(co=>co.entradaId===e.id).reduce((s,co)=>s+parseFloat(co.monto||0),0);
   const pend=Math.max(0,(e.importe||0)-pagado);
-  return `• ${c?.nombre} | ${( e.mascotas||[] ).join(',')} | Hab${e.habitacion} | Entra:${(e.entrada||'').split('T')[0]} | Sale:${(e.salidaPrevista||'').split('T')[0]} | Total:$${e.importe} | Pagado:$${pagado} | Pendiente:$${pend}`;
+  return `• ${c?.nombre} | ${e.mascotas.join(',')} | Hab${e.habitacion} | Entra:${(e.entrada||'').split('T')[0]} | Sale:${(e.salidaPrevista||'').split('T')[0]} | Total:$${e.importe} | Pagado:$${pagado} | Pendiente:$${pend}`;
 }).join('\n')}
 
 --- FACTURACIÓN HISTÓRICA ---

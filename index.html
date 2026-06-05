@@ -1560,8 +1560,8 @@
         <div id="banner-qz" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
           <span style="font-size:20px">🖨️</span>
           <div style="flex:1">
-            <div style="font-weight:700;font-size:13px;color:#92400e">Impresora no conectada</div>
-            <div style="font-size:12px;color:#b45309">Abre QZ Tray para imprimir tickets y abrir el cajón. Los movimientos se siguen registrando normalmente.</div>
+            <div style="font-weight:700;font-size:13px;color:#92400e">Servidor de impresión no conectado</div>
+            <div style="font-size:12px;color:#b45309">Abre Terminal y corre: <code style="background:#fde68a;padding:1px 5px;border-radius:3px">python3 ~/Desktop/servidor_petground.py</code></div>
           </div>
           <button onclick="intentarConectarQZ()" style="background:#f59e0b;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🔄 Reconectar</button>
         </div>
@@ -7328,11 +7328,10 @@ async function confirmarSalida() {
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
-    // Abrir cajón (efectivo) + modal obligatorio de ticket para todos los cobros
+    // Cajón + modal de ticket (cajón solo para Efectivo, modal para todos)
     if (cobrado > 0 && c) {
-      const mascotasNombre = ( e.mascotas||[] ).join(', ');
+      const mascotasNombre = (e.mascotas||[]).join(', ');
       await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual, metodo);
-      // El notify y WA se hacen al cerrar el modal
     } else {
       if (pendiente > 0) {
         notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
@@ -8064,37 +8063,105 @@ function getNombreImpresora() {
   return getConfig('impresora_nombre', 'EPSON_TM_T88V');
 }
 
-let _qzConectando = false; // prevenir múltiples intentos simultáneos
+// ===================== SERVIDOR LOCAL DE IMPRESIÓN (reemplaza QZ Tray) =====================
+const PRINT_SERVER = 'http://localhost:9090';
+let _servidorConectado = false;
 
-async function conectarQZ() {
-  if (typeof qz === 'undefined') return false;
-  // Si ya está conectado, reusar sin reconectar
-  try { if (qz.websocket.isActive()) return true; } catch(e) {}
-  // Si ya hay un intento en curso, esperar
-  if (_qzConectando) {
-    await new Promise(r => setTimeout(r, 3000));
-    try { return qz.websocket.isActive(); } catch(e) { return false; }
-  }
-  _qzConectando = true;
+async function verificarServidorImpresion() {
   try {
-    qz.security.setCertificatePromise(function(resolve) {
-      resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----');
-    });
-    qz.security.setSignatureAlgorithm('SHA512');
-    qz.security.setSignaturePromise(function(toSign) {
-      return function(resolve) { resolve(); };
-    });
-    await Promise.race([
-      qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
-      new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    const r = await Promise.race([
+      fetch(PRINT_SERVER + '/status'),
+      new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), 3000))
     ]);
-    _qzConectando = false;
-    return true;
+    const data = await r.json();
+    _servidorConectado = data.ok;
+    actualizarBannerQZ(_servidorConectado);
+    return data;
   } catch(e) {
-    _qzConectando = false;
-    return false;
+    _servidorConectado = false;
+    actualizarBannerQZ(false);
+    return { ok: false };
   }
 }
+
+async function imprimirEnServidor(bytes) {
+  try {
+    const r = await fetch(PRINT_SERVER + '/imprimir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bytes: Array.from(bytes) })
+    });
+    const data = await r.json();
+    return data.ok;
+  } catch(e) { return false; }
+}
+
+async function abrirCajonServidor() {
+  try {
+    const r = await fetch(PRINT_SERVER + '/cajon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    const data = await r.json();
+    return data.ok;
+  } catch(e) { return false; }
+}
+
+// Función principal de impresión (reemplaza imprimirConCajon de QZ)
+async function imprimirConCajon(lineas) {
+  // Convertir string ESC/POS a bytes
+  const bytes = new Uint8Array(lineas.length);
+  for (let i = 0; i < lineas.length; i++) bytes[i] = lineas.charCodeAt(i) & 0xFF;
+  const ok = await imprimirEnServidor(bytes);
+  if (!ok) {
+    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
+    actualizarBannerCola();
+    notify('⏳ Ticket guardado — servidor de impresión no disponible', 'info');
+  }
+}
+
+// Cajón silencioso — abre solo, sin ticket
+async function abrirCajonSilencioso() {
+  await abrirCajonServidor();
+}
+
+// Compatibilidad — conectarQZ ahora verifica el servidor local
+async function conectarQZ() {
+  const data = await verificarServidorImpresion();
+  return data.ok;
+}
+
+async function intentarConectarQZ() {
+  const ok = await conectarQZ();
+  actualizarBannerQZ(ok);
+  if (ok) {
+    notify('✅ Servidor de impresión conectado', 'success');
+    if (_colaPendiente.length > 0) await imprimirColaPendiente();
+  } else {
+    notify('⚠️ Servidor no disponible — corre servidor_petground.py en Terminal', 'error');
+  }
+}
+
+async function imprimirColaPendiente() {
+  if (!_colaPendiente.length) return;
+  const cola = [..._colaPendiente];
+  _colaPendiente = [];
+  actualizarBannerCola();
+  for (const job of cola) {
+    if (job.lineas) await imprimirConCajon(job.lineas);
+  }
+  notify('🖨️ Tickets pendientes enviados', 'success');
+}
+
+async function verificarEstadoQZ() { await verificarServidorImpresion(); }
+
+let _qzConectando = false;
+function getNombreImpresora() { return 'EPSON_TM-T88V'; }
+
+// En cobro_imprimirYContinuar — usar servidor en lugar de QZ
+async function tvImprimirFisico() { /* no se usa */ }
+async function abrirCajon() { return await abrirCajonServidor(); }
 
 async function imprimirConCajon(lineas) {
   const ok = await conectarQZ();
@@ -8352,10 +8419,12 @@ async function registrarAuditoria(accion, entidad, entidadId, detalle) {
 // ===================== MODAL OBLIGATORIO POST-COBRO =====================
 let _cobroActual = null; // datos del cobro pendiente de confirmar ticket
 
-function mostrarModalCobro(datos) {
-  // datos: {cliente, mascota, monto, metodo, movimientoId, entradaId}
+async function mostrarModalCobro(datos) {
   _cobroActual = datos;
-  const qzOk = typeof qz !== 'undefined' && qz.websocket?.isActive();
+
+  // Verificar estado del servidor local (no QZ Tray)
+  const statusData = await verificarServidorImpresion();
+  const servidorOk = statusData.ok;
 
   document.getElementById('cobro-detalle').innerHTML = `
     <div style="display:grid;gap:8px">
@@ -8375,42 +8444,40 @@ function mostrarModalCobro(datos) {
         <span style="font-size:15px;font-weight:700">Total cobrado</span>
         <span style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:var(--green)">$${(datos.monto||0).toLocaleString('es-MX')} PM$</span>
       </div>
-      ${!qzOk ? '<div style="background:#fef3c7;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-top:4px">⚠️ Impresora no conectada — abre QZ Tray para imprimir</div>' : ''}
+      ${servidorOk
+        ? '<div style="background:#d1fae5;border-radius:8px;padding:8px 12px;font-size:12px;color:#065f46;margin-top:4px">✅ Impresora lista</div>'
+        : '<div style="background:#fef3c7;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-top:4px">⚠️ Servidor no activo — corre servidor_petground.py</div>'}
     </div>`;
 
-  // Actualizar botón según estado QZ
   const btnImp = document.getElementById('cobro-btn-imprimir');
-  if (qzOk) {
-    btnImp.style.background = 'var(--blue)';
+  btnImp.disabled = false;
+  if (servidorOk) {
+    btnImp.style.background = '#1B2F5B';
     btnImp.innerHTML = '🖨️ IMPRIMIR TICKET Y CONTINUAR';
   } else {
     btnImp.style.background = '#94a3b8';
-    btnImp.innerHTML = '🖨️ Imprimir (QZ no conectado)';
+    btnImp.innerHTML = '🖨️ Intentar imprimir igual';
   }
   document.getElementById('cobro-sin-ticket-wrap').style.display = 'none';
   document.getElementById('cobro-btn-sin-ticket').style.display = '';
   document.getElementById('cobro-motivo-sin-ticket').value = '';
-
-  const modal = document.getElementById('modal-cobro-confirmacion');
-  modal.style.display = 'flex';
+  document.getElementById('modal-cobro-confirmacion').style.display = 'flex';
 }
 
 async function cobro_imprimirYContinuar() {
   if (!_cobroActual) return;
-  const ok = await conectarQZ();
-  if (ok) {
+  const data = await verificarServidorImpresion();
+  if (data.ok) {
     const ticket = buildTicketCaja('cobro_efectivo', _cobroActual);
     await imprimirConCajon(ticket);
-    // Marcar ticket como impreso en Supabase
     if (_cobroActual.movimientoId) {
       try { await sb('PATCH','caja_movimientos',{ticket_impreso:true},`?id=eq.${_cobroActual.movimientoId}`); } catch(e) {}
     }
     cerrarModalCobro();
-    notify('✅ Ticket impreso', 'success');
+    notify('🖨️ Ticket impreso', 'success');
   } else {
-    // Mostrar sección sin ticket
     cobro_mostrarSinTicket();
-    notify('⚠️ No se pudo conectar a QZ Tray', 'error');
+    notify('⚠️ Servidor de impresión no disponible — corre servidor_petground.py', 'error');
   }
 }
 
@@ -8442,28 +8509,37 @@ function cerrarModalCobro() {
 
 // Apertura automática al cobrar — ahora muestra modal obligatorio
 async function abrirCajonPorCobro(cliente, mascota, monto, entradaId, metodo) {
-  // 1. Abrir cajón si es efectivo
-  if (!metodo || metodo === 'Efectivo') abrirCajonSilencioso();
+  const esEfectivo = !metodo || metodo === 'Efectivo';
+  const motivoCaja = esEfectivo ? 'Cobro en efectivo' : `Cobro ${metodo}`;
 
-  // 2. Guardar movimiento y obtener el ID para poder actualizarlo
+  // Abrir cajón SOLO si es efectivo
+  if (esEfectivo) abrirCajonSilencioso();
+
+  // Guardar movimiento en caja (efectivo) o solo en cobros (tarjeta/transferencia)
   let movimientoId = null;
-  try {
-    const result = await sb('POST','caja_movimientos',{
-      tipo: 'entrada',
-      motivo: 'Cobro en efectivo',
-      monto,
-      nota: `${cliente} - ${mascota}`,
-      usuario_id: usuarioActual?.id || null,
-      usuario_nombre: usuarioActual?.nombre || 'Sistema',
-      entrada_id: entradaId,
-      fecha: fechaLocal(),
-      ticket_impreso: false
-    });
-    movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
-  } catch(e) {}
+  if (esEfectivo) {
+    try {
+      const result = await sb('POST','caja_movimientos',{
+        tipo: 'entrada',
+        motivo: motivoCaja,
+        monto,
+        nota: `${cliente} - ${mascota}`,
+        usuario_id: usuarioActual?.id || null,
+        usuario_nombre: usuarioActual?.nombre || 'Sistema',
+        entrada_id: entradaId,
+        fecha: fechaLocal(),
+        ticket_impreso: false
+      });
+      movimientoId = Array.isArray(result) ? result[0]?.id : result?.id;
+    } catch(e) {}
+  }
 
-  // 3. Mostrar modal obligatorio — empleado DEBE confirmar ticket
-  mostrarModalCobro({ cliente, mascota, monto, metodo: metodo||'Efectivo', movimientoId, entradaId });
+  // Mostrar modal de ticket para todos los pagos (efectivo y no efectivo)
+  mostrarModalCobro({
+    cliente, mascota, monto,
+    metodo: metodo || 'Efectivo',
+    movimientoId, entradaId
+  });
 }
 
 async function abrirCajonSilencioso() {

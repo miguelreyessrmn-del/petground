@@ -6693,10 +6693,7 @@ function onConceptoServicioChange(sel) {
     if (!_cargandoServicioAuto && mascotaObj && mascotaObj.id && svcId !== svcActual) {
       const servicios = getServicios();
       const svcNombre = (servicios.find(s => s.id === svcId) || {}).nombre || svcId;
-      const actualizar = confirm('¿Deseas guardar "' + svcNombre + '" como servicio predeterminado para ' + mascotaNombre + '?
-
-Sí → Se guardará para futuras entradas.
-No → Se usará solo para esta entrada.');
+      const actualizar = confirm('\u00bfDeseas guardar "' + svcNombre + '" como servicio predeterminado para ' + mascotaNombre + '?\n\nS\u00ed \u2192 Se guardar\u00e1 para futuras entradas.\nNo \u2192 Se usar\u00e1 solo para esta entrada.');
       if (actualizar) {
         localStorage.setItem('pg_svc_' + mascotaNombre, sel.value);
         localStorage.setItem('pg_ultimo_servicio', sel.value);

@@ -3116,6 +3116,7 @@ let entradas = [
 let clienteEntradaSeleccionado = null;
 let salidaActual = null;
 let entradaEditandoId = null;
+let _cargandoServicioAuto = false; // evita confirmación al restaurar servicios automáticamente
 let reservaciones = [];
 let loading = false;
 
@@ -3183,7 +3184,8 @@ async function cargarTodo() {
       mascotas: (c.mascotas||[]).map(m => ({
         id: m.id, nombre: m.nombre, raza: m.raza||'', sexo: m.sexo||'',
         color: m.color||'', nacimiento: m.nacimiento||'',
-        notas: m.notas||'', flags: m.flags||[], foto: m.foto||''
+        notas: m.notas||'', flags: m.flags||[], foto: m.foto||'',
+        servicio_id: m.servicio_id || null
       })),
       alojamientos: 0, facturacion: 0
     }));
@@ -3201,7 +3203,8 @@ async function cargarTodo() {
       notas: e.notas||'',
       status: e.status||'activo',
       responsiva: e.responsiva_firmada||false,
-      descuento: e.descuento ? (typeof e.descuento === 'string' ? JSON.parse(e.descuento) : e.descuento) : null
+      descuento: e.descuento ? (typeof e.descuento === 'string' ? JSON.parse(e.descuento) : e.descuento) : null,
+      conceptos_json: e.conceptos_json || null
     }));
 
     // Cargar reservaciones pendientes
@@ -4269,13 +4272,13 @@ function verDetalleHospedaje(id) {
         </div>
       </div>`;
     }).join('') || '<span style="color:var(--gray-400);font-size:13px">—</span>';
-    // Restaurar servicios guardados
+    // Restaurar servicios guardados (sin disparar confirmación)
     (e.mascotas||[]).forEach((m, idx) => {
       const mascObj = getMascotaObj(m);
       const svcId = mascObj?.servicio_id || localStorage.getItem('pg_svc_'+m) || '';
       if (svcId) {
         const sels = mdsMasc.querySelectorAll('select');
-        if (sels[idx]) sels[idx].value = String(svcId);
+        if (sels[idx]) { _cargandoServicioAuto = true; sels[idx].value = String(svcId); _cargandoServicioAuto = false; }
       }
     });
   }
@@ -4451,19 +4454,27 @@ async function mdh_eliminarAdelanto(cobId) {
 async function mdh_cambiarServicioMascota(nombreMascota, sel) {
   const svcId = parseInt(sel.value);
   if (!svcId) return;
-  localStorage.setItem('pg_svc_' + nombreMascota, sel.value);
   mdh_calcResumen();
-  // Guardar en Supabase
+  // Buscar objeto mascota en memoria
   let mascObj = null;
   for (const c of clientes) {
     const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === nombreMascota);
     if (m && m.id) { mascObj = m; break; }
   }
-  if (mascObj?.id) {
-    try {
-      await sb('PATCH', `mascotas?id=eq.${mascObj.id}`, { servicio_id: svcId });
-      mascObj.servicio_id = svcId;
-    } catch(e) { /* silencioso */ }
+  // Si el servicio elegido es distinto al predeterminado guardado, preguntar
+  const svcActual = mascObj ? mascObj.servicio_id : null;
+  if (!_cargandoServicioAuto && mascObj && mascObj.id && svcId !== svcActual) {
+    const servicios = getServicios();
+    const svcNombre = (servicios.find(s => s.id === svcId) || {}).nombre || svcId;
+    const actualizar = confirm('\u00bfDeseas guardar "' + svcNombre + '" como servicio predeterminado para ' + nombreMascota + '?\n\nS\u00ed \u2192 Se guardar\u00e1 para futuras entradas.\nNo \u2192 Se usar\u00e1 solo para esta entrada.');
+    if (actualizar) {
+      try {
+        await sb('PATCH', 'mascotas?id=eq.' + mascObj.id, { servicio_id: svcId });
+        mascObj.servicio_id = svcId;
+        localStorage.setItem('pg_svc_' + nombreMascota, sel.value);
+        notify('\u2705 Servicio predeterminado actualizado para ' + nombreMascota, 'success');
+      } catch(e) { notify('No se pudo guardar el servicio predeterminado', 'error'); }
+    }
   }
 }
 
@@ -4738,23 +4749,16 @@ function mdh_calcNoches() {
   el.value = diff + (diff===1?' noche':' noches');
   el.style.color = diff===0 ? 'var(--yellow)' : 'var(--blue)';
 
-  // Recalcular importe automáticamente basado en el importe original por noche
-  if (detalleHospedajeId && diff > 0) {
-    const e = entradas.find(en=>en.id===detalleHospedajeId);
-    if (e) {
-      // Calcular noches originales
-      const feOrig = (e.entrada||'').replace('T',' ').split(' ')[0];
-      const fsOrig = (e.salidaPrevista||'').replace('T',' ').split(' ')[0];
-      const nochesOrig = Math.max(1, Math.ceil((new Date(fsOrig)-new Date(feOrig))/(1000*60*60*24)));
-      const precioPorNoche = e.importe / nochesOrig;
-      const nuevoImporte = Math.round(precioPorNoche * diff);
-      const importeEl = document.getElementById('mdh-importe');
-      if (importeEl) {
-        importeEl.value = nuevoImporte;
-        importeEl.style.color = nuevoImporte !== e.importe ? 'var(--orange)' : '';
-      }
-    }
-  }
+  // Actualizar cantidad de noches en cada fila de mascota del modal
+  const sels = document.querySelectorAll('#mdh-mascotas select');
+  sels.forEach((sel, idx) => {
+    // El input de noches está en mdh-noches (campo display), el cálculo real
+    // se hace en mdh_getImporteConDescuento que usa el valor del campo mdh-noches
+  });
+
+  // Recalcular importe automáticamente desde servicios seleccionados
+  // mdh_calcResumen lo hace correctamente — llamarlo siempre
+  mdh_calcResumen();
 }
 
 async function guardarCambiosHospedaje() {
@@ -4769,6 +4773,28 @@ async function guardarCambiosHospedaje() {
   const descuentoObj = mdh_getDescuentoObj();
   if (!fe||!fs) { notify('⚠️ Las fechas son obligatorias', 'error'); return; }
   if (new Date(fs)<new Date(fe)) { notify('⚠️ La salida no puede ser antes que la entrada', 'error'); return; }
+
+  // Serializar conceptos del modal para reconstrucción futura
+  const e = entradas.find(en => en.id === detalleHospedajeId);
+  const selsModal = document.querySelectorAll('#mdh-mascotas select');
+  const descsModal = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
+  const serviciosModal = getServicios();
+  const nochesModal = parseInt((document.getElementById('mdh-noches')?.value||'0').replace(/\D/g,'')) || 1;
+  const conceptosModalGuardar = [];
+  (e ? e.mascotas : []).forEach((mascNombre, idx) => {
+    const sel = selsModal[idx];
+    const descInput = descsModal[idx];
+    const svcId = sel ? parseInt(sel.value) || null : null;
+    const svc = svcId ? serviciosModal.find(s => s.id === svcId) : null;
+    conceptosModalGuardar.push({
+      mascota: mascNombre,
+      svc_id: svcId,
+      uds: nochesModal,
+      precio: svc ? svc.precio : 0,
+      desc: parseFloat(descInput?.value || 0) || 0
+    });
+  });
+
   const btn = document.querySelector('#modal-detalle-hospedaje .btn-primary[onclick="guardarCambiosHospedaje()"]');
   setBtnLoading(btn, true);
   setLoading(true);
@@ -4778,7 +4804,8 @@ async function guardarCambiosHospedaje() {
       fecha_salida_prevista: `${fs}T${hs}:00`,
       habitacion: hab, importe,
       descuento: descuentoObj ? JSON.stringify(descuentoObj) : null,
-      notas
+      notas,
+      conceptos_json: JSON.stringify(conceptosModalGuardar)
     });
     await cargarTodo();
     closeModal('modal-detalle-hospedaje');
@@ -6589,8 +6616,10 @@ function sincronizarConceptos() {
         const svcDesdeLocal = localStorage.getItem('pg_svc_' + m) || localStorage.getItem('pg_ultimo_servicio') || '';
         const svcFinal = svcDesdeDB || svcDesdeLocal || svcPorMascota;
         if (svcFinal) {
+          _cargandoServicioAuto = true;
           sel.value = String(svcFinal);
           if (sel.value) onConceptoServicioChange(sel);
+          _cargandoServicioAuto = false;
         }
       }
     }
@@ -6647,22 +6676,35 @@ function onConceptoServicioChange(sel) {
     const precioInput = tr.querySelectorAll('input')[1];
     if (precioInput) { precioInput.value = precio; calcResumen(); }
   }
-  // Guardar último servicio por nombre de mascota en Supabase
+  // Guardar servicio predeterminado por mascota con confirmación
   if (sel.value) {
     const tr = sel.closest('tr');
     const mascotaNombre = tr?.dataset?.mascota || '_global';
-    // localStorage como fallback inmediato
-    localStorage.setItem('pg_svc_' + mascotaNombre, sel.value);
-    localStorage.setItem('pg_ultimo_servicio', sel.value);
-    // Guardar en Supabase para persistir entre dispositivos
+    if (mascotaNombre === '_global') return; // filas manuales sin mascota asignada
+    // Buscar mascota en memoria
     let mascotaObj = null;
     for (const c of clientes) {
       const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === mascotaNombre);
       if (m && m.id) { mascotaObj = m; break; }
     }
-    if (mascotaObj?.id) {
-      sb('PATCH', `mascotas?id=eq.${mascotaObj.id}`, { servicio_id: parseInt(sel.value) })
-        .catch(e => console.warn('No se pudo guardar servicio en mascota:', e));
+    const svcId = parseInt(sel.value);
+    const svcActual = mascotaObj ? mascotaObj.servicio_id : null;
+    // Solo preguntar si el servicio cambió Y es un cambio manual (no carga automática)
+    if (!_cargandoServicioAuto && mascotaObj && mascotaObj.id && svcId !== svcActual) {
+      const servicios = getServicios();
+      const svcNombre = (servicios.find(s => s.id === svcId) || {}).nombre || svcId;
+      const actualizar = confirm('¿Deseas guardar "' + svcNombre + '" como servicio predeterminado para ' + mascotaNombre + '?
+
+Sí → Se guardará para futuras entradas.
+No → Se usará solo para esta entrada.');
+      if (actualizar) {
+        localStorage.setItem('pg_svc_' + mascotaNombre, sel.value);
+        localStorage.setItem('pg_ultimo_servicio', sel.value);
+        sb('PATCH', 'mascotas?id=eq.' + mascotaObj.id, { servicio_id: svcId })
+          .then(() => { mascotaObj.servicio_id = svcId; notify('✅ Servicio predeterminado guardado para ' + mascotaNombre, 'success'); })
+          .catch(e => console.warn('No se pudo guardar servicio en mascota:', e));
+      }
+      // Si dice No: no actualizar localStorage ni DB, solo usar para esta entrada
     }
   }
 }
@@ -6768,9 +6810,134 @@ function editarEntrada(id) {
     // Habitación
     const habSel = document.getElementById('ne-habitacion');
     if (habSel) habSel.value = e.habitacion||'';
+    // Actualizar visual del grid de habitaciones
+    if (e.habitacion) {
+      const grid = document.getElementById('ne-habitacion-grid');
+      if (grid) {
+        grid.querySelectorAll('button').forEach(btn2 => {
+          const esEsta = btn2.textContent === e.habitacion;
+          btn2.style.background = esEsta ? 'var(--orange)' : 'white';
+          btn2.style.borderColor = esEsta ? 'var(--orange)' : 'var(--gray-200)';
+          btn2.style.color = esEsta ? 'white' : 'var(--blue)';
+        });
+      }
+      const label = document.getElementById('ne-hab-seleccionada');
+      if (label) label.textContent = `— Hab. ${e.habitacion} seleccionada`;
+    }
 
     // Notas
     document.getElementById('ne-notas').value = e.notas||'';
+
+    // Reconstruir conceptos desde conceptos_json guardado
+    const tbody = document.getElementById('conceptos-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      let conceptosRestaurados = [];
+      // Intentar desde conceptos_json
+      if (e.conceptos_json) {
+        try { conceptosRestaurados = JSON.parse(e.conceptos_json); } catch(ex) {}
+      }
+      const servicios = getServicios();
+      const opcionesServ = servicios.map(s => `<option value="${s.id}" data-precio="${s.precio}">${s.nombre}</option>`).join('');
+      const noches = calcNoches() || 1;
+
+      if (conceptosRestaurados.length > 0) {
+        // Restaurar desde conceptos_json (ruta preferida)
+        conceptosRestaurados.forEach(con => {
+          const tr = document.createElement('tr');
+          if (con.mascota) tr.dataset.mascota = con.mascota;
+          tr.style.borderBottom = '1px solid var(--gray-100)';
+          const etiqueta = con.mascota ? `🐕 ${con.mascota}` : 'Extra';
+          tr.innerHTML = `
+            <td style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--blue)">${etiqueta}</td>
+            <td style="padding:10px 14px">
+              <select style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none"
+                onchange="onConceptoServicioChange(this)">
+                <option value="">— Servicio —</option>${opcionesServ}
+              </select>
+            </td>
+            <td style="padding:10px 8px;text-align:center">
+              <input type="text" inputmode="numeric" value="${con.uds || noches}"
+                style="width:60px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:center;font-family:'Poppins',sans-serif;outline:none;font-weight:700"
+                oninput="calcResumen()">
+            </td>
+            <td style="padding:10px 8px;text-align:right">
+              <input type="text" inputmode="numeric" placeholder="0" value="${con.precio || ''}"
+                style="width:80px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
+                oninput="calcResumen()">
+              <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
+            </td>
+            <td style="padding:10px 8px;text-align:right">
+              <input type="text" inputmode="numeric" placeholder="0" value="${con.desc || ''}"
+                style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
+                oninput="calcResumen()">
+              <span style="font-size:11px;color:var(--gray-400)">%</span>
+            </td>
+            <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
+            <td style="padding:10px 8px">
+              <button onclick="this.closest('tr').remove();calcResumen()" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px">🗑️</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+          // Restaurar servicio seleccionado (sin disparar confirmación)
+          if (con.svc_id) {
+            const sel2 = tr.querySelector('select');
+            if (sel2) { _cargandoServicioAuto = true; sel2.value = String(con.svc_id); _cargandoServicioAuto = false; }
+          }
+        });
+      } else {
+        // Fallback para entradas antiguas: reconstruir desde mascotas + servicio_id
+        (e.mascotas || []).forEach(mascNombre => {
+          let mascotaObj = null;
+          for (const cl2 of clientes) {
+            const mo = (cl2.mascotas||[]).find(mo2 => (mo2.nombre||mo2) === mascNombre);
+            if (mo) { mascotaObj = mo; break; }
+          }
+          const svcId = mascotaObj?.servicio_id || null;
+          const svc = svcId ? servicios.find(s => s.id === svcId) : null;
+          const tr = document.createElement('tr');
+          tr.dataset.mascota = mascNombre;
+          tr.style.borderBottom = '1px solid var(--gray-100)';
+          const precioEstimado = svc ? svc.precio : Math.round((e.importe / noches) / (e.mascotas.length || 1));
+          tr.innerHTML = `
+            <td style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--blue)">🐕 ${mascNombre}</td>
+            <td style="padding:10px 14px">
+              <select style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none"
+                onchange="onConceptoServicioChange(this)">
+                <option value="">— Servicio —</option>${opcionesServ}
+              </select>
+            </td>
+            <td style="padding:10px 8px;text-align:center">
+              <input type="text" inputmode="numeric" value="${noches}"
+                style="width:60px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:center;font-family:'Poppins',sans-serif;outline:none;font-weight:700"
+                oninput="calcResumen()">
+            </td>
+            <td style="padding:10px 8px;text-align:right">
+              <input type="text" inputmode="numeric" placeholder="0" value="${precioEstimado}"
+                style="width:80px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
+                oninput="calcResumen()">
+              <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
+            </td>
+            <td style="padding:10px 8px;text-align:right">
+              <input type="text" inputmode="numeric" placeholder="0" value=""
+                style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
+                oninput="calcResumen()">
+              <span style="font-size:11px;color:var(--gray-400)">%</span>
+            </td>
+            <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
+            <td style="padding:10px 8px">
+              <button onclick="this.closest('tr').remove();calcResumen()" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px">🗑️</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+          if (svcId) {
+            const sel2 = tr.querySelector('select');
+            if (sel2) { _cargandoServicioAuto = true; sel2.value = String(svcId); _cargandoServicioAuto = false; }
+          }
+        });
+      }
+      calcResumen();
+    }
 
     // Cambiar botón a modo edición
     const btn = document.querySelector('#screen-nueva-entrada .btn-primary[onclick="guardarEntrada()"]');
@@ -6798,6 +6965,19 @@ async function guardarEntrada() {
   const hab = document.getElementById('ne-habitacion').value;
   if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
 
+  // CORRECCIÓN 4 — Validar que ninguna mascota tenga ya un hospedaje activo
+  const mascotasConHospedajeActivo = mascotas.filter(mascNombre => {
+    return entradas.some(ent => {
+      // Excluir la entrada que se está editando
+      if (entradaEditandoId && ent.id === entradaEditandoId) return false;
+      return (ent.mascotas || []).includes(mascNombre);
+    });
+  });
+  if (mascotasConHospedajeActivo.length > 0) {
+    notify(`⚠️ Ya existe un hospedaje activo para: ${mascotasConHospedajeActivo.join(', ')}. Registra la salida primero.`, 'error');
+    return;
+  }
+
   const filas = document.querySelectorAll('#conceptos-tbody tr');
   let totalFinal = 0;
   let hayPrecioVacio = false;
@@ -6819,12 +6999,31 @@ async function guardarEntrada() {
 
   const he = document.getElementById('ne-hora-entrada').value;
   const hs = document.getElementById('ne-hora-salida').value;
+  // Serializar conceptos para restaurarlos al editar
+  const conceptosParaGuardar = [];
+  document.querySelectorAll('#conceptos-tbody tr').forEach(tr => {
+    const servSel = tr.querySelector('select');
+    const inputs = tr.querySelectorAll('input');
+    const svcId = servSel ? parseInt(servSel.value) || null : null;
+    const uds = parseFloat(inputs[0]?.value) || 0;
+    const precio = parseFloat(inputs[1]?.value) || 0;
+    const desc = parseFloat(inputs[2]?.value) || 0;
+    if (svcId || precio > 0) {
+      conceptosParaGuardar.push({
+        mascota: tr.dataset.mascota || null,
+        svc_id: svcId,
+        uds, precio, desc
+      });
+    }
+  });
+
   const datos = {
     cliente_id: clienteEntradaSeleccionado.id, mascotas, habitacion: hab,
     fecha_entrada: `${fe}T${he}:00`, fecha_salida_prevista: `${fs}T${hs}:00`,
     importe: totalFinal, servicio: '',
     notas: document.getElementById('ne-notas').value, status: 'activo',
-    responsiva_firmada: document.getElementById('ne-responsiva')?.checked || false
+    responsiva_firmada: document.getElementById('ne-responsiva')?.checked || false,
+    conceptos_json: JSON.stringify(conceptosParaGuardar)
   };
 
   setLoading(true);
@@ -7743,6 +7942,7 @@ function renderDeudasPendientes() {
 
 // ===================== COLA DE IMPRESIÓN =====================
 let _colaPendiente = []; // {tipo, datos}
+let _imprimiendoAhora = false; // mutex: evita impresiones duplicadas simultáneas
 
 function actualizarBannerQZ(conectado) {
   const banner = document.getElementById('banner-qz');
@@ -7772,8 +7972,14 @@ async function intentarConectarQZ() {
 
 async function imprimirColaPendiente() {
   if (!_colaPendiente.length) return;
+  if (_imprimiendoAhora) {
+    console.warn('imprimirColaPendiente: impresión en curso, reintentando en 1s');
+    setTimeout(imprimirColaPendiente, 1000);
+    return;
+  }
   const ok = await conectarQZ();
   if (!ok) { notify('⚠️ QZ Tray sigue sin conectar', 'error'); return; }
+  _imprimiendoAhora = true;
   const cola = [..._colaPendiente];
   _colaPendiente = [];
   actualizarBannerCola();
@@ -7791,6 +7997,7 @@ async function imprimirColaPendiente() {
       console.warn('Error imprimiendo trabajo pendiente:', e);
     }
   }
+  _imprimiendoAhora = false;
   notify('🖨️ Tickets pendientes impresos', 'success');
 }
 
@@ -7833,22 +8040,29 @@ async function conectarQZ() {
 // Abrir cajón de dinero vía ESC/POS
 // Abrir cajón + imprimir ticket en UNA SOLA llamada QZ = 1 solo popup
 async function imprimirConCajon(lineas) {
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (!ok) {
-    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
-    actualizarBannerCola();
-    notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+  // Mutex: si ya hay una impresión en curso, encolar y salir
+  if (_imprimiendoAhora) {
+    console.warn('imprimirConCajon: impresión ya en curso, ignorando llamada duplicada');
     return;
   }
+  _imprimiendoAhora = true;
   try {
+    const ok = await conectarQZ();
+    actualizarBannerQZ(ok);
+    if (!ok) {
+      _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
+      actualizarBannerCola();
+      notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+      return;
+    }
     const config = qz.configs.create(getNombreImpresora());
-    // Comando cajón + ticket en un solo array de datos = 1 popup
     const cajonCmd = '\x1B\x70\x00\x19\xFA';
     const b64 = btoa(unescape(encodeURIComponent(cajonCmd + lineas)));
     await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
   } catch(e) {
     notify('Error al imprimir: ' + e.message, 'error');
+  } finally {
+    _imprimiendoAhora = false;
   }
 }
 
@@ -8438,7 +8652,7 @@ function renderPendientes() {
     const cl = clientes.find(c=>c.id===e.clienteId);
     // Solo cobros pagados o adelantos reales (no los pendientes diferidos)
     const adelE = cobros.filter(c=>
-      (c.entradaId===e.id || c.entradaId===e.id) &&
+      c.entradaId===e.id &&
       (c.status==='pagado' || c.status==='adelanto')
     ).reduce((s,c)=>s+c.monto,0);
     const pendiente = e.importe - adelE;
@@ -9173,7 +9387,8 @@ function showScreen(name) {
     clienteEntradaSeleccionado = null;
     document.getElementById('ne-habitacion').value = '';
     document.getElementById('ne-hab-seleccionada').textContent = '';
-    document.getElementById('tbody-conceptos').innerHTML = '';
+    // Solo limpiar conceptos si NO estamos en modo edición (entradaEditandoId se asigna después)
+    if (!entradaEditandoId) document.getElementById('conceptos-tbody').innerHTML = '';
     calcNochesYTotal();
     poblarGridHabitacion();
     // Restaurar estado de responsiva
@@ -10513,6 +10728,7 @@ function eliminarServicio(id) {
 let _crConcepto = 'Guardería';
 
 function abrirCobroRapido() {
+  _cobrandoRapido = false; // reset por si quedó bloqueado
   document.getElementById('cr-monto').value = '';
   document.getElementById('cr-nota').value = '';
   _crConcepto = 'Guardería';
@@ -10537,7 +10753,10 @@ function crSelConcepto(btn) {
   });
 }
 
+let _cobrandoRapido = false;
 async function cobrarRapido() {
+  if (_cobrandoRapido) return;
+  _cobrandoRapido = true;
   const monto = parseFloat(document.getElementById('cr-monto').value);
   if (!monto || monto <= 0) {
     document.getElementById('cr-monto').style.border = '2px solid var(--red)';
@@ -10573,6 +10792,7 @@ async function cobrarRapido() {
     notify('Error: ' + err.message, 'error');
   }
   setBtnLoading(btn, false);
+  _cobrandoRapido = false;
 }
 </script>
 </body>

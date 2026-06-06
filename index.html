@@ -3053,66 +3053,8 @@ function fieldError(id, msg) {
 }
 
 // ===================== DATA (cache local) =====================
-let clientes = [
-  { id:1, nombre:'Aidee Perez Garcia', whatsapp:'2221111111', telefono:'2221111111', email:'aidee@gmail.com', direccion:'Col. Centro, Puebla', curp:'', activo:'2019-03-15',
-    mascotas:[{id:1,nombre:'Manchita',raza:'Labrador',sexo:'Hembra',color:'Amarillo',nacimiento:'2019-06-10'},{id:2,nombre:'Salem',raza:'Siamés',sexo:'Macho',color:'Gris',nacimiento:'2020-01-05'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:8, facturacion:31200 },
-  { id:2, nombre:'Fernanda Gomez', whatsapp:'2222222222', telefono:'2222222222', email:'fgomez@gmail.com', direccion:'Angelópolis, Puebla', curp:'', activo:'2020-05-10',
-    mascotas:[{id:3,nombre:'Crispy',raza:'Golden Retriever',sexo:'Macho',color:'Dorado',nacimiento:'2020-03-12'},{id:4,nombre:'Hachy',raza:'Beagle',sexo:'Hembra',color:'Tricolor',nacimiento:'2021-07-20'}],
-    notas:'', infoImportante:'Crispy tiene alergia al pollo', recogida:'', alojamientos:12, facturacion:45600 },
-  { id:3, nombre:'Fernanda Veana', whatsapp:'2223333333', telefono:'2223333333', email:'', direccion:'', curp:'', activo:'2021-01-20',
-    mascotas:[{id:5,nombre:'Africa',raza:'Rottweiler',sexo:'Hembra',color:'Negro y café',nacimiento:'2019-11-30'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:6, facturacion:17280 },
-  { id:4, nombre:'Daniela Lepe', whatsapp:'2224444444', telefono:'2224444444', email:'', direccion:'', curp:'', activo:'2022-03-05',
-    mascotas:[{id:6,nombre:'Buzz',raza:'Bulldog Francés',sexo:'Macho',color:'Atigrado',nacimiento:'2022-01-15'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:5, facturacion:9600 },
-  { id:5, nombre:'Nieves', whatsapp:'2226354035', telefono:'2226354035', email:'', direccion:'', curp:'', activo:'2020-09-28',
-    mascotas:[
-      {id:7,nombre:'Giulia',raza:'Cane Corso',sexo:'Hembra',color:'Gris',nacimiento:'2023-09-13'},
-      {id:8,nombre:'Gumara',raza:'Grifon De Bruselas',sexo:'Hembra',color:'Café',nacimiento:'2020-09-28'},
-      {id:9,nombre:'Merlina',raza:'Grifon De Bruselas',sexo:'Hembra',color:'Negro',nacimiento:'2023-01-27'},
-      {id:10,nombre:'Simon',raza:'Corgi',sexo:'Macho',color:'Naranja',nacimiento:'2025-07-10'}
-    ],
-    notas:'', infoImportante:'', recogida:'', alojamientos:24, facturacion:31757 },
-  { id:6, nombre:'Karen Agraz', whatsapp:'2225555555', telefono:'2225555555', email:'', direccion:'', curp:'', activo:'2022-08-14',
-    mascotas:[{id:11,nombre:'Pablo',raza:'Poodle',sexo:'Macho',color:'Blanco',nacimiento:'2021-04-22'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:7, facturacion:10780 },
-  { id:7, nombre:'Valeria Hernandez', whatsapp:'2226666666', telefono:'2226666666', email:'', direccion:'', curp:'', activo:'2021-06-01',
-    mascotas:[{id:12,nombre:'Bolillo',raza:'Criollo',sexo:'Macho',color:'Café',nacimiento:'2020-03-10'},{id:13,nombre:'Copal',raza:'Xoloitzcuintle',sexo:'Macho',color:'Negro',nacimiento:'2019-08-15'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:14, facturacion:22400 },
-  { id:8, nombre:'Rodrigo Trillo', whatsapp:'2227777777', telefono:'2227777777', email:'', direccion:'', curp:'', activo:'2023-02-10',
-    mascotas:[{id:14,nombre:'Lorenzo',raza:'Labrador',sexo:'Macho',color:'Negro',nacimiento:'2022-09-05'},{id:15,nombre:'Nico',raza:'Labrador',sexo:'Macho',color:'Chocolate',nacimiento:'2023-01-20'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:9, facturacion:23400 },
-  { id:9, nombre:'Angeles Diaz', whatsapp:'2228888888', telefono:'2228888888', email:'', direccion:'', curp:'', activo:'2022-11-03',
-    mascotas:[{id:16,nombre:'Nala',raza:'Husky',sexo:'Hembra',color:'Blanco y gris',nacimiento:'2021-06-18'},{id:17,nombre:'Timon',raza:'Pomerania',sexo:'Macho',color:'Naranja',nacimiento:'2022-03-30'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:6, facturacion:7920 },
-  { id:10, nombre:'Erick Galvan', whatsapp:'2229999999', telefono:'2229999999', email:'', direccion:'', curp:'', activo:'2023-07-22',
-    mascotas:[{id:18,nombre:'Mamba',raza:'Pastor Alemán',sexo:'Macho',color:'Negro y café',nacimiento:'2022-05-11'}],
-    notas:'', infoImportante:'', recogida:'', alojamientos:4, facturacion:3120 },
-  { id:11, nombre:'Williams De Jesus', whatsapp:'2220000000', telefono:'2220000000', email:'', direccion:'', curp:'', activo:'2023-09-14',
-    mascotas:[
-      {id:19,nombre:'Bruck',raza:'Rottweiler',sexo:'Macho',color:'Negro y café',nacimiento:'2022-11-01'},
-      {id:20,nombre:'Massimo',raza:'Cane Corso',sexo:'Macho',color:'Gris',nacimiento:'2022-11-01'},
-      {id:21,nombre:'Mimmo',raza:'Cane Corso',sexo:'Macho',color:'Café',nacimiento:'2023-03-10'},
-      {id:22,nombre:'Rocko',raza:'Bullmastiff',sexo:'Macho',color:'Café',nacimiento:'2021-08-25'}
-    ],
-    notas:'', infoImportante:'', recogida:'', alojamientos:11, facturacion:45760 }
-];
-
-let entradas = [
-  { id:1, clienteId:1, mascotas:['Manchita','Salem'], habitacion:'11', entrada:'2026-03-27 18:03', salidaPrevista:'2026-04-11 18:00', importe:4800, status:'activo' },
-  { id:2, clienteId:2, mascotas:['Crispy','Hachy'], habitacion:'13', entrada:'2026-03-29 12:14', salidaPrevista:'2026-04-12 12:00', importe:5544, status:'activo' },
-  { id:3, clienteId:3, mascotas:['Africa'], habitacion:'21', entrada:'2026-04-01 11:33', salidaPrevista:'2026-04-13 11:00', importe:2880, status:'activo' },
-  { id:4, clienteId:4, mascotas:['Buzz'], habitacion:'28', entrada:'2026-04-02 13:49', salidaPrevista:'2026-04-10 13:00', importe:1920, status:'activo' },
-  { id:5, clienteId:5, mascotas:['Merlina','Simon'], habitacion:'17', entrada:'2026-04-04 12:49', salidaPrevista:'2026-04-11 12:00', importe:3080, status:'activo' },
-  { id:6, clienteId:6, mascotas:['Pablo'], habitacion:'03', entrada:'2026-04-08 10:23', salidaPrevista:'2026-04-15 10:00', importe:1540, status:'activo' },
-  { id:7, clienteId:7, mascotas:['Copal'], habitacion:'01', entrada:'2026-04-08 13:32', salidaPrevista:'2026-04-09 13:00', importe:260, status:'atrasado' },
-  { id:8, clienteId:8, mascotas:['Lorenzo','Nico'], habitacion:'04', entrada:'2026-04-08 14:25', salidaPrevista:'2026-04-13 14:00', importe:2600, status:'activo' },
-  { id:9, clienteId:9, mascotas:['Nala','Timon'], habitacion:'02', entrada:'2026-04-08 16:10', salidaPrevista:'2026-04-11 16:00', importe:1320, status:'activo' },
-  { id:10, clienteId:10, mascotas:['Mamba'], habitacion:'06', entrada:'2026-04-09 11:50', salidaPrevista:'2026-04-10 11:00', importe:260, status:'activo' },
-  { id:11, clienteId:11, mascotas:['Bruck','Massimo','Mimmo','Rocko'], habitacion:'05', entrada:'2026-04-09 12:25', salidaPrevista:'2026-04-13 12:00', importe:4160, status:'activo' }
-];
-
+let clientes = []; // datos reales cargados desde Supabase en cargarTodo()
+let entradas = []; // datos reales cargados desde Supabase en cargarTodo()
 let clienteEntradaSeleccionado = null;
 let salidaActual = null;
 let entradaEditandoId = null;
@@ -3248,13 +3190,23 @@ async function cargarTodo() {
    
     renderCalendario();
   } catch(e) {
-    console.warn('Supabase no disponible, usando datos demo:', e.message);
-    usarDatosDemo();
-    actualizarDashboard();
-    renderEntradas();
-    renderClientes();
-   
-    renderCalendario();
+    console.error('Error al cargar datos de Supabase:', e.message);
+    // NO cargar datos demo — el personal no debe operar sobre información falsa
+    clientes = [];
+    entradas = [];
+    cobros = [];
+    reservaciones = [];
+    setLoading(false);
+    // Mostrar banner de error prominente
+    const mainContent = document.querySelector('.content');
+    const errorBanner = document.createElement('div');
+    errorBanner.id = 'error-conexion-banner';
+    errorBanner.style.cssText = 'position:fixed;top:64px;left:240px;right:0;z-index:200;background:var(--red);color:white;padding:16px 28px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,0.2)';
+    errorBanner.innerHTML = '<span style="font-size:24px">⚠️</span><div><div style="font-weight:800;font-size:15px">Sin conexión a la base de datos</div><div style="font-size:13px;opacity:0.9">No se pudo conectar con Supabase. Verifica tu conexión a internet y recarga la página. No registres operaciones hasta que esto se resuelva.</div></div><button onclick="location.reload()" style="margin-left:auto;background:white;color:var(--red);border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">🔄 Reintentar</button>';
+    document.body.appendChild(errorBanner);
+    // Ajuste para mobile
+    if (window.innerWidth <= 768) errorBanner.style.left = '0';
+    return;
   }
   setLoading(false);
 }
@@ -3613,7 +3565,7 @@ function nr_sincronizarConceptos() {
           const mo = (c.mascotas||[]).find(mo => (mo.nombre||mo) === m);
           if (mo && mo.id) { mascotaObj = mo; break; }
         }
-        const svcFinal = mascotaObj?.servicio_id ? String(mascotaObj.servicio_id) : (localStorage.getItem('pg_svc_' + m) || localStorage.getItem('pg_ultimo_servicio') || '');
+        const svcFinal = mascotaObj?.servicio_id ? String(mascotaObj.servicio_id) : (localStorage.getItem('pg_svc_' + m) || '');
         if (svcFinal) { sel.value = String(svcFinal); if (sel.value) nr_onServicioChange(sel); }
       }
     }
@@ -3859,26 +3811,7 @@ async function rechazarReservacion(entradaId, wa, nombre) {
 }
 
 // Revisar si la URL tiene ?reservar=1 al cargar
-window.addEventListener('load', () => {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('reservar') === '1') {
-    // Mostrar formulario público directamente sin login
-    document.getElementById('login-overlay').classList.add('hidden');
-    document.querySelector('.sidebar').style.display = 'flex';
-    document.querySelector('.main').style.display = 'flex';
-    // Ocultar sidebar en modo reservación
-    document.querySelector('.sidebar').style.display = 'none';
-    showScreen('reservacion-publica');
-    // Establecer fecha mínima como hoy
-    const hoy = new Date().toISOString().split('T')[0];
-    setTimeout(() => {
-      const fe = document.getElementById('res-fecha-entrada');
-      const fs = document.getElementById('res-fecha-salida');
-      if (fe) fe.min = hoy;
-      if (fs) fs.min = hoy;
-    }, 100);
-  }
-});
+
 
 // ===================== GRÁFICA FACTURACIÓN =====================
 function renderGraficaFac() {
@@ -4275,7 +4208,7 @@ function verDetalleHospedaje(id) {
     // Restaurar servicios guardados (sin disparar confirmación)
     (e.mascotas||[]).forEach((m, idx) => {
       const mascObj = getMascotaObj(m);
-      const svcId = mascObj?.servicio_id || localStorage.getItem('pg_svc_'+m) || '';
+      const svcId = mascObj?.servicio_id ? String(mascObj.servicio_id) : '';
       if (svcId) {
         const sels = mdsMasc.querySelectorAll('select');
         if (sels[idx]) { _cargandoServicioAuto = true; sels[idx].value = String(svcId); _cargandoServicioAuto = false; }
@@ -6568,7 +6501,7 @@ function sincronizarConceptos() {
       const tr = document.createElement('tr');
       tr.dataset.mascota = m;
       tr.style.borderBottom = '1px solid var(--gray-100)';
-      const svcPorMascota = localStorage.getItem('pg_svc_' + m) || localStorage.getItem('pg_ultimo_servicio') || '';
+      // svcPorMascota eliminado — la fuente de verdad es mascotaObj.servicio_id
       tr.innerHTML = `
         <td style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--blue)">
           🐕 ${m}
@@ -6613,8 +6546,8 @@ function sincronizarConceptos() {
           if (mo && mo.id) { mascotaObj = mo; break; }
         }
         const svcDesdeDB = mascotaObj?.servicio_id ? String(mascotaObj.servicio_id) : null;
-        const svcDesdeLocal = localStorage.getItem('pg_svc_' + m) || localStorage.getItem('pg_ultimo_servicio') || '';
-        const svcFinal = svcDesdeDB || svcDesdeLocal || svcPorMascota;
+        // Fuente única: servicio_id de Supabase. Sin fallback a localStorage global.
+        const svcFinal = svcDesdeDB || '';
         if (svcFinal) {
           _cargandoServicioAuto = true;
           sel.value = String(svcFinal);
@@ -6696,7 +6629,7 @@ function onConceptoServicioChange(sel) {
       const actualizar = confirm('\u00bfDeseas guardar "' + svcNombre + '" como servicio predeterminado para ' + mascotaNombre + '?\n\nS\u00ed \u2192 Se guardar\u00e1 para futuras entradas.\nNo \u2192 Se usar\u00e1 solo para esta entrada.');
       if (actualizar) {
         localStorage.setItem('pg_svc_' + mascotaNombre, sel.value);
-        localStorage.setItem('pg_ultimo_servicio', sel.value);
+        // pg_ultimo_servicio eliminado — no usar servicio entre mascotas distintas
         sb('PATCH', 'mascotas?id=eq.' + mascotaObj.id, { servicio_id: svcId })
           .then(() => { mascotaObj.servicio_id = svcId; notify('✅ Servicio predeterminado guardado para ' + mascotaNombre, 'success'); })
           .catch(e => console.warn('No se pudo guardar servicio en mascota:', e));
@@ -8238,7 +8171,20 @@ function setCajaTipo(tipo) {
   }
 }
 
-function toggleCajaRetiro() {}
+function toggleCajaRetiro() {
+  const motivo = document.getElementById('caja-motivo').value;
+  const notaGroup = document.getElementById('caja-nota')?.closest('.form-group');
+  const notaInput = document.getElementById('caja-nota');
+  const esOtro = motivo === 'Otro' || motivo === 'Otro ingreso';
+  if (notaGroup) {
+    const label = notaGroup.querySelector('.form-label');
+    if (label) label.innerHTML = 'Nota' + (esOtro ? ' <span style="color:var(--red)">*</span>' : ' <span style="color:var(--gray-400);font-size:11px">(opcional)</span>');
+  }
+  if (notaInput) {
+    notaInput.style.borderColor = esOtro ? 'var(--orange)' : '';
+    if (esOtro) notaInput.focus();
+  }
+}
 
 async function confirmarAperturaCaja() {
   const motivo  = document.getElementById('caja-motivo').value;
@@ -8247,6 +8193,12 @@ async function confirmarAperturaCaja() {
   const mascota = document.getElementById('caja-mascota')?.value.trim() || '';
 
   if (!motivo) { notify('Selecciona un concepto', 'error'); return; }
+  // Si el motivo es "Otro", la nota es obligatoria
+  if ((motivo === 'Otro' || motivo === 'Otro ingreso') && !nota.trim()) {
+    notify('⚠️ Escribe una nota para el concepto "Otro"', 'error');
+    document.getElementById('caja-nota')?.focus();
+    return;
+  }
   // Solo requerir monto si no es conteo o cambio de billetes
   const motivosSinMonto = ['Conteo de caja', 'Cambio de billetes'];
   if (!monto && !motivosSinMonto.includes(motivo)) {
@@ -9153,11 +9105,34 @@ let usuarioNipSeleccionado = null;
 let editandoUsuarioId = null;
 
 // Al cargar: mostrar login
+// ===================== INICIALIZACIÓN DE VENTANA (único listener) =====================
 window.addEventListener('load', async () => {
+  const params = new URLSearchParams(window.location.search);
+
+  // Modo reservación pública (?reservar=1): saltar login y mostrar formulario
+  if (params.get('reservar') === '1') {
+    document.getElementById('login-overlay').classList.add('hidden');
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.main').style.display = 'flex';
+    showScreen('reservacion-publica');
+    const hoy = new Date().toISOString().split('T')[0];
+    setTimeout(() => {
+      const fe = document.getElementById('res-fecha-entrada');
+      const fs = document.getElementById('res-fecha-salida');
+      if (fe) fe.min = hoy;
+      if (fs) fs.min = hoy;
+    }, 100);
+    return; // no continuar con el flujo de login
+  }
+
+  // Modo normal: ocultar interfaz hasta que se complete el login
   document.querySelector('.sidebar').style.display = 'none';
   document.querySelector('.main').style.display = 'none';
-  // Esperar a que cargue la config de Supabase antes de verificar clave recordada
-  await cargarConfig();
+
+  // cargarConfig() ya fue llamado en DOMContentLoaded — reusar caché
+  // Si por alguna razón el caché está vacío (carga muy rápida), llamarlo aquí
+  if (!_configCache) await cargarConfig();
+
   const claveRecordada = localStorage.getItem('pg_clave_recordada');
   if (claveRecordada && claveRecordada === getClaveSistema()) {
     document.getElementById('login-paso1').style.display = 'none';

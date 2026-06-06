@@ -1026,7 +1026,7 @@
                   <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-400)">SERVICIO</th>
                   <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:var(--gray-400)">UDS (NOCHES)</th>
                   <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--gray-400)">PRECIO/UND</th>
-                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--gray-400)">DESC %</th>
+                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--gray-400)">DESC</th>
                   <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:var(--gray-400)">TOTAL</th>
                   <th style="padding:10px 8px;width:32px"></th>
                 </tr>
@@ -1035,24 +1035,73 @@
             </table>
           </div>
 
-          <!-- Resumen financiero estilo Gespet -->
-          <div style="display:flex;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--gray-100)">
-            <div style="min-width:280px">
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
-                <span style="color:var(--gray-600)">Antes de descuentos</span>
-                <span id="resumen-subtotal" style="font-weight:600">0.00 PM$</span>
+          <!-- Resumen financiero -->
+          <div style="padding:16px 20px;border-top:1px solid var(--gray-100)">
+            <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end">
+
+              <!-- Descuento global -->
+              <div style="min-width:260px;max-width:320px">
+                <div style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Descuento global (opcional)</div>
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+                  <button id="ne-desc-tipo-btn" onclick="ne_toggleDescTipo()" data-tipo="pct"
+                    style="padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:white;color:var(--gray-600);white-space:nowrap;flex-shrink:0">
+                    %
+                  </button>
+                  <input type="number" id="ne-desc-valor" min="0" placeholder="0"
+                    oninput="calcResumen()"
+                    style="flex:1;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:14px;font-weight:700;text-align:right;outline:none;font-family:'Poppins',sans-serif;color:#dc2626">
+                  <span id="ne-desc-tipo-label" style="font-size:12px;color:var(--gray-400);flex-shrink:0">%</span>
+                </div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
-                <span style="color:var(--gray-600)">Descuentos</span>
-                <span id="resumen-descuentos" style="color:var(--red)">0.00 PM$</span>
+
+              <!-- Totales -->
+              <div style="min-width:260px">
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
+                  <span style="color:var(--gray-600)">Subtotal</span>
+                  <span id="resumen-subtotal" style="font-weight:600">0.00 PM$</span>
+                </div>
+                <div id="ne-desc-fila" style="display:none;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--gray-100)">
+                  <span style="color:#dc2626">🏷️ Descuento</span>
+                  <span id="resumen-descuentos" style="color:#dc2626;font-weight:600">0.00 PM$</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:var(--green);padding:8px 0 0">
+                  <span>Total</span>
+                  <span id="resumen-total">0.00 PM$</span>
+                </div>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
-                <span style="color:var(--gray-600)">Base</span>
-                <span id="resumen-base" style="font-weight:600">0.00 PM$</span>
+            </div>
+
+            <!-- Adelanto -->
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100)">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="ne-tiene-adelanto" style="width:16px;height:16px;accent-color:var(--green)"
+                  onchange="ne_toggleAdelanto()">
+                <label for="ne-tiene-adelanto" style="font-size:13px;font-weight:700;color:var(--gray-800);cursor:pointer">
+                  💵 Registrar adelanto recibido
+                </label>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;color:var(--green);padding:10px 0 0">
-                <span>Total</span>
-                <span id="resumen-total">0.00 PM$</span>
+              <div id="ne-adelanto-form" style="display:none;background:var(--green-light);border-radius:8px;padding:12px 14px;border:1px solid #86efac">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                  <div>
+                    <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Monto del adelanto *</label>
+                    <input type="number" id="ne-adelanto-monto" min="0" placeholder="0.00" step="0.01"
+                      oninput="calcResumen()"
+                      style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:14px;font-weight:700;font-family:'Poppins',sans-serif;outline:none">
+                  </div>
+                  <div>
+                    <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Método</label>
+                    <select id="ne-adelanto-metodo"
+                      style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:13px;font-family:'Poppins',sans-serif;outline:none">
+                      <option value="Efectivo">💵 Efectivo</option>
+                      <option value="Transferencia">🏦 Transferencia</option>
+                      <option value="Tarjeta">💳 Tarjeta</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#166534">
+                  <span>Saldo pendiente:</span>
+                  <span id="ne-saldo-pendiente">0.00 PM$</span>
+                </div>
               </div>
             </div>
           </div>
@@ -3146,7 +3195,11 @@ async function cargarTodo() {
       status: e.status||'activo',
       responsiva: e.responsiva_firmada||false,
       descuento: e.descuento ? (typeof e.descuento === 'string' ? JSON.parse(e.descuento) : e.descuento) : null,
-      conceptos_json: e.conceptos_json || null
+      conceptos_json: e.conceptos_json || null,
+      subtotal: parseFloat(e.subtotal) || 0,
+      desc_tipo: e.desc_tipo || 'pct',
+      desc_valor: parseFloat(e.desc_valor) || 0,
+      desc_monto: parseFloat(e.desc_monto) || 0
     }));
 
     // Cargar reservaciones pendientes
@@ -6507,14 +6560,14 @@ function sincronizarConceptos() {
           🐕 ${m}
         </td>
         <td style="padding:10px 14px">
-          <select style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none" 
+          <select style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none"
             onchange="onConceptoServicioChange(this)">
             <option value="">— Servicio —</option>
             ${opcionesServ}
           </select>
         </td>
         <td style="padding:10px 8px;text-align:center">
-          <input type="text" inputmode="numeric" value="${noches||1}" 
+          <input type="text" inputmode="numeric" value="${noches||1}"
             style="width:60px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:center;font-family:'Poppins',sans-serif;outline:none;font-weight:700"
             oninput="calcResumen()">
         </td>
@@ -6525,10 +6578,13 @@ function sincronizarConceptos() {
           <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
         </td>
         <td style="padding:10px 8px;text-align:right">
-          <input type="text" inputmode="numeric" placeholder="0"
-            style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
-            oninput="calcResumen()">
-          <span style="font-size:11px;color:var(--gray-400)">%</span>
+          <div style="display:flex;gap:3px;align-items:center;justify-content:flex-end">
+            <input type="text" inputmode="numeric" placeholder="0" data-tipo="pct"
+              style="width:50px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none;color:#dc2626"
+              oninput="calcResumen()" class="ne-desc-fila-input">
+            <button onclick="ne_toggleDescTipoFila(this)" data-tipo="pct"
+              style="padding:4px 5px;border:1.5px solid var(--gray-200);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;background:white;color:var(--gray-600);flex-shrink:0">%</button>
+          </div>
         </td>
         <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
         <td style="padding:10px 8px">
@@ -6588,10 +6644,13 @@ function agregarConceptoManual() {
       <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
     </td>
     <td style="padding:10px 8px;text-align:right">
-      <input type="text" inputmode="numeric" placeholder="0"
-        style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
-        oninput="calcResumen()">
-      <span style="font-size:11px;color:var(--gray-400)">%</span>
+      <div style="display:flex;gap:3px;align-items:center;justify-content:flex-end">
+        <input type="text" inputmode="numeric" placeholder="0" data-tipo="pct"
+          style="width:50px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none;color:#dc2626"
+          oninput="calcResumen()" class="ne-desc-fila-input">
+        <button onclick="ne_toggleDescTipoFila(this)" data-tipo="pct"
+          style="padding:4px 5px;border:1.5px solid var(--gray-200);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;background:white;color:var(--gray-600);flex-shrink:0">%</button>
+      </div>
     </td>
     <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
     <td style="padding:10px 8px">
@@ -6687,29 +6746,100 @@ function calcNochesYTotal() {
 }
 
 function calcResumen() {
-  let subtotal = 0, totalDescuentos = 0;
+  // ── 1. Sumar filas (cada fila tiene su propio descuento % o $)
+  let subtotal = 0;
   document.querySelectorAll('#conceptos-tbody tr').forEach(tr => {
     const inputs = tr.querySelectorAll('input');
-    const uds = parseFloat(inputs[0]?.value)||0;
-    const precio = parseFloat(inputs[1]?.value)||0;
-    const desc = parseFloat(inputs[2]?.value)||0;
+    const uds      = parseFloat(inputs[0]?.value) || 0;
+    const precio   = parseFloat(inputs[1]?.value) || 0;
+    const descInp  = tr.querySelector('.ne-desc-fila-input');
+    const descVal  = parseFloat(descInp?.value) || 0;
+    const descTipo = descInp?.dataset?.tipo || 'pct';
     const lineaBase = uds * precio;
-    const lineaDesc = lineaBase * desc / 100;
+    const lineaDesc = descTipo === 'pct'
+      ? lineaBase * descVal / 100
+      : Math.min(lineaBase, descVal);
     const lineaTotal = lineaBase - lineaDesc;
-    subtotal += lineaBase;
-    totalDescuentos += lineaDesc;
+    subtotal += lineaTotal; // subtotal ya incluye descuentos por fila
     const colTotal = tr.querySelector('.col-total');
     if (colTotal) colTotal.textContent = lineaTotal.toLocaleString('es-MX', {minimumFractionDigits:2}) + ' PM$';
   });
-  const base = subtotal - totalDescuentos;
-  document.getElementById('resumen-subtotal').textContent = subtotal.toLocaleString('es-MX',{minimumFractionDigits:2})+' PM$';
-  document.getElementById('resumen-descuentos').textContent = totalDescuentos.toLocaleString('es-MX',{minimumFractionDigits:2})+' PM$';
-  document.getElementById('resumen-base').textContent = base.toLocaleString('es-MX',{minimumFractionDigits:2})+' PM$';
-  document.getElementById('resumen-total').textContent = base.toLocaleString('es-MX',{minimumFractionDigits:2})+' PM$';
+
+  // ── 2. Descuento global sobre el subtotal de filas
+  const descGlobalBtn  = document.getElementById('ne-desc-tipo-btn');
+  const descGlobalInp  = document.getElementById('ne-desc-valor');
+  const descGlobalTipo = descGlobalBtn?.dataset?.tipo || 'pct';
+  const descGlobalVal  = parseFloat(descGlobalInp?.value) || 0;
+  const descGlobalMonto = descGlobalTipo === 'pct'
+    ? subtotal * descGlobalVal / 100
+    : Math.min(subtotal, descGlobalVal);
+  const total = Math.round((subtotal - descGlobalMonto) * 100) / 100;
+
+  // ── 3. Actualizar UI resumen
+  const fmt = n => n.toLocaleString('es-MX', {minimumFractionDigits:2}) + ' PM$';
+  document.getElementById('resumen-subtotal').textContent = fmt(subtotal);
+  const descFila = document.getElementById('ne-desc-fila');
+  const descLabel = document.getElementById('resumen-descuentos');
+  if (descGlobalMonto > 0) {
+    if (descFila) descFila.style.display = 'flex';
+    if (descLabel) descLabel.textContent = '-' + fmt(descGlobalMonto);
+  } else {
+    if (descFila) descFila.style.display = 'none';
+  }
+  document.getElementById('resumen-total').textContent = fmt(total);
+
+  // ── 4. Adelanto y saldo
+  const tieneAdelanto = document.getElementById('ne-tiene-adelanto')?.checked;
+  const adelanto = tieneAdelanto ? (parseFloat(document.getElementById('ne-adelanto-monto')?.value) || 0) : 0;
+  const saldo = Math.max(0, total - adelanto);
+  const saldoEl = document.getElementById('ne-saldo-pendiente');
+  if (saldoEl) {
+    saldoEl.textContent = fmt(saldo);
+    saldoEl.style.color = saldo === 0 ? '#16a34a' : '#dc2626';
+  }
 }
 
 // Mantener compatibilidad con calcTotal
 function calcTotal() { calcResumen(); }
+
+// Toggle tipo descuento GLOBAL (% o $)
+function ne_toggleDescTipo() {
+  const btn = document.getElementById('ne-desc-tipo-btn');
+  const label = document.getElementById('ne-desc-tipo-label');
+  const inp = document.getElementById('ne-desc-valor');
+  if (!btn) return;
+  const actual = btn.dataset.tipo || 'pct';
+  const nuevo = actual === 'pct' ? 'monto' : 'pct';
+  btn.dataset.tipo = nuevo;
+  btn.textContent = nuevo === 'pct' ? '%' : '$';
+  if (label) label.textContent = nuevo === 'pct' ? '%' : 'PM$';
+  if (inp) { inp.placeholder = nuevo === 'pct' ? '0' : '0.00'; inp.value = ''; }
+  calcResumen();
+}
+
+// Toggle tipo descuento POR FILA (% o $)
+function ne_toggleDescTipoFila(btn) {
+  const actual = btn.dataset.tipo || 'pct';
+  const nuevo = actual === 'pct' ? 'monto' : 'pct';
+  btn.dataset.tipo = nuevo;
+  btn.textContent = nuevo === 'pct' ? '%' : '$';
+  const inp = btn.previousElementSibling;
+  if (inp) { inp.dataset.tipo = nuevo; inp.value = ''; }
+  calcResumen();
+}
+
+// Mostrar/ocultar form de adelanto en nueva entrada
+function ne_toggleAdelanto() {
+  const cb = document.getElementById('ne-tiene-adelanto');
+  const form = document.getElementById('ne-adelanto-form');
+  if (!form) return;
+  form.style.display = cb?.checked ? 'block' : 'none';
+  if (!cb?.checked) {
+    const montoEl = document.getElementById('ne-adelanto-monto');
+    if (montoEl) montoEl.value = '';
+  }
+  calcResumen();
+}
 
 function editarEntrada(id) {
   const e = entradas.find(en=>en.id===id);
@@ -6798,10 +6928,14 @@ function editarEntrada(id) {
               <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
             </td>
             <td style="padding:10px 8px;text-align:right">
-              <input type="text" inputmode="numeric" placeholder="0" value="${con.desc || ''}"
-                style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none"
-                oninput="calcResumen()">
-              <span style="font-size:11px;color:var(--gray-400)">%</span>
+              <div style="display:flex;gap:3px;align-items:center;justify-content:flex-end">
+                <input type="text" inputmode="numeric" placeholder="0" value="${con.desc || ''}"
+                  data-tipo="${con.desc_tipo || 'pct'}"
+                  style="width:50px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none;color:#dc2626"
+                  oninput="calcResumen()" class="ne-desc-fila-input">
+                <button onclick="ne_toggleDescTipoFila(this)" data-tipo="${con.desc_tipo || 'pct'}"
+                  style="padding:4px 5px;border:1.5px solid var(--gray-200);border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;background:white;color:var(--gray-600);flex-shrink:0">${(con.desc_tipo||'pct')==='pct'?'%':'$'}</button>
+              </div>
             </td>
             <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
             <td style="padding:10px 8px">
@@ -6867,6 +7001,17 @@ function editarEntrada(id) {
         });
       }
       calcResumen();
+
+      // Restaurar descuento global desde e.desc_tipo / e.desc_valor
+      const descTipoGuardado = e.desc_tipo || 'pct';
+      const descValGuardado  = e.desc_valor || 0;
+      const descBtn = document.getElementById('ne-desc-tipo-btn');
+      const descLbl = document.getElementById('ne-desc-tipo-label');
+      const descInpG = document.getElementById('ne-desc-valor');
+      if (descBtn) { descBtn.dataset.tipo = descTipoGuardado; descBtn.textContent = descTipoGuardado === 'pct' ? '%' : '$'; }
+      if (descLbl) descLbl.textContent = descTipoGuardado === 'pct' ? '%' : 'PM$';
+      if (descInpG) descInpG.value = descValGuardado > 0 ? descValGuardado : '';
+      calcResumen();
     }
 
     // Cambiar botón a modo edición
@@ -6909,16 +7054,29 @@ async function guardarEntrada() {
   }
 
   const filas = document.querySelectorAll('#conceptos-tbody tr');
-  let totalFinal = 0;
+  let subtotalFinal = 0;
   let hayPrecioVacio = false;
   filas.forEach(tr => {
     const inputs = tr.querySelectorAll('input');
-    const uds = parseFloat(inputs[0]?.value)||0;
-    const precio = parseFloat(inputs[1]?.value)||0;
-    const desc = parseFloat(inputs[2]?.value)||0;
+    const uds      = parseFloat(inputs[0]?.value) || 0;
+    const precio   = parseFloat(inputs[1]?.value) || 0;
+    const descInp  = tr.querySelector('.ne-desc-fila-input');
+    const descVal  = parseFloat(descInp?.value) || 0;
+    const descTipo = descInp?.dataset?.tipo || 'pct';
     if (precio === 0) hayPrecioVacio = true;
-    totalFinal += (uds * precio) * (1 - desc/100);
+    const lineaBase = uds * precio;
+    const lineaDesc = descTipo === 'pct' ? lineaBase * descVal / 100 : Math.min(lineaBase, descVal);
+    subtotalFinal += lineaBase - lineaDesc;
   });
+  // Descuento global
+  const descGlobalBtn  = document.getElementById('ne-desc-tipo-btn');
+  const descGlobalInp  = document.getElementById('ne-desc-valor');
+  const descGlobalTipo = descGlobalBtn?.dataset?.tipo || 'pct';
+  const descGlobalVal  = parseFloat(descGlobalInp?.value) || 0;
+  const descGlobalMonto = descGlobalTipo === 'pct'
+    ? subtotalFinal * descGlobalVal / 100
+    : Math.min(subtotalFinal, descGlobalVal);
+  let totalFinal = Math.round((subtotalFinal - descGlobalMonto) * 100) / 100;
   // Si editando sin conceptos, mantener importe original
   if (!filas.length && entradaEditandoId) {
     const eOrig = entradas.find(en=>en.id===entradaEditandoId);
@@ -6938,11 +7096,16 @@ async function guardarEntrada() {
     const uds = parseFloat(inputs[0]?.value) || 0;
     const precio = parseFloat(inputs[1]?.value) || 0;
     const desc = parseFloat(inputs[2]?.value) || 0;
+    const descInpG = tr.querySelector('.ne-desc-fila-input');
+    const descTipoG = descInpG?.dataset?.tipo || 'pct';
+    const descG = parseFloat(descInpG?.value) || 0;
     if (svcId || precio > 0) {
       conceptosParaGuardar.push({
         mascota: tr.dataset.mascota || null,
         svc_id: svcId,
-        uds, precio, desc
+        uds, precio,
+        desc: descG,
+        desc_tipo: descTipoG
       });
     }
   });
@@ -6950,7 +7113,12 @@ async function guardarEntrada() {
   const datos = {
     cliente_id: clienteEntradaSeleccionado.id, mascotas, habitacion: hab,
     fecha_entrada: `${fe}T${he}:00`, fecha_salida_prevista: `${fs}T${hs}:00`,
-    importe: totalFinal, servicio: '',
+    importe: totalFinal,
+    subtotal: subtotalFinal,
+    desc_tipo: descGlobalTipo,
+    desc_valor: descGlobalVal,
+    desc_monto: Math.round(descGlobalMonto * 100) / 100,
+    servicio: '',
     notas: document.getElementById('ne-notas').value, status: 'activo',
     responsiva_firmada: document.getElementById('ne-responsiva')?.checked || false,
     conceptos_json: JSON.stringify(conceptosParaGuardar)
@@ -6958,13 +7126,31 @@ async function guardarEntrada() {
 
   setLoading(true);
   try {
+    let entradaIdFinal = entradaEditandoId;
     if (entradaEditandoId) {
       await sb('PATCH', `entradas?id=eq.${entradaEditandoId}`, datos);
       notify('✅ Hospedaje actualizado correctamente', 'success');
       entradaEditandoId = null;
     } else {
-      await sb('POST', 'entradas', datos);
+      const nuevaEntrada = await sb('POST', 'entradas', datos);
+      entradaIdFinal = Array.isArray(nuevaEntrada) ? nuevaEntrada[0]?.id : nuevaEntrada?.id;
       notify('✅ Entrada registrada','success');
+    }
+    // Registrar adelanto si se indicó al crear
+    const tieneAdelantoNE = document.getElementById('ne-tiene-adelanto')?.checked;
+    const montoAdelantoNE = tieneAdelantoNE ? parseFloat(document.getElementById('ne-adelanto-monto')?.value) || 0 : 0;
+    const metodoAdelantoNE = document.getElementById('ne-adelanto-metodo')?.value || 'Efectivo';
+    if (tieneAdelantoNE && montoAdelantoNE > 0 && entradaIdFinal && clienteEntradaSeleccionado?.id) {
+      await sb('POST', 'cobros', {
+        cliente_id: clienteEntradaSeleccionado.id,
+        entrada_id: entradaIdFinal,
+        fecha: new Date().toISOString().split('T')[0],
+        metodo: metodoAdelantoNE,
+        monto: montoAdelantoNE,
+        concepto: 'Adelanto al registrar entrada',
+        notas: '',
+        status: 'adelanto'
+      });
     }
     // Guardar datos para el ticket ANTES de limpiar el formulario
     const clienteParaTicket = clienteEntradaSeleccionado;
@@ -7001,6 +7187,19 @@ async function guardarEntrada() {
     const respCb = document.getElementById('ne-responsiva'); if(respCb) respCb.checked=false;
     localStorage.setItem('pg_responsiva', 'false');
     document.getElementById('conceptos-tbody').innerHTML='';
+    // Limpiar descuento global y adelanto
+    const descBtnR = document.getElementById('ne-desc-tipo-btn');
+    if (descBtnR) { descBtnR.dataset.tipo = 'pct'; descBtnR.textContent = '%'; }
+    const descLblR = document.getElementById('ne-desc-tipo-label');
+    if (descLblR) descLblR.textContent = '%';
+    const descValR = document.getElementById('ne-desc-valor');
+    if (descValR) descValR.value = '';
+    const adCheckR = document.getElementById('ne-tiene-adelanto');
+    if (adCheckR) adCheckR.checked = false;
+    const adFormR = document.getElementById('ne-adelanto-form');
+    if (adFormR) adFormR.style.display = 'none';
+    const adMontoR = document.getElementById('ne-adelanto-monto');
+    if (adMontoR) adMontoR.value = '';
     calcResumen();
     const btn = document.querySelector('#screen-nueva-entrada .btn-primary');
     if (btn) { btn.textContent='💾 Guardar entrada'; btn.style.background=''; }

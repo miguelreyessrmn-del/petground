@@ -3775,6 +3775,12 @@ async function guardarReservacion() {
     totalFinal += (uds * precio) * (1 - desc/100);
   });
 
+  // Corrección C: bloquear reservación con total $0
+  if (totalFinal <= 0) {
+    notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar la reservación.', 'error');
+    return;
+  }
+
   // Adelanto
   const tieneAdelanto = document.getElementById('nr-tiene-adelanto').checked;
   const montoAdelanto = tieneAdelanto ? parseFloat(document.getElementById('nr-adelanto-monto').value) : 0;
@@ -4759,6 +4765,21 @@ async function guardarCambiosHospedaje() {
   const descuentoObj = mdh_getDescuentoObj();
   if (!fe||!fs) { notify('⚠️ Las fechas son obligatorias', 'error'); return; }
   if (new Date(fs)<new Date(fe)) { notify('⚠️ La salida no puede ser antes que la entrada', 'error'); return; }
+
+  // Corrección B: bloquear guardado con importe $0, identificando mascota sin servicio
+  if (importe <= 0) {
+    const eVal = entradas.find(en => en.id === detalleHospedajeId);
+    const selsCheck = document.querySelectorAll('#mdh-mascotas select');
+    const sinServicio = (eVal?.mascotas || []).filter((_, idx) => {
+      const sel = selsCheck[idx];
+      return !sel || !parseInt(sel.value);
+    });
+    const detalle = sinServicio.length
+      ? `Sin servicio asignado: ${sinServicio.join(', ')}.`
+      : 'El total calculado es $0.';
+    notify(`⚠️ No se puede guardar con total $0. ${detalle} Selecciona un servicio para continuar.`, 'error');
+    return; // modal permanece abierto
+  }
 
   // Serializar conceptos del modal para reconstrucción futura
   const e = entradas.find(en => en.id === detalleHospedajeId);
@@ -7083,6 +7104,12 @@ async function guardarEntrada() {
     totalFinal = eOrig?.importe || 0;
   } else if (hayPrecioVacio && filas.length) {
     if (!confirm('Hay conceptos con precio $0. ¿Deseas continuar?')) return;
+  }
+
+  // Corrección A: bloquear entrada con total $0
+  if (totalFinal <= 0 && !entradaEditandoId) {
+    notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar.', 'error');
+    return;
   }
 
   const he = document.getElementById('ne-hora-entrada').value;

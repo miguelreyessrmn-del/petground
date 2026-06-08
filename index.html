@@ -1612,7 +1612,7 @@
             <div style="font-weight:700;font-size:13px;color:#92400e">Impresora no conectada</div>
             <div style="font-size:12px;color:#b45309">Abre QZ Tray para imprimir tickets y abrir el cajón. Los movimientos se siguen registrando normalmente.</div>
           </div>
-          <button onclick="intentarConectarQZ()" style="background:#f59e0b;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🔄 Reconectar</button>
+          <button onclick="Printer.reconectar()" style="background:#f59e0b;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🔄 Reconectar</button>
         </div>
 
         <!-- Cola de trabajos pendientes -->
@@ -1622,7 +1622,7 @@
             <div style="font-weight:700;font-size:13px;color:#1e40af" id="banner-cola-texto">1 ticket pendiente de imprimir</div>
             <div style="font-size:12px;color:#3b82f6">Se imprimirán automáticamente cuando QZ Tray esté conectado.</div>
           </div>
-          <button onclick="imprimirColaPendiente()" style="background:#3b82f6;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🖨️ Imprimir ahora</button>
+          <button onclick="Printer.reconectar()" style="background:#3b82f6;color:white;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">🖨️ Imprimir ahora</button>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6f0e4;border:1.5px solid #86efac">
@@ -2555,7 +2555,7 @@
       </button>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-detalle-hospedaje')">Cancelar</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="imprimirDesdeDetalle()">🖨️ Ticket</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="Printer.imprimirDesdeDetalle()">🖨️ Ticket</button>
         <button class="btn btn-ghost" style="flex:1;background:#f0f7ff;color:#1a4a7a;border:1.5px solid #93c5fd" onclick="abrirCambioHabitacion()">🚪 Hab.</button>
         <button class="btn btn-ghost" style="flex:1;background:#f0fdf4;color:#1a7a4a;border:1.5px solid #86efac" onclick="generarComprobantePDF(detalleHospedajeId)">📄 PDF</button>
         <button class="btn btn-red" style="flex:1" onclick="eliminarDesdeDetalle()">🗑️ Eliminar</button>
@@ -3817,7 +3817,7 @@ async function guardarReservacion() {
       });
       // Abrir cajón si es efectivo
       if (metodoAdelanto === 'Efectivo') {
-        await abrirCajonPorCobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+        await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
       }
     }
     await cargarTodo();
@@ -4074,78 +4074,6 @@ function verHistorialMascota(clienteId, mascotaNombre) {
 }
 
 // ===================== TICKET DE ENTRADA (IMPRESORA TÉRMICA) =====================
-function imprimirTicketEntrada(datos) {
-  const { cliente, mascotas, habitacion, fechaEntrada, horaEntrada, fechaSalida, horaSalida, notas, conceptos, total } = datos;
-  const cfg = getNegocioConfig();
-  const negNombre = cfg.nombre || 'PetGround';
-  const negPropietario = cfg.propietario || 'PetGround';
-  const negDireccion = cfg.direccion || 'Puebla, México';
-  const negUrl = cfg.url || 'petground.netlify.app';
-  const negFooter = cfg.footer || '¡Gracias por confiar en nosotros! Su mascota está en las mejores manos 🐕';
-  const logoHtml = cfg.logo ? `<img src="${cfg.logo}" style="width:60px;height:60px;object-fit:contain;margin-bottom:4px">` : '<div style="font-size:28px">🐾</div>';
-  const ahora = new Date().toLocaleString('es-MX');
-  const noches = Math.max(0, Math.ceil((new Date(fechaSalida)-new Date(fechaEntrada))/(1000*60*60*24)));
-
-  const win = window.open('', '_blank', 'width:320,height:600');
-  win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Ticket ${negNombre}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Courier New', monospace; font-size: 12px; width: 280px; padding: 8px; color: #000; }
-  .center { text-align: center; }
-  .bold { font-weight: bold; }
-  .big { font-size: 16px; font-weight: bold; }
-  .divider { border-top: 1px dashed #000; margin: 6px 0; }
-  .divider-solid { border-top: 2px solid #000; margin: 6px 0; }
-  .row { display: flex; justify-content: space-between; margin: 2px 0; }
-  .total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin: 4px 0; }
-  .footer { text-align: center; font-size: 10px; color: #555; margin-top: 8px; }
-  @media print { body { width: 80mm; } @page { margin: 2mm; size: 80mm auto; } }
-</style>
-</head>
-<body>
-  <div class="center">
-    ${logoHtml}
-    <div class="big">${negNombre}</div>
-    <div style="font-size:10px">Hotel de Mascotas</div>
-    <div style="font-size:10px">${negPropietario} · ${negDireccion}</div>
-  </div>
-  <div class="divider-solid"></div>
-  <div class="center bold" style="font-size:13px">COMPROBANTE DE ENTRADA</div>
-  <div class="center" style="font-size:10px">${ahora}</div>
-  <div class="divider"></div>
-  <div class="row"><span>Cliente:</span><span class="bold">${cliente?.nombre||'—'}</span></div>
-  <div class="row"><span>Tel:</span><span>${cliente?.whatsapp||'—'}</span></div>
-  <div class="divider"></div>
-  <div class="bold" style="margin-bottom:3px">🐕 Mascotas:</div>
-  ${mascotas.map(m=>`<div style="padding-left:8px">• ${m}</div>`).join('')}
-  <div class="divider"></div>
-  <div class="row"><span>Habitación:</span><span class="bold">${habitacion}</span></div>
-  <div class="row"><span>Entrada:</span><span>${fechaEntrada} ${horaEntrada}</span></div>
-  <div class="row"><span>Salida prev.:</span><span>${fechaSalida} ${horaSalida}</span></div>
-  <div class="row"><span>Noches:</span><span class="bold">${noches}</span></div>
-  ${notas ? `<div class="divider"></div><div style="font-size:10px;color:#333">Notas:</div><div style="font-size:10px">${notas}</div>` : ''}
-  <div class="divider"></div>
-  ${conceptos.length ? `
-  <div class="bold" style="margin-bottom:3px">Servicios:</div>
-  ${conceptos.map(c=>`<div class="row"><span style="font-size:10px">${c.servicio} x${c.uds}</span><span>$${c.total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`).join('')}
-  <div class="divider"></div>` : ''}
-  <div class="total-row"><span>TOTAL ESTIMADO:</span><span>$${(total||0).toLocaleString('es-MX',{minimumFractionDigits:2})} PM$</span></div>
-  <div class="divider-solid"></div>
-  <div class="footer">
-    <div>${negFooter}</div>
-    <div style="margin-top:4px">${negUrl}</div>
-    <div style="margin-top:4px;color:#999">Atendió: ${usuarioActual?.nombre || '—'}</div>
-  </div>
-  <div style="height:20px"></div>
-</body>
-</html>`);
-  win.document.close();
-  setTimeout(() => { win.print(); win.close(); }, 400);
-}
 // ===================== DETALLE HOSPEDAJE =====================
 let detalleHospedajeId = null;
 
@@ -4508,7 +4436,7 @@ async function mdh_guardarAdelanto() {
     // Cajón + ticket si es efectivo
     const c = clientes.find(cl => cl.id === e.clienteId);
     if (metodo === 'Efectivo') {
-      await abrirCajonPorCobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
+      await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
     }
     // Ofrecer WA
     if (c?.whatsapp) {
@@ -4712,25 +4640,7 @@ async function generarComprobantePDF(entradaId) {
   modalComp.appendChild(compWrapper);
 }
 
-function imprimirDesdeDetalle() {
-  const e = entradas.find(en=>en.id===detalleHospedajeId);
-  const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
-  if (!e || !c) return;
-  const fe = document.getElementById('mdh-fecha-entrada').value;
-  const he = document.getElementById('mdh-hora-entrada').value;
-  const fs = document.getElementById('mdh-fecha-salida').value;
-  const hs = document.getElementById('mdh-hora-salida').value;
-  imprimirTicketEntrada({
-    cliente: c,
-    mascotas: e.mascotas||[],
-    habitacion: document.getElementById('mdh-habitacion').value || e.habitacion,
-    fechaEntrada: fe, horaEntrada: he,
-    fechaSalida: fs, horaSalida: hs,
-    notas: document.getElementById('mdh-notas').value,
-    conceptos: [],
-    total: parseFloat(document.getElementById('mdh-importe').value)||e.importe||0
-  });
-}
+// imprimirDesdeDetalle() → movida a Printer.imprimirDesdeDetalle()
 
 function mdh_calcNoches() {
   const fe = document.getElementById('mdh-fecha-entrada')?.value;
@@ -7180,7 +7090,7 @@ async function guardarEntrada() {
       });
       // Si el adelanto es en efectivo: abrir cajón + registrar en caja_movimientos
       if (metodoAdelantoNE === 'Efectivo') {
-        await abrirCajonPorCobro(
+        await Printer.cobro(
           clienteEntradaSeleccionado.nombre,
           mascotas.join(', '),
           montoAdelantoNE,
@@ -7454,7 +7364,7 @@ async function confirmarSalida() {
     // Si pagó en efectivo → abrir cajón + imprimir ticket
     if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
-      await abrirCajonPorCobro(c.nombre, mascotasNombre, cobrado, salidaActual);
+      await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
     }
 
     if (c?.whatsapp && cobrado > 0) {
@@ -8105,237 +8015,340 @@ function renderDeudasPendientes() {
 
 
 
-// ===================== COLA DE IMPRESIÓN =====================
-let _colaPendiente = []; // {tipo, datos}
-let _imprimiendoAhora = false; // mutex: evita impresiones duplicadas simultáneas
+// ===================== PRINTER MODULE =====================
+// Toda la lógica de QZ Tray y generación de tickets vive aquí.
+// El resto del sistema solo llama a Printer.cobro(), Printer.apertura(), etc.
+// Fase 2: separar guardarMovimientoCaja de Printer.cobro() cuando se valide.
 
-function actualizarBannerQZ(conectado) {
-  const banner = document.getElementById('banner-qz');
-  if (!banner) return;
-  banner.style.display = conectado ? 'none' : 'flex';
-}
+const Printer = (() => {
 
-function actualizarBannerCola() {
-  const banner = document.getElementById('banner-cola-impresion');
-  const texto  = document.getElementById('banner-cola-texto');
-  if (!banner) return;
-  if (_colaPendiente.length === 0) {
-    banner.style.display = 'none';
-  } else {
-    banner.style.display = 'flex';
-    if (texto) texto.textContent = `${_colaPendiente.length} ticket${_colaPendiente.length>1?'s':''} pendiente${_colaPendiente.length>1?'s':''} de imprimir`;
+  // ── Estado privado ────────────────────────────────────────
+  let _cola = [];           // jobs pendientes {tipo, lineas}
+  let _ocupado = false;     // mutex: evita impresiones simultáneas
+
+  // ── A: Hardware / QZ Tray (privado) ──────────────────────
+
+  function _getNombreImpresora() {
+    return getConfig('impresora_nombre', 'EPSON_TM_T88V');
   }
-}
 
-async function intentarConectarQZ() {
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (ok && _colaPendiente.length > 0) {
-    await imprimirColaPendiente();
-  }
-}
-
-async function imprimirColaPendiente() {
-  if (!_colaPendiente.length) return;
-  if (_imprimiendoAhora) {
-    console.warn('imprimirColaPendiente: impresión en curso, reintentando en 1s');
-    setTimeout(imprimirColaPendiente, 1000);
-    return;
-  }
-  const ok = await conectarQZ();
-  if (!ok) { notify('⚠️ QZ Tray sigue sin conectar', 'error'); return; }
-  _imprimiendoAhora = true;
-  const cola = [..._colaPendiente];
-  _colaPendiente = [];
-  actualizarBannerCola();
-  for (const job of cola) {
+  async function _conectar() {
+    if (typeof qz === 'undefined') return false;
     try {
-      if (job.tipo === 'cajon_ticket') {
-        const config = qz.configs.create(getNombreImpresora());
-        // Cajón: formato hex garantiza bytes exactos
-        await qz.print(config, [{ type:'raw', format:'hex', data: '1B700019FA' }]);
-        // Ticket: btoa directo sobre Latin-1 (sin encodeURIComponent)
-        if (job.lineas) {
-          await qz.print(config, [{ type:'raw', format:'base64', data: btoa(job.lineas) }]);
-        }
+      qz.security.setCertificatePromise(function(resolve) {
+        resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----');
+      });
+      qz.security.setSignatureAlgorithm('SHA512');
+      qz.security.setSignaturePromise(function(toSign) {
+        return function(resolve) { resolve(); };
+      });
+      if (!qz.websocket.isActive()) {
+        await Promise.race([
+          qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
+          new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+        ]);
       }
+      return true;
     } catch(e) {
-      console.warn('Error imprimiendo trabajo pendiente:', e);
+      return false;
     }
   }
-  _imprimiendoAhora = false;
-  notify('🖨️ Tickets pendientes impresos', 'success');
-}
 
-// Verificar QZ al abrir Caja
-async function verificarEstadoQZ() {
-  if (typeof qz === 'undefined') { actualizarBannerQZ(false); return; }
-  const conectado = qz.websocket.isActive();
-  actualizarBannerQZ(conectado);
-  actualizarBannerCola();
-}
+  // Imprime cajón ESC/POS + ticket en dos llamadas QZ separadas.
+  // Cajón en hex (bytes exactos), ticket en base64 Latin-1 (sin encodeURIComponent).
+  async function _enviarCajonYTicket(lineas) {
+    if (_ocupado) {
+      console.warn('Printer: impresión ya en curso, ignorando llamada duplicada');
+      return;
+    }
+    _ocupado = true;
+    try {
+      const ok = await _conectar();
+      _bannerQZ(ok);
+      if (!ok) {
+        _cola.push({ tipo: 'cajon_ticket', lineas });
+        _bannerCola();
+        notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+        return;
+      }
+      const config = qz.configs.create(_getNombreImpresora());
+      // Cajón: formato hex garantiza bytes exactos (1B 70 00 19 FA = ESC p 0 25 250)
+      await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+      // Ticket: btoa directo sobre Latin-1 (correcto para EPSON TM-T88V CP850)
+      if (lineas) {
+        await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(lineas) }]);
+      }
+    } catch(e) {
+      notify('Error al imprimir: ' + e.message, 'error');
+    } finally {
+      _ocupado = false;
+    }
+  }
+
+  async function _vaciarCola() {
+    if (!_cola.length) return;
+    if (_ocupado) {
+      console.warn('Printer._vaciarCola: impresión en curso, reintentando en 1s');
+      setTimeout(_vaciarCola, 1000);
+      return;
+    }
+    const ok = await _conectar();
+    if (!ok) { notify('⚠️ QZ Tray sigue sin conectar', 'error'); return; }
+    _ocupado = true;
+    const pendientes = [..._cola];
+    _cola = [];
+    _bannerCola();
+    for (const job of pendientes) {
+      try {
+        if (job.tipo === 'cajon_ticket') {
+          const config = qz.configs.create(_getNombreImpresora());
+          await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+          if (job.lineas) {
+            await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(job.lineas) }]);
+          }
+        }
+      } catch(e) {
+        console.warn('Printer: error imprimiendo trabajo pendiente:', e);
+      }
+    }
+    _ocupado = false;
+    notify('🖨️ Tickets pendientes impresos', 'success');
+  }
+
+  // ── B: Construcción de tickets ESC/POS (privado) ─────────
+
+  function _buildTicket(tipo, datos) {
+    const negocio = getConfig('negocio_nombre', 'PetGround');
+    const usuario = (typeof usuarioActual !== 'undefined' && usuarioActual?.nombre) || 'Sistema';
+    const fecha = new Date().toLocaleDateString('es-MX');
+    const hora  = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+    const sep   = '--------------------------------\n';
+
+    let t = '';
+    t += '\x1B\x40';
+    t += '\x1B\x61\x01';
+    t += '\x1B\x45\x01';
+    t += negocio + '\n';
+    t += '\x1B\x45\x00';
+    t += '\x1B\x61\x00';
+
+    if (tipo === 'apertura_manual') {
+      t += sep;
+      t += ' APERTURA DE CAJON\n';
+      t += sep;
+      t += ` Usuario:  ${usuario}\n`;
+      t += ` Motivo:   ${datos.motivo}\n`;
+      if (datos.monto > 0) t += ` Retiro:   $${datos.monto.toLocaleString('es-MX')}\n`;
+      if (datos.nota) t += ` Nota:     ${datos.nota}\n`;
+      t += ` Fecha:    ${fecha}  ${hora}\n`;
+      t += sep;
+    }
+
+    if (tipo === 'cobro_efectivo') {
+      t += sep;
+      t += ' COBRO EN EFECTIVO\n';
+      t += sep;
+      t += ` Cliente:  ${datos.cliente}\n`;
+      t += ` Mascota:  ${datos.mascota}\n`;
+      t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
+      t += ` Cobro:    ${usuario}\n`;
+      t += ` Fecha:    ${fecha}  ${hora}\n`;
+      t += sep;
+    }
+
+    if (tipo === 'corte') {
+      t += sep;
+      t += '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n';
+      t += sep;
+      t += ` Fecha:    ${fecha}\n`;
+      t += ` Usuario:  ${usuario}\n`;
+      t += sep;
+      t += ' ENTRADAS\n';
+      t += ` Cobros del período: $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')}\n`;
+      t += ` Fondo inicial:      $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n`;
+      t += sep;
+      t += ' SALIDAS\n';
+      (datos.salidas||[]).forEach(s => {
+        t += ` ${s.motivo.padEnd(18)} -$${s.monto.toLocaleString('es-MX')}\n`;
+      });
+      t += sep;
+      t += '\x1B\x45\x01';
+      t += ` TOTAL EN CAJA: $${(datos.totalCaja||0).toLocaleString('es-MX')}\n`;
+      t += '\x1B\x45\x00';
+      t += sep;
+    }
+
+    t += '\n\n\n';
+    return t;
+  }
+
+  // ── C: UI — banners (privado) ─────────────────────────────
+
+  function _bannerQZ(conectado) {
+    const el = document.getElementById('banner-qz');
+    if (el) el.style.display = conectado ? 'none' : 'flex';
+  }
+
+  function _bannerCola() {
+    const banner = document.getElementById('banner-cola-impresion');
+    const texto  = document.getElementById('banner-cola-texto');
+    if (!banner) return;
+    if (_cola.length === 0) {
+      banner.style.display = 'none';
+    } else {
+      banner.style.display = 'flex';
+      if (texto) texto.textContent = `${_cola.length} ticket${_cola.length>1?'s':''} pendiente${_cola.length>1?'s':''} de imprimir`;
+    }
+  }
+
+  // ── API PÚBLICA ────────────────────────────────────────────
+
+  // Verifica estado de QZ al abrir la pantalla Caja
+  async function verificarEstado() {
+    if (typeof qz === 'undefined') { _bannerQZ(false); return; }
+    _bannerQZ(qz.websocket.isActive());
+    _bannerCola();
+  }
+
+  // Botón "Reconectar" del banner — conecta QZ y vacía la cola
+  async function reconectar() {
+    const ok = await _conectar();
+    _bannerQZ(ok);
+    if (ok && _cola.length > 0) await _vaciarCola();
+  }
+
+  // Cobro en efectivo: abre cajón + imprime ticket + registra en caja_movimientos
+  // Conserva el mismo comportamiento que abrirCajonPorCobro() (fase 1 — sin separar responsabilidades)
+  async function cobro(cliente, mascota, monto, entradaId) {
+    const ticket = _buildTicket('cobro_efectivo', {cliente, mascota, monto});
+    await _enviarCajonYTicket(ticket);
+    await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
+      `${cliente} - ${mascota}`, entradaId);
+    renderMovimientosCaja();
+  }
+
+  // Apertura manual / retiro: abre cajón + imprime ticket
+  // El registro en caja_movimientos lo hace el caller (confirmarAperturaCaja)
+  async function apertura(motivo, monto, nota, tipo) {
+    const ticket = _buildTicket('apertura_manual', {motivo, monto, nota, tipo});
+    await _enviarCajonYTicket(ticket);
+  }
+
+  // Corte de caja: abre cajón + imprime ticket
+  // El registro en caja_movimientos y el cierre del modal lo hace el caller (imprimirCorte)
+  async function corte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
+    const ticket = _buildTicket('corte', {cobrosEfectivo, fondoInicial, salidas, totalCaja});
+    await _enviarCajonYTicket(ticket);
+  }
+
+  // Ticket de entrada (sistema browser — sin QZ)
+  function ticketEntrada(datos) {
+    const { cliente, mascotas, habitacion, fechaEntrada, horaEntrada, fechaSalida, horaSalida, notas, conceptos, total } = datos;
+    const cfg = getNegocioConfig();
+    const negNombre      = cfg.nombre      || 'PetGround';
+    const negPropietario = cfg.propietario || 'PetGround';
+    const negDireccion   = cfg.direccion   || 'Puebla, México';
+    const negUrl         = cfg.url         || 'petground.netlify.app';
+    const negFooter      = cfg.footer      || '¡Gracias por confiar en nosotros! Su mascota está en las mejores manos 🐕';
+    const logoHtml       = cfg.logo ? `<img src="${cfg.logo}" style="width:60px;height:60px;object-fit:contain;margin-bottom:4px">` : '<div style="font-size:28px">🐾</div>';
+    const ahora  = new Date().toLocaleString('es-MX');
+    const noches = Math.max(0, Math.ceil((new Date(fechaSalida)-new Date(fechaEntrada))/(1000*60*60*24)));
+    const uActual = (typeof usuarioActual !== 'undefined' && usuarioActual?.nombre) || '—';
+
+    const win = window.open('', '_blank', 'width:320,height:600');
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ticket ${negNombre}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Courier New', monospace; font-size: 12px; width: 280px; padding: 8px; color: #000; }
+  .center { text-align: center; }
+  .bold { font-weight: bold; }
+  .big { font-size: 16px; font-weight: bold; }
+  .divider { border-top: 1px dashed #000; margin: 6px 0; }
+  .divider-solid { border-top: 2px solid #000; margin: 6px 0; }
+  .row { display: flex; justify-content: space-between; margin: 2px 0; }
+  .total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin: 4px 0; }
+  .footer { text-align: center; font-size: 10px; color: #555; margin-top: 8px; }
+  @media print { body { width: 80mm; } @page { margin: 2mm; size: 80mm auto; } }
+</style>
+</head>
+<body>
+  <div class="center">
+    ${logoHtml}
+    <div class="big">${negNombre}</div>
+    <div style="font-size:10px">Hotel de Mascotas</div>
+    <div style="font-size:10px">${negPropietario} · ${negDireccion}</div>
+  </div>
+  <div class="divider-solid"></div>
+  <div class="center bold" style="font-size:13px">COMPROBANTE DE ENTRADA</div>
+  <div class="center" style="font-size:10px">${ahora}</div>
+  <div class="divider"></div>
+  <div class="row"><span>Cliente:</span><span class="bold">${cliente?.nombre||'—'}</span></div>
+  <div class="row"><span>Tel:</span><span>${cliente?.whatsapp||'—'}</span></div>
+  <div class="divider"></div>
+  <div class="bold" style="margin-bottom:3px">🐕 Mascotas:</div>
+  ${mascotas.map(m=>`<div style="padding-left:8px">• ${m}</div>`).join('')}
+  <div class="divider"></div>
+  <div class="row"><span>Habitación:</span><span class="bold">${habitacion}</span></div>
+  <div class="row"><span>Entrada:</span><span>${fechaEntrada} ${horaEntrada}</span></div>
+  <div class="row"><span>Salida prev.:</span><span>${fechaSalida} ${horaSalida}</span></div>
+  <div class="row"><span>Noches:</span><span class="bold">${noches}</span></div>
+  ${notas ? `<div class="divider"></div><div style="font-size:10px;color:#333">Notas:</div><div style="font-size:10px">${notas}</div>` : ''}
+  <div class="divider"></div>
+  ${conceptos.length ? `
+  <div class="bold" style="margin-bottom:3px">Servicios:</div>
+  ${conceptos.map(c=>`<div class="row"><span style="font-size:10px">${c.servicio} x${c.uds}</span><span>$${c.total.toLocaleString('es-MX',{minimumFractionDigits:2})}</span></div>`).join('')}
+  <div class="divider"></div>` : ''}
+  <div class="total-row"><span>TOTAL ESTIMADO:</span><span>$${(total||0).toLocaleString('es-MX',{minimumFractionDigits:2})} PM$</span></div>
+  <div class="divider-solid"></div>
+  <div class="footer">
+    <div>${negFooter}</div>
+    <div style="margin-top:4px">${negUrl}</div>
+    <div style="margin-top:4px;color:#999">Atendió: ${uActual}</div>
+  </div>
+  <div style="height:20px"></div>
+</body>
+</html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); win.close(); }, 400);
+  }
+
+  // Botón 🖨️ en modal de hospedaje — adapta datos y llama ticketEntrada
+  function imprimirDesdeDetalle() {
+    const e = entradas.find(en => en.id === detalleHospedajeId);
+    const c = e ? clientes.find(cl => cl.id === e.clienteId) : null;
+    if (!e || !c) { notify('No se encontró el hospedaje', 'error'); return; }
+    const fe = (e.entrada||'').replace('T',' ').split(' ')[0];
+    const he = (e.entrada||'').split('T')[1]?.substring(0,5) || '';
+    const fs = (e.salidaPrevista||'').replace('T',' ').split(' ')[0];
+    const hs = (e.salidaPrevista||'').split('T')[1]?.substring(0,5) || '';
+    const servicios = getServicios();
+    const conceptosList = [];
+    document.querySelectorAll('#mdh-mascotas select').forEach(sel => {
+      const svc = servicios.find(s => s.id === parseInt(sel.value));
+      if (svc) {
+        const noches = parseInt((document.getElementById('mdh-noches')?.value||'1').replace(/\D/g,'')) || 1;
+        conceptosList.push({ servicio: svc.nombre, uds: noches, total: svc.precio * noches });
+      }
+    });
+    ticketEntrada({
+      cliente: c, mascotas: e.mascotas||[], habitacion: e.habitacion||'',
+      fechaEntrada: fe, horaEntrada: he, fechaSalida: fs, horaSalida: hs,
+      notas: e.notas||'', conceptos: conceptosList,
+      total: parseFloat(document.getElementById('mdh-importe')?.value) || e.importe || 0
+    });
+  }
+
+  return { verificarEstado, reconectar, cobro, apertura, corte, ticketEntrada, imprimirDesdeDetalle };
+
+})();
 
 // ===================== SISTEMA DE CAJA =====================
 
-// Nombre exacto de la impresora (se puede cambiar desde Mi Negocio)
-function getNombreImpresora() {
-  return getConfig('impresora_nombre', 'EPSON_TM_T88V');
-}
 
-// Conectar a QZ Tray
-async function conectarQZ() {
-  if (typeof qz === 'undefined') return false;
-  try {
-    qz.security.setCertificatePromise(function(resolve) { resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----'); });
-    qz.security.setSignatureAlgorithm('SHA512');
-    qz.security.setSignaturePromise(function(toSign) {
-      return function(resolve) { resolve(); };
-    });
-    if (!qz.websocket.isActive()) {
-      await Promise.race([
-        qz.websocket.connect({ host: 'localhost', port: { primary: 8181, fallback: 8383 } }),
-        new Promise((_,reject) => setTimeout(() => reject(new Error('timeout')), 10000))
-      ]);
-    }
-    return true;
-  } catch(e) {
-    return false;
-  }
-}
-
-// Abrir cajón de dinero vía ESC/POS
-// Abrir cajón + imprimir ticket en UNA SOLA llamada QZ = 1 solo popup
-async function imprimirConCajon(lineas) {
-  // Mutex: si ya hay una impresión en curso, encolar y salir
-  if (_imprimiendoAhora) {
-    console.warn('imprimirConCajon: impresión ya en curso, ignorando llamada duplicada');
-    return;
-  }
-  _imprimiendoAhora = true;
-  try {
-    const ok = await conectarQZ();
-    actualizarBannerQZ(ok);
-    if (!ok) {
-      _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
-      actualizarBannerCola();
-      notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
-      return;
-    }
-    const config = qz.configs.create(getNombreImpresora());
-    // Cajón: formato hex garantiza bytes exactos sin transformación de codificación
-    await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
-    // Ticket: btoa directo sobre Latin-1 (sin encodeURIComponent que corrompe \xFA y acentos)
-    if (lineas) {
-      await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(lineas) }]);
-    }
-  } catch(e) {
-    notify('Error al imprimir: ' + e.message, 'error');
-  } finally {
-    _imprimiendoAhora = false;
-  }
-}
-
-async function abrirCajon() {
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (!ok) return false;
-  try {
-    const config = qz.configs.create(getNombreImpresora());
-    const data = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
-    await qz.print(config, data);
-    return true;
-  } catch(e) {
-    notify('Error al abrir cajón: ' + e.message, 'error');
-    return false;
-  }
-}
-
-// Imprimir ticket ESC/POS
-async function imprimirTicketCaja(lineas) {
-  const ok = await conectarQZ();
-  actualizarBannerQZ(ok);
-  if (!ok) {
-    _colaPendiente.push({ tipo: 'cajon_ticket', lineas });
-    actualizarBannerCola();
-    notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
-    return;
-  }
-  try {
-    const config = qz.configs.create(getNombreImpresora());
-    const b64 = btoa(unescape(encodeURIComponent(lineas)));
-    const data = [{ type: 'raw', format: 'base64', data: b64 }];
-    await qz.print(config, data);
-  } catch(e) {
-    notify('Error al imprimir: ' + e.message, 'error');
-  }
-}
-
-// Construir ticket ESC/POS
-function buildTicketCaja(tipo, datos) {
-  const negocio = getConfig('negocio_nombre', 'PetGround');
-  const usuario = usuarioActual?.nombre || 'Sistema';
-  const fecha = new Date().toLocaleDateString('es-MX');
-  const hora  = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
-  const sep   = '--------------------------------\n';
-
-  let t = '';
-  t += '\x1B\x40';          // Init
-  t += '\x1B\x61\x01';      // Center
-  t += '\x1B\x45\x01';      // Bold ON
-  t += negocio + '\n';
-  t += '\x1B\x45\x00';      // Bold OFF
-  t += '\x1B\x61\x00';      // Left
-
-  if (tipo === 'apertura_manual') {
-    t += sep;
-    t += ' APERTURA DE CAJON\n';
-    t += sep;
-    t += ` Usuario:  ${usuario}\n`;
-    t += ` Motivo:   ${datos.motivo}\n`;
-    if (datos.monto > 0) t += ` Retiro:   $${datos.monto.toLocaleString('es-MX')}\n`;
-    if (datos.nota) t += ` Nota:     ${datos.nota}\n`;
-    t += ` Fecha:    ${fecha}  ${hora}\n`;
-    t += sep;
-  }
-
-  if (tipo === 'cobro_efectivo') {
-    t += sep;
-    t += ' COBRO EN EFECTIVO\n';
-    t += sep;
-    t += ` Cliente:  ${datos.cliente}\n`;
-    t += ` Mascota:  ${datos.mascota}\n`;
-    t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
-    t += ` Cobro:    ${usuario}\n`;
-    t += ` Fecha:    ${fecha}  ${hora}\n`;
-    t += sep;
-  }
-
-  if (tipo === 'corte') {
-    t += sep;
-    t += '\x1B\x45\x01 CORTE DE CAJA\x1B\x45\x00\n';
-    t += sep;
-    t += ` Fecha:    ${fecha}\n`;
-    t += ` Usuario:  ${usuario}\n`;
-    t += sep;
-    t += ' ENTRADAS\n';
-    t += ` Cobros del período: $${(datos.cobrosEfectivo||0).toLocaleString('es-MX')}\n`;
-    t += ` Fondo inicial:      $${(datos.fondoInicial||0).toLocaleString('es-MX')}\n`;
-    t += sep;
-    t += ' SALIDAS\n';
-    (datos.salidas||[]).forEach(s => {
-      t += ` ${s.motivo.padEnd(18)} -$${s.monto.toLocaleString('es-MX')}\n`;
-    });
-    t += sep;
-    t += '\x1B\x45\x01';
-    t += ` TOTAL EN CAJA: $${(datos.totalCaja||0).toLocaleString('es-MX')}\n`;
-    t += '\x1B\x45\x00';
-    t += sep;
-  }
-
-  t += '\n\n\n';
-  
-  return t;
-}
 
 // Guardar movimiento en Supabase
 async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) {
@@ -8447,10 +8460,7 @@ async function confirmarAperturaCaja() {
   cerrarModalCaja();
 
   const notaFinal = mascota ? (mascota + (nota ? ' — ' + nota : '')) : nota;
-  const ticket = buildTicketCaja('apertura_manual', {motivo, monto, nota: notaFinal, tipo: _cajaTipo});
-
-  // Cajón + ticket en una sola llamada QZ → 1 solo popup
-  await imprimirConCajon(ticket);
+  await Printer.apertura(motivo, monto, notaFinal, _cajaTipo);
 
   if (_cajaTipo === 'salida') {
     await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
@@ -8463,14 +8473,7 @@ async function confirmarAperturaCaja() {
   renderMovimientosCaja();
 }
 
-// Apertura automática al cobrar en efectivo
-async function abrirCajonPorCobro(cliente, mascota, monto, entradaId) {
-  const ticket = buildTicketCaja('cobro_efectivo', {cliente, mascota, monto});
-  await imprimirConCajon(ticket);
-  await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
-    `${cliente} - ${mascota}`, entradaId);
-  renderMovimientosCaja();
-}
+// abrirCajonPorCobro() → movida a Printer.cobro()
 
 // Cargar movimientos del día
 async function renderMovimientosCaja() {
@@ -8552,7 +8555,7 @@ async function renderMovimientosCaja() {
 
 function initCaja() {
   renderMovimientosCaja();
-  verificarEstadoQZ();
+  Printer.verificarEstado();
 }
 
 // Corte de caja
@@ -8623,8 +8626,7 @@ async function hacerCorteCaja() {
 }
 
 async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
-  const ticket = buildTicketCaja('corte', {cobrosEfectivo, fondoInicial, salidas, totalCaja});
-  await imprimirConCajon(ticket);
+  await Printer.corte(cobrosEfectivo, fondoInicial, salidas, totalCaja);
   // Registrar el corte como movimiento para marcar el punto de reinicio
   await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
     `Retiro de $${totalCaja.toLocaleString('es-MX')} al hacer corte`);
@@ -11003,7 +11005,7 @@ async function cobrarRapido() {
       status: 'pagado'
     });
     // Abrir cajón + ticket
-    await abrirCajonPorCobro('Cobro rápido', concepto, monto, null);
+    await Printer.cobro('Cobro rápido', concepto, monto, null);
     closeModal('modal-cobro-rapido');
     notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
   } catch(err) {

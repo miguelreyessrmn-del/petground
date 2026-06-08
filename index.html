@@ -7178,6 +7178,15 @@ async function guardarEntrada() {
         notas: '',
         status: 'adelanto'
       });
+      // Si el adelanto es en efectivo: abrir cajón + registrar en caja_movimientos
+      if (metodoAdelantoNE === 'Efectivo') {
+        await abrirCajonPorCobro(
+          clienteEntradaSeleccionado.nombre,
+          mascotas.join(', '),
+          montoAdelantoNE,
+          entradaIdFinal
+        );
+      }
     }
     // Guardar datos para el ticket ANTES de limpiar el formulario
     const clienteParaTicket = clienteEntradaSeleccionado;
@@ -10974,6 +10983,7 @@ async function cobrarRapido() {
       document.getElementById('cr-monto').style.background = '';
     }, 1500);
     notify('⚠️ Ingresa un monto válido', 'error');
+    _cobrandoRapido = false;
     return;
   }
   const nota = document.getElementById('cr-nota').value.trim();

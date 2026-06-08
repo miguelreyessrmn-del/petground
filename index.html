@@ -8074,6 +8074,9 @@ const Printer = (() => {
       const config = qz.configs.create(_getNombreImpresora());
       // Cajón: formato hex garantiza bytes exactos (1B 70 00 19 FA = ESC p 0 25 250)
       await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+      // Esperar que el solenoide del cajón complete su ciclo antes de enviar el ticket.
+      // Sin este delay, la TM-T88V descarta el segundo job silenciosamente.
+      await new Promise(r => setTimeout(r, 200));
       // Ticket: btoa directo sobre Latin-1 (correcto para EPSON TM-T88V CP850)
       if (lineas) {
         await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(lineas) }]);

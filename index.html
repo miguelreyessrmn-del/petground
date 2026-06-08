@@ -8143,10 +8143,11 @@ async function imprimirColaPendiente() {
     try {
       if (job.tipo === 'cajon_ticket') {
         const config = qz.configs.create(getNombreImpresora());
-        await qz.print(config, [{ type:'raw', format:'base64', data: btoa(unescape(encodeURIComponent('\x1B\x70\x00\x19\xFA'))) }]);
+        // Cajón: formato hex garantiza bytes exactos
+        await qz.print(config, [{ type:'raw', format:'hex', data: '1B700019FA' }]);
+        // Ticket: btoa directo sobre Latin-1 (sin encodeURIComponent)
         if (job.lineas) {
-          const b64 = btoa(unescape(encodeURIComponent(job.lineas)));
-          await qz.print(config, [{ type:'raw', format:'base64', data: b64 }]);
+          await qz.print(config, [{ type:'raw', format:'base64', data: btoa(job.lineas) }]);
         }
       }
     } catch(e) {
@@ -8212,9 +8213,12 @@ async function imprimirConCajon(lineas) {
       return;
     }
     const config = qz.configs.create(getNombreImpresora());
-    const cajonCmd = '\x1B\x70\x00\x19\xFA';
-    const b64 = btoa(unescape(encodeURIComponent(cajonCmd + lineas)));
-    await qz.print(config, [{ type: 'raw', format: 'base64', data: b64 }]);
+    // Cajón: formato hex garantiza bytes exactos sin transformación de codificación
+    await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+    // Ticket: btoa directo sobre Latin-1 (sin encodeURIComponent que corrompe \xFA y acentos)
+    if (lineas) {
+      await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(lineas) }]);
+    }
   } catch(e) {
     notify('Error al imprimir: ' + e.message, 'error');
   } finally {

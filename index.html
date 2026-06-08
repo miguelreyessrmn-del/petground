@@ -1652,13 +1652,13 @@
         <!-- Movimientos del día -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📋 Movimientos de caja hoy</div>
-            <input type="date" id="caja-fecha-filtro" class="form-input" 
-              style="width:160px;padding:6px 10px;font-size:13px"
+            <div class="card-title">📋 Movimientos desde último corte</div>
+            <input type="date" id="caja-fecha-filtro" class="form-input" placeholder="Filtrar por día"
+              style="width:160px;padding:6px 10px;font-size:13px" title="Selecciona una fecha para filtrar. Déjalo vacío para ver desde el último corte."
               onchange="renderMovimientosCaja()">
           </div>
           <div id="caja-movimientos-lista">
-            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos hoy</div></div>
+            <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Cargando movimientos...</div></div>
           </div>
         </div>
 
@@ -8468,16 +8468,11 @@ async function renderMovimientosCaja() {
   const el = document.getElementById('caja-movimientos-lista');
   if (!el) return;
 
-  // Fecha filtro
+  // Fecha filtro (para auditoría histórica — vacío por defecto muestra desde último corte)
   const fechaInput = document.getElementById('caja-fecha-filtro');
-  if (!fechaInput.value) {
-    fechaInput.value = new Date().toISOString().split('T')[0];
-  }
-  const fecha = fechaInput.value;
-  const desde = fecha + 'T00:00:00';
-  const hasta = fecha + 'T23:59:59';
+  const fechaFiltro = fechaInput ? fechaInput.value : '';
 
-  // KPIs: acumulado desde último corte
+  // Identificar último corte de caja
   let desdeCorte = '';
   try {
     const uc = await sb('GET','caja_movimientos',null,
@@ -8485,20 +8480,14 @@ async function renderMovimientosCaja() {
     if (uc && uc[0]) desdeCorte = '&fecha=gte.' + uc[0].fecha.replace(/\+/g,'%2B');
   } catch(e) {}
 
+  // Movimientos desde el último corte (fuente única de verdad)
   let movsTotal = [];
   try {
     movsTotal = await sb('GET', 'caja_movimientos', null,
       '?motivo=neq.Corte+realizado&order=fecha.asc' + desdeCorte + '&select=*');
   } catch(e) {}
 
-  // Lista: solo la fecha seleccionada
-  let movs = [];
-  try {
-    movs = await sb('GET', 'caja_movimientos', null,
-      `?fecha=gte.${desde}&fecha=lte.${hasta}&order=fecha.asc&select=*`);
-  } catch(e) {}
-
-  // Calcular KPIs desde último corte
+  // Calcular KPIs
   const entradas = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
   const salidas  = movsTotal.filter(m=>m.tipo==='salida' && m.motivo!=='Corte realizado').reduce((s,m)=>s+parseFloat(m.monto||0),0);
   const total    = entradas - salidas;
@@ -8513,20 +8502,37 @@ async function renderMovimientosCaja() {
     elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b';
   }
 
-  if (!movs.length) {
-    el.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos este día</div></div>';
+  // Lista: si hay fecha de filtro → solo ese día; si no → todos desde el último corte
+  let movsLista = movsTotal;
+  if (fechaFiltro) {
+    const desde = fechaFiltro + 'T00:00:00';
+    const hasta = fechaFiltro + 'T23:59:59';
+    movsLista = movsTotal.filter(m => m.fecha >= desde && m.fecha <= hasta);
+  }
+
+  if (!movsLista.length) {
+    el.innerHTML = fechaFiltro
+      ? '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos ese d\u00eda</div></div>'
+      : '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos desde el \u00faltimo corte</div></div>';
     return;
   }
 
-  el.innerHTML = movs.filter(m => m.motivo !== 'Corte realizado').map(m => {
+  // Encabezado informativo
+  const encabezado = fechaFiltro
+    ? `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">Filtrando: ${fechaFiltro} &nbsp;·&nbsp; <button onclick="document.getElementById('caja-fecha-filtro').value='';renderMovimientosCaja()" style="background:none;border:none;color:var(--orange);font-weight:700;cursor:pointer;font-size:11px;padding:0">✕ Ver todos desde el corte</button></div>`
+    : `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">${movsLista.length} movimiento${movsLista.length!==1?'s':''} desde el \u00faltimo corte</div>`;
+
+  el.innerHTML = encabezado + movsLista.map(m => {
     const es_entrada = m.tipo === 'entrada';
     const monto = parseFloat(m.monto||0);
-    const hora = new Date(m.fecha).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    const dt = new Date(m.fecha);
+    const fechaStr = dt.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'});
+    const horaStr  = dt.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     return `<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${es_entrada?'#f0fdf4':'#fef2f2'}">
       <div style="font-size:20px">${es_entrada?'💵':'📤'}</div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:13px;color:${es_entrada?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}</div>
-        <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${hora}${m.nota?' · '+m.nota:''}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${fechaStr} ${horaStr}${m.nota?' · '+m.nota:''}</div>
       </div>
       <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:${es_entrada?'#1a7a4a':'#c0392b'}">
         ${es_entrada?'+':'-'}$${monto.toLocaleString('es-MX')}

@@ -8072,18 +8072,16 @@ const Printer = (() => {
         return;
       }
       const config = qz.configs.create(_getNombreImpresora());
-      // Cajón: formato hex garantiza bytes exactos (1B 70 00 19 FA = ESC p 0 25 250)
-      await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
-      // Esperar que el solenoide del cajón complete su ciclo antes de enviar el ticket.
-      // Sin este delay, la TM-T88V descarta el segundo job silenciosamente.
-      await new Promise(r => setTimeout(r, 200));
-      // Ticket: sanitizar a Latin-1 antes de btoa.
-      // Caracteres > U+00FF (emojis, comillas tipográficas, em dash, etc.)
-      // no pueden codificarse con btoa y la EPSON TM-T88V no puede imprimirlos.
+      // Cajón + ticket en un solo job = una sola autorización de QZ Tray.
+      // QZ Tray 2.2.6 soporta arrays mixtos (hex + base64) en una sola llamada.
+      // El printer recibe ambos como stream continuo y los secuencia internamente.
+      const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
       if (lineas) {
+        // Sanitizar a Latin-1 antes de btoa — caracteres > U+00FF causan InvalidCharacterError
         const lineasLatin1 = lineas.replace(/[^\x00-\xFF]/g, '?');
-        await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(lineasLatin1) }]);
+        dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
       }
+      await qz.print(config, dataArr);
     } catch(e) {
       notify('Error al imprimir: ' + e.message, 'error');
     } finally {
@@ -8108,10 +8106,12 @@ const Printer = (() => {
       try {
         if (job.tipo === 'cajon_ticket') {
           const config = qz.configs.create(_getNombreImpresora());
-          await qz.print(config, [{ type: 'raw', format: 'hex', data: '1B700019FA' }]);
+          const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
           if (job.lineas) {
-            await qz.print(config, [{ type: 'raw', format: 'base64', data: btoa(job.lineas) }]);
+            const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
+            dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
           }
+          await qz.print(config, dataArr);
         }
       } catch(e) {
         console.warn('Printer: error imprimiendo trabajo pendiente:', e);

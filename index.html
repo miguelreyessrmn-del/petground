@@ -8131,8 +8131,11 @@ const Printer = (() => {
     const sep   = '--------------------------------\n';
 
     let t = '';
-    t += '\x1B\x40';
-    t += '\x1B\x61\x01';
+    t += '\x1B\x40';       // ESC @ — inicializar impresora
+    t += '\x1B\x74\x10';   // ESC t 16 — seleccionar CP1252 (Windows-1252)
+                            // Necesario para que á é í ó ú ñ lleguen correctos.
+                            // btoa() produce Latin-1; CP1252 es idéntico para 0xA0-0xFF.
+    t += '\x1B\x61\x01';   // center align
     t += '\x1B\x45\x01';
     t += negocio + '\n';
     t += '\x1B\x45\x00';

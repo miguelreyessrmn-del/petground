@@ -1602,7 +1602,7 @@
     <div class="screen fade-in" id="screen-caja">
       <div style="max-width:800px">
         <div style="background:#f0fdf4;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#166534;display:flex;align-items:center;gap:8px">
-          💡 <span>Aquí ves todo el efectivo del día. Para cobros rápidos usa el botón <strong>💵</strong> verde en la esquina de abajo. Para cobros de hospedajes, hazlo desde el detalle del cliente hospedado.</span>
+          💡 <span>Aquí ves los movimientos pendientes de cierre. Al hacer corte quedan registrados en el historial. Para cobros rápidos usa el botón <strong>💵</strong> verde abajo a la derecha.</span>
         </div>
 
         <!-- Banner QZ Tray -->
@@ -1627,11 +1627,11 @@
         <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6f0e4;border:1.5px solid #86efac">
             <div class="stat-num" id="caja-entradas" style="color:#1a7a4a">$0</div>
-            <div class="stat-label">Entradas hoy</div>
+            <div class="stat-label">Entradas pendientes</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#fdecea;border:1.5px solid #fca5a5">
             <div class="stat-num" id="caja-salidas" style="color:#c0392b">$0</div>
-            <div class="stat-label">Salidas hoy</div>
+            <div class="stat-label">Salidas pendientes</div>
           </div>
           <div class="stat-card" style="flex:1;min-width:140px;background:#d6e4f7;border:1.5px solid #93c5fd">
             <div class="stat-num" id="caja-total" style="color:#1a4f8a">$0</div>
@@ -1647,15 +1647,15 @@
           <button class="btn" id="btn-corte-caja" onclick="hacerCorteCaja()" style="background:#1a4f8a;color:white;border:none">
             🧾 Corte de caja
           </button>
+          <button class="btn" onclick="verHistorialCortes()" style="background:white;color:#1a4f8a;border:1.5px solid #1a4f8a">
+            📚 Historial de cortes
+          </button>
         </div>
 
         <!-- Movimientos del día -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📋 Movimientos desde último corte</div>
-            <input type="date" id="caja-fecha-filtro" class="form-input" placeholder="Filtrar por día"
-              style="width:160px;padding:6px 10px;font-size:13px" title="Selecciona una fecha para filtrar. Déjalo vacío para ver desde el último corte."
-              onchange="renderMovimientosCaja()">
+            <div class="card-title">📋 Movimientos pendientes de corte</div>
           </div>
           <div id="caja-movimientos-lista">
             <div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Cargando movimientos...</div></div>
@@ -8489,28 +8489,16 @@ async function renderMovimientosCaja() {
   const el = document.getElementById('caja-movimientos-lista');
   if (!el) return;
 
-  // Fecha filtro (para auditoría histórica — vacío por defecto muestra desde último corte)
-  const fechaInput = document.getElementById('caja-fecha-filtro');
-  const fechaFiltro = fechaInput ? fechaInput.value : '';
-
-  // Identificar último corte de caja
-  let desdeCorte = '';
-  try {
-    const uc = await sb('GET','caja_movimientos',null,
-      '?motivo=eq.Corte+realizado&order=fecha.desc&limit=1&select=fecha');
-    if (uc && uc[0]) desdeCorte = '&fecha=gte.' + uc[0].fecha.replace(/\+/g,'%2B');
-  } catch(e) {}
-
-  // Movimientos desde el último corte (fuente única de verdad)
+  // Fuente única de verdad: movimientos pendientes de corte (corte_id IS NULL)
   let movsTotal = [];
   try {
     movsTotal = await sb('GET', 'caja_movimientos', null,
-      '?motivo=neq.Corte+realizado&order=fecha.asc' + desdeCorte + '&select=*');
+      '?corte_id=is.null&order=fecha.asc&select=*');
   } catch(e) {}
 
-  // Calcular KPIs
+  // KPIs
   const entradas = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const salidas  = movsTotal.filter(m=>m.tipo==='salida' && m.motivo!=='Corte realizado').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const salidas  = movsTotal.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
   const total    = entradas - salidas;
 
   const elE = document.getElementById('caja-entradas');
@@ -8518,12 +8506,11 @@ async function renderMovimientosCaja() {
   const elT = document.getElementById('caja-total');
   if (elE) elE.textContent = '$' + entradas.toLocaleString('es-MX');
   if (elS) elS.textContent = '$' + salidas.toLocaleString('es-MX');
-  if (elT) {
-    elT.textContent = '$' + total.toLocaleString('es-MX');
-    elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b';
-  }
+  if (elT) { elT.textContent = '$' + total.toLocaleString('es-MX'); elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b'; }
 
-  // Lista: si hay fecha de filtro → solo ese día; si no → todos desde el último corte
+  // Filtro de fecha opcional (filtra en memoria sobre pendientes)
+  const fechaInput = document.getElementById('caja-fecha-filtro');
+  const fechaFiltro = fechaInput ? fechaInput.value : '';
   let movsLista = movsTotal;
   if (fechaFiltro) {
     const desde = fechaFiltro + 'T00:00:00';
@@ -8533,15 +8520,15 @@ async function renderMovimientosCaja() {
 
   if (!movsLista.length) {
     el.innerHTML = fechaFiltro
-      ? '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos ese d\u00eda</div></div>'
-      : '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos desde el \u00faltimo corte</div></div>';
+      ? '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos ese día</div></div>'
+      : '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Caja vacía — sin movimientos pendientes de corte</div></div>';
     return;
   }
 
-  // Encabezado informativo
+  const pendCount = movsLista.length;
   const encabezado = fechaFiltro
-    ? `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">Filtrando: ${fechaFiltro} &nbsp;·&nbsp; <button onclick="document.getElementById('caja-fecha-filtro').value='';renderMovimientosCaja()" style="background:none;border:none;color:var(--orange);font-weight:700;cursor:pointer;font-size:11px;padding:0">✕ Ver todos desde el corte</button></div>`
-    : `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">${movsLista.length} movimiento${movsLista.length!==1?'s':''} desde el \u00faltimo corte</div>`;
+    ? `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">Filtrando: ${fechaFiltro} · <button onclick="document.getElementById('caja-fecha-filtro').value='';renderMovimientosCaja()" style="background:none;border:none;color:var(--orange);font-weight:700;cursor:pointer;font-size:11px;padding:0">✕ Ver todos los pendientes</button></div>`
+    : `<div style="padding:8px 16px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);font-size:11px;color:var(--gray-400);font-weight:600">${pendCount} movimiento${pendCount!==1?'s':''} pendiente${pendCount!==1?'s':''} de corte</div>`;
 
   el.innerHTML = encabezado + movsLista.map(m => {
     const es_entrada = m.tipo === 'entrada';
@@ -8549,19 +8536,13 @@ async function renderMovimientosCaja() {
     const dt = new Date(m.fecha);
     const fechaStr = dt.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit'});
     const horaStr  = dt.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    return `<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${es_entrada?'#f0fdf4':'#fef2f2'}">
-      <div style="font-size:20px">${es_entrada?'💵':'📤'}</div>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:13px;color:${es_entrada?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}</div>
-        <div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${fechaStr} ${horaStr}${m.nota?' · '+m.nota:''}</div>
-      </div>
-      <div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:${es_entrada?'#1a7a4a':'#c0392b'}">
-        ${es_entrada?'+':'-'}$${monto.toLocaleString('es-MX')}
-      </div>
-    </div>`;
+    return `<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:12px;background:${es_entrada?'#f0fdf4':'#fef2f2'}">`
+      + `<div style="font-size:20px">${es_entrada?'💵':'📤'}</div>`
+      + `<div style="flex:1"><div style="font-weight:700;font-size:13px;color:${es_entrada?'#1a7a4a':'#c0392b'}">${m.motivo||'—'}</div>`
+      + `<div style="font-size:11px;color:var(--gray-400)">${m.usuario_nombre||'Sistema'} · ${fechaStr} ${horaStr}${m.nota?' · '+m.nota:''}</div></div>`
+      + `<div style="font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:${es_entrada?'#1a7a4a':'#c0392b'}">${es_entrada?'+':'-'}$${monto.toLocaleString('es-MX')}</div></div>`;
   }).join('');
 }
-
 function initCaja() {
   renderMovimientosCaja();
   Printer.verificarEstado();
@@ -8569,31 +8550,26 @@ function initCaja() {
 
 // Corte de caja
 async function hacerCorteCaja() {
-  // Buscar último corte para saber desde cuándo acumular
-  let desdeStr = '';
-  try {
-    const ultCorte = await sb('GET','caja_movimientos',null,
-      '?motivo=eq.Corte+realizado&order=fecha.desc&limit=1&select=fecha');
-    if (ultCorte && ultCorte[0]) {
-      desdeStr = `&fecha=gte.${ultCorte[0].fecha.replace('+','%2B')}`;
-    }
-  } catch(e) {}
-
+  // Obtener todos los movimientos pendientes de corte
   let movs = [];
   try {
     movs = await sb('GET','caja_movimientos',null,
-      '?motivo=neq.Corte+realizado&order=fecha.asc' + desdeStr + '&select=*');
+      '?corte_id=is.null&order=fecha.asc&select=*');
   } catch(e) {}
 
-  const entradas_tot = movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const salidas_tot  = movs.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const fondoInicial = movs.filter(m=>m.tipo==='entrada'&&(m.motivo==='Fondo de caja'||m.motivo==='Fondo de cambio')).reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  // Cobros = todas las entradas excepto el fondo inicial (hospedajes + guarderías + otros ingresos)
-  const cobrosEfectivo = movs.filter(m=>m.tipo==='entrada'&&m.motivo!=='Fondo de caja'&&m.motivo!=='Fondo de cambio').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const salidas = movs.filter(m=>m.tipo==='salida').map(m=>({motivo:m.motivo, monto:parseFloat(m.monto||0)}));
-  const totalCaja = entradas_tot - salidas_tot;
+  if (!movs.length) {
+    notify('No hay movimientos pendientes de corte', 'info');
+    return;
+  }
 
-  // Mostrar resumen en modal
+  const entradas_tot   = movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const salidas_tot    = movs.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const fondoInicial   = movs.filter(m=>m.tipo==='entrada'&&(m.motivo==='Fondo de caja'||m.motivo==='Fondo de cambio')).reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const cobrosEfectivo = movs.filter(m=>m.tipo==='entrada'&&m.motivo!=='Fondo de caja'&&m.motivo!=='Fondo de cambio').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const salidas        = movs.filter(m=>m.tipo==='salida').map(m=>({motivo:m.motivo, monto:parseFloat(m.monto||0)}));
+  const totalCaja      = entradas_tot - salidas_tot;
+  const movIds         = movs.map(m=>m.id);
+
   const resumen = `
     <div style="padding:20px;font-family:monospace">
       <div style="text-align:center;font-weight:700;font-size:16px;margin-bottom:12px">🧾 CORTE DE CAJA</div>
@@ -8610,13 +8586,14 @@ async function hacerCorteCaja() {
       <div style="background:#d6e4f7;border-radius:8px;padding:14px;text-align:center">
         <div style="font-size:12px;color:#1a4f8a;margin-bottom:4px">TOTAL EN CAJA</div>
         <div style="font-size:28px;font-weight:900;color:${totalCaja>=0?'#1a4f8a':'#c0392b'}">$${totalCaja.toLocaleString('es-MX')}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px">${movs.length} movimiento${movs.length!==1?'s':''}</div>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
-        <button onclick="imprimirCorte(${cobrosEfectivo},${fondoInicial},${JSON.stringify(salidas).replace(/"/g,'&quot;')},${totalCaja})" 
+        <button onclick="imprimirCorte(${cobrosEfectivo},${fondoInicial},${JSON.stringify(salidas).replace(/"/g,'&quot;')},${totalCaja},${JSON.stringify(movIds).replace(/"/g,'&quot;')})"
           style="flex:1;background:#1a4f8a;color:white;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer">
           🖨️ Imprimir corte
         </button>
-        <button onclick="cerrarModalComprobante()" 
+        <button onclick="cerrarModalComprobante()"
           style="background:#f3f4f6;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer">
           ✕ Cerrar
         </button>
@@ -8633,17 +8610,205 @@ async function hacerCorteCaja() {
   }
   modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:400px">${resumen}</div>`;
 }
-
-async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja) {
+async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, movIds) {
   await Printer.corte(cobrosEfectivo, fondoInicial, salidas, totalCaja);
-  // Registrar el corte como movimiento para marcar el punto de reinicio
+
+  // 1. Crear registro en cortes_caja
+  let corteId = null;
+  try {
+    const corteData = await sb('POST', 'cortes_caja', {
+      fecha:              new Date().toISOString(),
+      usuario_id:         usuarioActual?.id || null,
+      usuario_nombre:     usuarioActual?.nombre || 'Sistema',
+      fondo_inicial:      fondoInicial,
+      cobros_sistema:     cobrosEfectivo,
+      total_sistema:      totalCaja,
+      total_contado:      null,
+      diferencia:         null,
+      observaciones:      null,
+      movimientos_count:  Array.isArray(movIds) ? movIds.length : 0,
+      movimientos_total:  cobrosEfectivo + fondoInicial
+    });
+    corteId = Array.isArray(corteData) ? corteData[0]?.id : corteData?.id;
+  } catch(e) {
+    console.error('Error guardando corte_caja:', e);
+  }
+
+  // 2. Asociar movimientos al corte usando sus IDs explícitos
+  if (corteId && Array.isArray(movIds) && movIds.length > 0) {
+    try {
+      await sb('PATCH', 'caja_movimientos',
+        { corte_id: corteId },
+        '?corte_id=is.null&id=in.(' + movIds.join(',') + ')'
+      );
+    } catch(e) {
+      console.error('Error asociando movimientos al corte:', e);
+    }
+  }
+
+  // 3. Mantener compatibilidad: registrar movimiento 'Corte realizado' (legacy)
   await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
-    `Retiro de $${totalCaja.toLocaleString('es-MX')} al hacer corte`);
+    'Retiro de $' + totalCaja.toLocaleString('es-MX') + ' al hacer corte');
+
   cerrarModalComprobante();
   notify('✅ Corte impreso y caja reiniciada en $0', 'success');
   renderMovimientosCaja();
 }
 
+
+
+// ===================== HISTORIAL DE CORTES =====================
+
+async function verHistorialCortes() {
+  // Abrir o crear modal
+  let modal = document.getElementById('modal-historial-cortes');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-historial-cortes';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+    modal.onclick = ev => { if(ev.target===modal) modal.remove(); };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = '<div style="background:white;border-radius:12px;width:100%;max-width:720px;margin-top:20px"><div style="padding:20px;text-align:center;font-size:14px;color:var(--gray-400)">⏳ Cargando historial...</div></div>';
+
+  let cortes = [];
+  try {
+    cortes = await sb('GET', 'cortes_caja', null,
+      '?order=fecha.desc&select=*&limit=100');
+  } catch(e) {
+    modal.innerHTML = '<div style="background:white;border-radius:12px;width:100%;max-width:720px;margin-top:20px"><div style="padding:20px;color:var(--red)">Error al cargar el historial.</div></div>';
+    return;
+  }
+
+  const filas = cortes.length === 0
+    ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray-400)">Sin cortes registrados</td></tr>'
+    : cortes.map(c => {
+        const fecha = new Date(c.fecha);
+        const fechaStr = fecha.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'});
+        const horaStr  = fecha.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        const diff = c.diferencia !== null && c.diferencia !== undefined ? c.diferencia : null;
+        const diffStr = diff !== null ? (diff === 0 ? '<span style="color:#1a7a4a;font-weight:700">$0</span>' : `<span style="color:${diff>0?'#1a7a4a':'#c0392b'};font-weight:700">${diff>0?'+':''}$${Math.abs(diff).toLocaleString('es-MX')}</span>`) : '<span style="color:var(--gray-400)">-</span>';
+        const esMigracion = (c.observaciones||'').includes('Historial previo');
+        return `<tr style="border-bottom:1px solid var(--gray-100);${esMigracion?'opacity:0.6':''}">
+          <td style="padding:10px 12px;font-size:12px">${fechaStr} ${horaStr}${esMigracion?' <span style="font-size:10px;background:#f3f4f6;border-radius:4px;padding:1px 5px">migración</span>':''}</td>
+          <td style="padding:10px 12px;font-size:12px">${c.usuario_nombre||'-'}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:right">$${parseFloat(c.fondo_inicial||0).toLocaleString('es-MX')}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:right;color:#1a7a4a;font-weight:700">$${parseFloat(c.cobros_sistema||0).toLocaleString('es-MX')}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:right;font-weight:800;color:#1a4f8a">$${parseFloat(c.total_sistema||0).toLocaleString('es-MX')}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:right">${diffStr}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:center;color:var(--gray-600)">${c.movimientos_count||0}</td>
+          <td style="padding:10px 12px;text-align:center">
+            <button onclick="verDetalleCorte(${c.id})" style="background:#1a4f8a;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🔍 Ver</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+  modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:720px;margin-top:20px">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800;font-size:16px">📜 Historial de Cortes</div>
+      <button onclick="document.getElementById('modal-historial-cortes').remove()" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--gray-50);font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase">
+            <th style="padding:10px 12px;text-align:left">Fecha</th>
+            <th style="padding:10px 12px;text-align:left">Usuario</th>
+            <th style="padding:10px 12px;text-align:right">Fondo</th>
+            <th style="padding:10px 12px;text-align:right">Cobros</th>
+            <th style="padding:10px 12px;text-align:right">Total sistema</th>
+            <th style="padding:10px 12px;text-align:right">Diferencia</th>
+            <th style="padding:10px 12px;text-align:center">Movs.</th>
+            <th style="padding:10px 12px"></th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+async function verDetalleCorte(corteId) {
+  // Reemplazar contenido del modal historial con el detalle del corte
+  const modal = document.getElementById('modal-historial-cortes');
+  if (!modal) return;
+
+  // Cargar datos del corte
+  let corte = null;
+  let movs  = [];
+  try {
+    const r = await sb('GET','cortes_caja',null,`?id=eq.${corteId}&select=*`);
+    corte = r && r[0] ? r[0] : null;
+  } catch(e) {}
+  try {
+    movs = await sb('GET','caja_movimientos',null,
+      `?corte_id=eq.${corteId}&order=fecha.asc&select=*`);
+  } catch(e) {}
+
+  if (!corte) {
+    notify('No se pudo cargar el corte', 'error');
+    return;
+  }
+
+  const fecha = new Date(corte.fecha).toLocaleString('es-MX');
+  const esMigracion = (corte.observaciones||'').includes('Historial previo');
+
+  const filasMov = movs.length === 0
+    ? '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--gray-400)">Sin movimientos registrados para este corte</td></tr>'
+    : movs.map(m => {
+        const es_entrada = m.tipo === 'entrada';
+        const monto = parseFloat(m.monto||0);
+        const hora = new Date(m.fecha).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+        return `<tr style="border-bottom:1px solid var(--gray-100)">
+          <td style="padding:9px 12px;font-size:12px">${hora}</td>
+          <td style="padding:9px 12px;font-size:12px;font-weight:600">${m.motivo||'-'}${m.nota?' <span style="color:var(--gray-400);font-weight:400">· '+m.nota+'</span>':''}</td>
+          <td style="padding:9px 12px;font-size:12px;color:var(--gray-500)">${m.usuario_nombre||'-'}</td>
+          <td style="padding:9px 12px;font-size:13px;font-weight:800;text-align:right;color:${es_entrada?'#1a7a4a':'#c0392b'}">${es_entrada?'+':'-'}$${monto.toLocaleString('es-MX')}</td>
+        </tr>`;
+      }).join('');
+
+  modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:620px;margin-top:20px">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <button onclick="verHistorialCortes()" style="background:none;border:none;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:4px">← Historial</button>
+        <div style="font-weight:800;font-size:15px">🧾 Corte #${corteId}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${fecha} · ${corte.usuario_nombre||'Sistema'}${esMigracion?' · Corte de migración':''}</div>
+      </div>
+      <button onclick="document.getElementById('modal-historial-cortes').remove()" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--gray-100)">
+      <div style="flex:1;padding:14px 16px;text-align:center;border-right:1px solid var(--gray-100)">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:2px">Fondo</div>
+        <div style="font-weight:800;font-size:15px">$${parseFloat(corte.fondo_inicial||0).toLocaleString('es-MX')}</div>
+      </div>
+      <div style="flex:1;padding:14px 16px;text-align:center;border-right:1px solid var(--gray-100)">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:2px">Cobros</div>
+        <div style="font-weight:800;font-size:15px;color:#1a7a4a">$${parseFloat(corte.cobros_sistema||0).toLocaleString('es-MX')}</div>
+      </div>
+      <div style="flex:1;padding:14px 16px;text-align:center;border-right:1px solid var(--gray-100)">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:2px">Total sistema</div>
+        <div style="font-weight:800;font-size:15px;color:#1a4f8a">$${parseFloat(corte.total_sistema||0).toLocaleString('es-MX')}</div>
+      </div>
+      <div style="flex:1;padding:14px 16px;text-align:center">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:2px">Movimientos</div>
+        <div style="font-weight:800;font-size:15px">${corte.movimientos_count||movs.length}</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--gray-50);font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase">
+            <th style="padding:9px 12px;text-align:left">Hora</th>
+            <th style="padding:9px 12px;text-align:left">Concepto</th>
+            <th style="padding:9px 12px;text-align:left">Usuario</th>
+            <th style="padding:9px 12px;text-align:right">Monto</th>
+          </tr>
+        </thead>
+        <tbody>${filasMov}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
 
 // ===================== COBROS EMPLEADO =====================
 function renderCobrosEmpleado() {

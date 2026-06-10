@@ -8646,10 +8646,6 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, m
     }
   }
 
-  // 3. Mantener compatibilidad: registrar movimiento 'Corte realizado' (legacy)
-  await guardarMovimientoCaja('salida', 'Corte realizado', totalCaja,
-    'Retiro de $' + totalCaja.toLocaleString('es-MX') + ' al hacer corte');
-
   cerrarModalComprobante();
   notify('✅ Corte impreso y caja reiniciada en $0', 'success');
   renderMovimientosCaja();

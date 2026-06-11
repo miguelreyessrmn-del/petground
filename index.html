@@ -5522,6 +5522,15 @@ async function confirmarAplicarPago() {
     }
     await cargarTodo();
     closeModal('modal-aplicar-pago');
+    // Cajón + ticket + caja_movimientos si el pago es en efectivo
+    if (metodo === 'Efectivo' && monto > 0) {
+      await Printer.cobro(
+        c?.nombre || 'Cliente',
+        'Cobro de saldo pendiente',
+        monto,
+        null
+      );
+    }
     const restanteTotal = Math.max(0, totalPendiente - monto);
     notify(restanteTotal > 0
       ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
@@ -9096,6 +9105,14 @@ async function guardarCobro() {
     });
     await cargarTodo();
     closeModal('modal-nuevo-cobro');
+    // Cajón + ticket + caja_movimientos si el cobro es en efectivo
+    const metodoCobro = document.getElementById('cobro-metodo').value;
+    if (metodoCobro === 'Efectivo' && monto > 0) {
+      const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
+      const conceptoCobro = document.getElementById('cobro-concepto').value || 'Cobro';
+      const entradaIdCobro = parseInt(document.getElementById('cobro-entrada').value) || null;
+      await Printer.cobro(nombreCliente, conceptoCobro, monto, entradaIdCobro);
+    }
     notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     initFacturacion();
   } catch(e) {
@@ -9145,6 +9162,11 @@ async function guardarAdelanto() {
     await cargarTodo();
     closeModal('modal-adelanto');
     notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
+    // Cajón + ticket + caja_movimientos si el adelanto es en efectivo
+    if (metodo === 'Efectivo' && monto > 0) {
+      const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
+      await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
+    }
     initFacturacion();
     // Ofrecer envío de confirmación por WhatsApp
     const c = clientes.find(cl=>cl.id===cid);

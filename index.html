@@ -3844,6 +3844,23 @@ async function guardarReservacion() {
 
 async function convertirEnEntrada(reservaId) {
   if (!confirm('¿Confirmar esta reservación y convertirla en entrada activa?')) return;
+
+  // Validación de responsiva firmada antes de activar
+  const resv = entradas.find(e => e.id === reservaId);
+  if (resv) {
+    let firmada = clientes.find(c => c.id === resv.clienteId)?.responsiva_firmada ?? null;
+    if (firmada === null || firmada === undefined) {
+      try {
+        const cDB = await sb('GET','clientes',null,`?id=eq.${resv.clienteId}&select=responsiva_firmada`);
+        firmada = cDB?.[0]?.responsiva_firmada || false;
+      } catch(e) { firmada = false; }
+    }
+    if (!firmada) {
+      notify('⚠️ NO SE PUEDE REGISTRAR EL HOSPEDAJE.\n\nEl cliente no tiene responsiva firmada. Ve al perfil del cliente, registra la responsiva y vuelve a intentar.', 'error');
+      return;
+    }
+  }
+
   setLoading(true);
   try {
     await sb('PATCH', `entradas?id=eq.${reservaId}`, { status: 'activo' });
@@ -6997,6 +7014,15 @@ async function guardarEntrada() {
   if (mascotasConHospedajeActivo.length > 0) {
     notify(`⚠️ Ya existe un hospedaje activo para: ${mascotasConHospedajeActivo.join(', ')}. Registra la salida primero.`, 'error');
     return;
+  }
+
+  // Validación de responsiva firmada — solo aplica a nuevas entradas, no a ediciones
+  if (!entradaEditandoId) {
+    const respFirmada = clienteEntradaSeleccionado?.responsiva_firmada || false;
+    if (!respFirmada) {
+      notify('⚠️ NO SE PUEDE REGISTRAR EL HOSPEDAJE.\n\nEl cliente no tiene responsiva firmada. Ve al perfil del cliente, registra la responsiva y vuelve a intentar.', 'error');
+      return;
+    }
   }
 
   const filas = document.querySelectorAll('#conceptos-tbody tr');

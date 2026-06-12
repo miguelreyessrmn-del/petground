@@ -983,7 +983,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Hora entrada</label>
-                <input type="time" class="form-input" id="ne-hora-entrada" value="10:00">
+                <input type="time" class="form-input" id="ne-hora-entrada">
               </div>
               <div class="form-group">
                 <label class="form-label">Fecha salida prevista</label>
@@ -3121,9 +3121,12 @@ function setLoading(on) {
 document.addEventListener('DOMContentLoaded', async () => {
   const hoy = new Date();
   document.getElementById('page-date').textContent = hoy.toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  const fechaStr = hoy.toISOString().split('T')[0];
-  document.getElementById('ne-fecha-entrada').value = fechaStr;
-  document.getElementById('ne-fecha-salida').value = fechaStr;
+  // Fecha local (getFullYear/Month/Date evita el adelanto UTC que ocurre en México después de las 19h)
+  const fechaLocal = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+  const horaLocal  = `${String(hoy.getHours()).padStart(2,'0')}:${String(hoy.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('ne-fecha-entrada').value = fechaLocal;
+  document.getElementById('ne-fecha-salida').value  = fechaLocal;
+  document.getElementById('ne-hora-entrada').value  = horaLocal;
   await cargarConfig();
   await cargarTodo();
   aplicarConfigNegocio();
@@ -9782,9 +9785,15 @@ function showScreen(name) {
   if (name === 'nueva-entrada') {
     actualizarDropdownsHabitacion();
     poblarSelectServicios();
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('ne-fecha-entrada').value = hoy;
-    document.getElementById('ne-fecha-salida').value = hoy;
+    // Solo asignar fecha/hora actuales si NO estamos editando una entrada existente
+    if (!entradaEditandoId) {
+      const ahora = new Date();
+      const fechaHoy = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+      const horaAhora = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}`;
+      document.getElementById('ne-fecha-entrada').value = fechaHoy;
+      document.getElementById('ne-fecha-salida').value  = fechaHoy;
+      document.getElementById('ne-hora-entrada').value  = horaAhora;
+    }
     // Siempre limpiar buscador y estado al entrar
     const buscarEl = document.getElementById('buscar-cliente-entrada');
     if (buscarEl) buscarEl.value = '';

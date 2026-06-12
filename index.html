@@ -6981,11 +6981,14 @@ async function guardarEntrada() {
   if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
 
   // CORRECCIÓN 4 — Validar que ninguna mascota tenga ya un hospedaje activo
+  // Compara nombre + clienteId: mismo nombre en cliente distinto no es el mismo perro
   const mascotasConHospedajeActivo = mascotas.filter(mascNombre => {
     return entradas.some(ent => {
       // Excluir la entrada que se está editando
       if (entradaEditandoId && ent.id === entradaEditandoId) return false;
-      return (ent.mascotas || []).includes(mascNombre);
+      // Bloquear solo si: mismo nombre + mismo cliente = mismo perro
+      return (ent.mascotas || []).includes(mascNombre)
+        && ent.clienteId === clienteEntradaSeleccionado?.id;
     });
   });
   if (mascotasConHospedajeActivo.length > 0) {

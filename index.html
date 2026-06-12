@@ -7018,9 +7018,10 @@ async function guardarEntrada() {
 
   // Validación de responsiva firmada — solo aplica a nuevas entradas, no a ediciones
   if (!entradaEditandoId) {
-    const respFirmada = clienteEntradaSeleccionado?.responsiva_firmada || false;
+    const respFirmada = clienteEntradaSeleccionado?.responsiva_firmada === true
+      || document.getElementById('ne-responsiva')?.checked === true;
     if (!respFirmada) {
-      notify('⚠️ NO SE PUEDE REGISTRAR EL HOSPEDAJE.\n\nEl cliente no tiene responsiva firmada. Ve al perfil del cliente, registra la responsiva y vuelve a intentar.', 'error');
+      notify('⚠️ El cliente debe firmar la responsiva antes de registrar el hospedaje.', 'error');
       return;
     }
   }

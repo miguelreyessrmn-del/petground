@@ -4260,11 +4260,8 @@ function verDetalleHospedaje(id) {
     const servicios = getServicios();
     const opcs = servicios.map(s=>`<option value="${s.id}" data-precio="${s.precio}">${s.nombre} — $${s.precio} PM$</option>`).join('');
     const getMascotaObj = (nombre) => {
-      for (const c of clientes) {
-        const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === nombre);
-        if (m) return m;
-      }
-      return null;
+      // c ya es el cliente dueño de esta entrada — no iterar todos los clientes
+      return (c.mascotas||[]).find(mo => (mo.nombre||mo) === nombre) || null;
     };
     // Restaurar descuentos por mascota desde e.descuento
     const descPorMascota = {};
@@ -4501,12 +4498,10 @@ async function mdh_cambiarServicioMascota(nombreMascota, sel) {
   const svcId = parseInt(sel.value);
   if (!svcId) return;
   mdh_calcResumen();
-  // Buscar objeto mascota en memoria
-  let mascObj = null;
-  for (const c of clientes) {
-    const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === nombreMascota);
-    if (m && m.id) { mascObj = m; break; }
-  }
+  // Buscar mascota restringida al cliente dueño de esta entrada
+  const _entradaActual = entradas.find(en => en.id === detalleHospedajeId);
+  const _clienteActual = _entradaActual ? clientes.find(cl => cl.id === _entradaActual.clienteId) : null;
+  const mascObj = (_clienteActual?.mascotas||[]).find(mo => (mo.nombre||mo) === nombreMascota && mo.id) || null;
   // Si el servicio elegido es distinto al predeterminado guardado, preguntar
   const svcActual = mascObj ? mascObj.servicio_id : null;
   if (!_cargandoServicioAuto && mascObj && mascObj.id && svcId !== svcActual) {
@@ -6670,12 +6665,9 @@ function sincronizarConceptos() {
       // Restaurar último servicio — primero desde Supabase, fallback localStorage
       const sel = tr.querySelector('select');
       if (sel) {
-        // Buscar mascota en clientes
-        let mascotaObj = null;
-        for (const c of clientes) {
-          const mo = (c.mascotas||[]).find(mo => (mo.nombre||mo) === m);
-          if (mo && mo.id) { mascotaObj = mo; break; }
-        }
+        // Buscar mascota restringida al cliente seleccionado en Nueva Entrada
+        const mascotaObj = (clienteEntradaSeleccionado?.mascotas||[])
+          .find(mo => (mo.nombre||mo) === m && mo.id) || null;
         const svcDesdeDB = mascotaObj?.servicio_id ? String(mascotaObj.servicio_id) : null;
         // Fuente única: servicio_id de Supabase. Sin fallback a localStorage global.
         const svcFinal = svcDesdeDB || '';
@@ -6748,12 +6740,9 @@ function onConceptoServicioChange(sel) {
     const tr = sel.closest('tr');
     const mascotaNombre = tr?.dataset?.mascota || '_global';
     if (mascotaNombre === '_global') return; // filas manuales sin mascota asignada
-    // Buscar mascota en memoria
-    let mascotaObj = null;
-    for (const c of clientes) {
-      const m = (c.mascotas||[]).find(mo => (mo.nombre||mo) === mascotaNombre);
-      if (m && m.id) { mascotaObj = m; break; }
-    }
+    // Buscar mascota restringida al cliente seleccionado en Nueva Entrada
+    const mascotaObj = (clienteEntradaSeleccionado?.mascotas||[])
+      .find(mo => (mo.nombre||mo) === mascotaNombre && mo.id) || null;
     const svcId = parseInt(sel.value);
     const svcActual = mascotaObj ? mascotaObj.servicio_id : null;
     // Solo preguntar si el servicio cambió Y es un cambio manual (no carga automática)

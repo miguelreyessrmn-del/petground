@@ -3402,6 +3402,7 @@ function detenerAutoLogout() {
 
 let _resClienteId = null;
 let _resMascotasSeleccionadas = [];
+let nr_reservacionEditandoId = null; // ID de reservación en modo edición (null = nueva)
 
 async function cargarReservaciones() {
   const lista = document.getElementById('lista-reservaciones-interna');
@@ -3437,6 +3438,7 @@ async function cargarReservaciones() {
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             <button class="btn btn-sm btn-primary" onclick="convertirEnEntrada(${r.id})">✅ El cliente llegó — Confirmar entrada</button>
+            <button class="btn btn-sm btn-ghost" style="color:var(--blue);border-color:var(--blue)" onclick="editarReservacion(${r.id})">✏️ Editar</button>
             <button class="btn btn-sm btn-ghost" onclick="abrirWhatsApp('${wa}')">💬 WhatsApp</button>
             <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="eliminarReservacion(${r.id},'${nombre}')">🗑️ Eliminar</button>
           </div>
@@ -3445,6 +3447,88 @@ async function cargarReservaciones() {
   } catch(e) {
     lista.innerHTML = `<div style="padding:16px;color:var(--red)">Error: ${e.message}</div>`;
   }
+}
+
+async function editarReservacion(id) {
+  // Cargar datos frescos desde Supabase
+  let r = null;
+  try {
+    const res = await sb('GET', 'entradas', null, `?id=eq.${id}&select=*`);
+    r = res?.[0] || null;
+  } catch(e) { notify('Error al cargar la reservación', 'error'); return; }
+  if (!r) { notify('Reservación no encontrada', 'error'); return; }
+
+  // Cargar adelantos existentes para mostrar como info
+  let adelantosExistentes = [];
+  try {
+    adelantosExistentes = await sb('GET', 'cobros', null,
+      `?entrada_id=eq.${id}&status=eq.adelanto&select=*`);
+  } catch(e) {}
+
+  nr_reservacionEditandoId = id;
+  showScreen('nueva-reservacion');
+
+  // Pequeño delay para que showScreen termine de inicializar el grid
+  setTimeout(async () => {
+    // 1. Seleccionar cliente (popula mascotas automáticamente)
+    await nr_seleccionarCliente(r.cliente_id);
+
+    // 2. Desmarcar mascotas que no están en la reservación
+    const mascotasReserv = Array.isArray(r.mascotas) ? r.mascotas : [];
+    document.querySelectorAll('#nr-mascotas-checklist input[type=checkbox]').forEach(cb => {
+      cb.checked = mascotasReserv.includes(cb.value);
+    });
+    nr_sincronizarConceptos();
+
+    // 3. Fechas y horas
+    const fe = (r.fecha_entrada||'').split('T')[0];
+    const he = (r.fecha_entrada||'').split('T')[1]?.substring(0,5) || '10:00';
+    const fs = (r.fecha_salida_prevista||'').split('T')[0];
+    const hs = (r.fecha_salida_prevista||'').split('T')[1]?.substring(0,5) || '13:00';
+    document.getElementById('nr-fecha-entrada').value = fe;
+    document.getElementById('nr-hora-entrada').value  = he;
+    document.getElementById('nr-fecha-salida').value  = fs;
+    document.getElementById('nr-hora-salida').value   = hs;
+    nr_calcNochesYTotal();
+
+    // 4. Habitación
+    const habInput = document.getElementById('nr-habitacion');
+    if (habInput) habInput.value = r.habitacion || '';
+    const habLabel = document.getElementById('nr-hab-seleccionada');
+    if (habLabel && r.habitacion) habLabel.textContent = `— Hab. ${r.habitacion} seleccionada`;
+    // Marcar visualmente la habitación en el grid
+    document.querySelectorAll('#nr-habitacion-grid button').forEach(btn => {
+      const esEsta = btn.textContent.trim() === r.habitacion;
+      btn.style.background    = esEsta ? 'var(--orange)' : 'white';
+      btn.style.borderColor   = esEsta ? 'var(--orange)' : 'var(--gray-200)';
+      btn.style.color         = esEsta ? 'white'         : 'var(--blue)';
+    });
+
+    // 5. Notas
+    document.getElementById('nr-notas').value = r.notas || '';
+
+    // 6. Adelantos existentes — solo mostrar como info, NO generar nuevos
+    const adelantoForm = document.getElementById('nr-adelanto-form');
+    const adelantoCb   = document.getElementById('nr-tiene-adelanto');
+    const adelantoLabel = adelantoCb?.closest('div')?.querySelector('label');
+    if (adelantosExistentes.length > 0) {
+      const totalAdelanto = adelantosExistentes.reduce((s,a) => s + parseFloat(a.monto||0), 0);
+      if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = true; }
+      if (adelantoLabel) adelantoLabel.innerHTML = `💵 Adelanto ya registrado: <strong>$${totalAdelanto.toLocaleString('es-MX')}</strong> <span style="font-size:11px;color:var(--gray-400)">(no se puede modificar en edición)</span>`;
+      if (adelantoForm) adelantoForm.style.display = 'none';
+    } else {
+      if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = false; }
+      if (adelantoLabel) adelantoLabel.innerHTML = '💵 Registrar adelanto recibido';
+      if (adelantoForm) adelantoForm.style.display = 'none';
+    }
+
+    // 7. Cambiar botón y título
+    const btn = document.querySelector('#screen-nueva-reservacion .btn-primary[onclick="guardarReservacion()"]');
+    if (btn) { btn.textContent = '💾 Guardar cambios'; btn.style.background = 'var(--blue)'; }
+    const titulo = document.getElementById('nr-titulo');
+    if (titulo) titulo.textContent = '✏️ Editar reservación';
+    notify(`✏️ Editando reservación de ${clientes.find(c=>c.id===r.cliente_id)?.nombre||''}`, 'success');
+  }, 200);
 }
 
 function res_buscarCliente(q) {
@@ -3804,24 +3888,42 @@ async function guardarReservacion() {
 
   setLoading(true);
   try {
-    const nuevaEntrada = await sb('POST', 'entradas', datos);
-    const entradaId = nuevaEntrada?.[0]?.id;
-    // Registrar adelanto si aplica
-    if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
-      await sb('POST', 'cobros', {
-        cliente_id: nr_clienteSeleccionado.id,
-        entrada_id: entradaId,
-        fecha: new Date().toISOString().split('T')[0],
-        metodo: metodoAdelanto,
-        monto: montoAdelanto,
-        concepto: 'Anticipo / Adelanto',
-        notas: 'Anticipo al hacer reservación',
-        status: 'adelanto'
-      });
-      // Abrir cajón si es efectivo
-      if (metodoAdelanto === 'Efectivo') {
-        await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+    if (nr_reservacionEditandoId) {
+      // Modo edición: solo actualizar datos, sin crear cobros ni adelantos
+      await sb('PATCH', `entradas?id=eq.${nr_reservacionEditandoId}`, datos);
+      nr_reservacionEditandoId = null;
+      // Restaurar botón y título
+      const btn = document.querySelector('#screen-nueva-reservacion .btn-primary[onclick="guardarReservacion()"]');
+      if (btn) { btn.textContent = '✅ Guardar reservación'; btn.style.background = ''; }
+      const titulo = document.getElementById('nr-titulo');
+      if (titulo) titulo.textContent = '📋 Nueva Reservación';
+      const adelantoCb = document.getElementById('nr-tiene-adelanto');
+      if (adelantoCb) adelantoCb.disabled = false;
+      const adelantoLabel = adelantoCb?.closest('div')?.querySelector('label');
+      if (adelantoLabel) adelantoLabel.innerHTML = '💵 Registrar adelanto recibido';
+      notify('✅ Reservación actualizada', 'success');
+    } else {
+      // Modo nuevo: crear entrada + adelanto si aplica
+      const nuevaEntrada = await sb('POST', 'entradas', datos);
+      const entradaId = nuevaEntrada?.[0]?.id;
+      // Registrar adelanto si aplica
+      if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
+        await sb('POST', 'cobros', {
+          cliente_id: nr_clienteSeleccionado.id,
+          entrada_id: entradaId,
+          fecha: new Date().toISOString().split('T')[0],
+          metodo: metodoAdelanto,
+          monto: montoAdelanto,
+          concepto: 'Anticipo / Adelanto',
+          notas: 'Anticipo al hacer reservación',
+          status: 'adelanto'
+        });
+        // Abrir cajón si es efectivo
+        if (metodoAdelanto === 'Efectivo') {
+          await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+        }
       }
+      notify('✅ Reservación guardada', 'success');
     }
     await cargarTodo();
     // Limpiar form
@@ -3836,7 +3938,6 @@ async function guardarReservacion() {
     document.getElementById('nr-adelanto-form').style.display = 'none';
     document.getElementById('nr-conceptos-tbody').innerHTML = '';
     nr_calcResumen();
-    notify('✅ Reservación guardada', 'success');
     showScreen('reservaciones-admin');
   } catch(e) { notify('Error: ' + e.message, 'error'); }
   setLoading(false);
@@ -9847,10 +9948,14 @@ function showScreen(name) {
   }
   if (name === 'nueva-reservacion') {
     nr_poblarGridHabitacion();
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('nr-fecha-entrada').value = hoy;
-    document.getElementById('nr-fecha-salida').value = hoy;
-    nr_calcNochesYTotal();
+    // Solo resetear fechas si NO estamos editando una reservación existente
+    if (!nr_reservacionEditandoId) {
+      const hoy = new Date();
+      const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+      document.getElementById('nr-fecha-entrada').value = fechaHoy;
+      document.getElementById('nr-fecha-salida').value  = fechaHoy;
+      nr_calcNochesYTotal();
+    }
   }
 }
 

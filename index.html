@@ -3424,7 +3424,12 @@ async function cargarReservaciones() {
       const wa = c?.whatsapp || '—';
       const fe = (r.fecha_entrada||'').split('T')[0];
       const fs = (r.fecha_salida_prevista||'').split('T')[0];
-      const macs = Array.isArray(r.mascotas) ? r.mascotas.join(', ') : (r.mascotas||'—');
+      const macs = Array.isArray(r.mascotas)
+        ? r.mascotas.map(m => {
+            const raza = c?.mascotas?.find(mo => mo.nombre === m)?.raza || '';
+            return raza ? `${m} (${raza})` : m;
+          }).join(', ')
+        : (r.mascotas||'—');
       const noches = Math.max(0, Math.ceil((new Date(fs)-new Date(fe))/(1000*60*60*24)));
       const init = nombre.split(' ').map(w=>w[0]).slice(0,2).join('');
       return `
@@ -4723,7 +4728,7 @@ async function generarComprobantePDF(entradaId) {
 
   <div class="cp-section">
     <div class="cp-stitle">🐕 Mascotas</div>
-    <div class="cp-tags">${(e.mascotas||[]).map(m=>`<span class="cp-tag">🐕 ${m}</span>`).join('')}</div>
+    <div class="cp-tags">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div>
   </div>
 
   <div class="cp-section">
@@ -6004,7 +6009,7 @@ function actualizarPanelesHoy(fecha) {
       listSal.innerHTML = `<table><tbody>${sals.map(e => {
         const c = clientes.find(cl => cl.id === e.clienteId);
         const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
-        return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
+        return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).map(m=>{const raza=c?.mascotas?.find(mo=>mo.nombre===m)?.raza||'';return raza?`${m} (${raza})`:m;}).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
       }).join('')}</tbody></table>`;
     }
   }
@@ -6058,6 +6063,15 @@ function usarDatosDemo() {
 }
 
 // ===================== RENDER ENTRADAS =====================
+// Helper: renderiza un dog-tag con nombre + raza debajo
+function mascotaTag(nombre, clienteObj) {
+  const raza = clienteObj?.mascotas?.find(m => m.nombre === nombre)?.raza || '';
+  return `<span class="dog-tag" style="display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.3">`
+    + `<span>🐕 ${nombre}</span>`
+    + (raza ? `<span style="font-size:10px;color:var(--gray-400);font-weight:400">${raza}</span>` : '')
+    + `</span>`;
+}
+
 function renderEntradas(filtro='', habFiltro='') {
   const tbody = document.getElementById('tbody-entradas');
   const hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -6097,7 +6111,7 @@ function renderEntradas(filtro='', habFiltro='') {
           </div>
         </div>
       </td>
-      <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="dogs-list">${e.mascotas.map(m=>mascotaTag(m,c)).join('')}</div></td>
       <td><div class="room-num">${e.habitacion}</div></td>
       <td><div class="date-cell"><div class="date">${e.entrada.split(' ')[0]}</div><div class="time">${e.entrada.split(' ')[1]}</div></div></td>
       <td><div class="date-cell"><div class="date" style="${atrasado?'color:var(--red);font-weight:700':''}">${e.salidaPrevista.split(' ')[0]}</div><div class="time">${e.salidaPrevista.split(' ')[1]}</div></div></td>
@@ -10204,7 +10218,7 @@ function renderReportes() {
     const diasRestantes = Math.ceil((new Date(e.salidaPrevista)-hoy)/(1000*60*60*24));
     return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:13px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${e.mascotas.map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="dogs-list">${e.mascotas.map(m=>mascotaTag(m,c)).join('')}</div></td>
       <td><div class="room-num">${e.habitacion}</div></td>
       <td><div style="font-weight:600;font-size:12px">${e.salidaPrevista.split(' ')[0]}</div><div style="font-size:11px;color:${diasRestantes<=1?'var(--red)':'var(--gray-400)'}">En ${diasRestantes} día${diasRestantes!==1?'s':''}</div></td>
       <td><span class="amount" style="font-size:13px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
@@ -10253,7 +10267,10 @@ function renderMapaOcupacion() {
     }
     const c = clientes.find(cl => cl.id === entrada.clienteId);
     const nombreCliente = c ? c.nombre.split(' ')[0] : '?';
-    const mascs = (entrada.mascotas||[]).slice(0,2).join(', ');
+    const mascs = (entrada.mascotas||[]).slice(0,2).map(m => {
+      const raza = c?.mascotas?.find(mo => mo.nombre === m)?.raza || '';
+      return raza ? `${m} (${raza})` : m;
+    }).join(', ');
     const salePronto = (entrada.salidaPrevista||'').startsWith(hoyStr) || (entrada.salidaPrevista||'').startsWith(mananaStr);
     const atrasado = new Date(entrada.salidaPrevista) < hoy;
     const color = atrasado ? 'var(--red)' : salePronto ? 'var(--yellow)' : 'var(--orange)';
@@ -10380,7 +10397,7 @@ async function renderSalidas() {
       const metodo = cobrosSalida[cobrosSalida.length-1]?.metodo || '—';
       return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
         <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
-        <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+        <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
         <td><div class="room-num">${e.habitacion||'—'}</div></td>
         <td><div class="date-cell"><div class="date">${fechaEnt}</div></div></td>
         <td><div class="date-cell"><div class="date">${fechaSal}</div></div></td>
@@ -10449,7 +10466,7 @@ function renderRecordatorios() {
     const esHoy = (e.salidaPrevista||'').startsWith(hoyStr);
     return `<tr>
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
       <td><div class="room-num">${e.habitacion}</div></td>
       <td><span class="badge ${esHoy?'badge-red':'badge-orange'}">${esHoy?'🔴 HOY':'🟡 Mañana'} ${(e.salidaPrevista||'').slice(0,10)}</span></td>
       <td><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
@@ -10466,7 +10483,7 @@ function renderRecordatorios() {
     const diasExtra = Math.ceil((hoy - new Date(e.salidaPrevista)) / (1000*60*60*24));
     return `<tr>
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--red)">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
       <td><div class="room-num">${e.habitacion}</div></td>
       <td style="color:var(--red);font-weight:700;font-size:12px">${(e.salidaPrevista||'').slice(0,10)}</td>
       <td><span class="badge badge-red">+${diasExtra} día${diasExtra!==1?'s':''}</span></td>
@@ -10484,7 +10501,7 @@ function renderRecordatorios() {
     const diasFaltan = Math.ceil((new Date(r.entrada) - hoy) / (1000*60*60*24));
     return `<tr>
       <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(r.mascotas||[]).map(m=>`<span class="dog-tag">🐕 ${m}</span>`).join('')}</div></td>
+      <td><div class="dogs-list">${(r.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===r.cliente_id))).join('')}</div></td>
       <td><div class="room-num">${r.habitacion||'—'}</div></td>
       <td style="font-weight:600;font-size:12px">${(r.entrada||'').slice(0,10)}</td>
       <td><span class="badge badge-blue">En ${diasFaltan} día${diasFaltan!==1?'s':''}</span></td>

@@ -5725,8 +5725,8 @@ function aplicarSort(arr, tabla) {
       const cb = clientes.find(cl=>cl.id===b.clienteId);
       if (s.campo === 'nombre') { va = ca?.nombre?.toLowerCase(); vb = cb?.nombre?.toLowerCase(); }
       else if (s.campo === 'habitacion') { va = a.habitacion; vb = b.habitacion; }
-      else if (s.campo === 'entrada') { va = a.entrada; vb = b.entrada; }
-      else if (s.campo === 'salida') { va = a.salidaPrevista; vb = b.salidaPrevista; }
+      else if (s.campo === 'entrada') { va = new Date(a.entrada).getTime(); vb = new Date(b.entrada).getTime(); }
+      else if (s.campo === 'salida') { va = new Date(a.salidaPrevista).getTime(); vb = new Date(b.salidaPrevista).getTime(); }
       else if (s.campo === 'importe') { va = a.importe||0; vb = b.importe||0; }
     }
     if (va === undefined || vb === undefined) return 0;

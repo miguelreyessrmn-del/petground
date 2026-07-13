@@ -3323,6 +3323,8 @@ const Alertas = (() => {
   let _plantillas = [];        // plantillas cargadas
   let _tabActual  = 'pendientes';
   let _filtros    = { categoria: '', prioridad: '', tipo: '', responsable: '' };
+  let _swReg      = null;      // ServiceWorkerRegistration (inyectado en Etapa 1)
+  let _pollingId  = null;      // ID del setInterval de Etapa 2
 
   // Iconos y colores por prioridad
   const _prioColor = { urgente:'#dc2626', alta:'#f97316', normal:'#eab308', baja:'#16a34a' };
@@ -3765,6 +3767,72 @@ const Alertas = (() => {
     else notify('No hay acci\u00f3n configurada para esta operaci\u00f3n', 'info');
   }
 
+  // ── F: Etapa 1 — recibir el SW registration desde DOMContentLoaded ──────
+
+  function _setSwRegistration(reg) {
+    _swReg = reg;
+    _iniciarPolling();
+  }
+
+  // ── G: Etapa 2 — polling cada 60s para notificaciones locales ────────────
+
+  function _iniciarPolling() {
+    if (_pollingId) clearInterval(_pollingId);
+    // Primera verificación a los 30s de cargar (tiempo para que el usuario inicie sesión)
+    setTimeout(_verificarNotificaciones, 30000);
+    // Luego cada 60 segundos
+    _pollingId = setInterval(_verificarNotificaciones, 60000);
+    console.log('[Alertas] Polling de notificaciones iniciado (cada 60s)');
+  }
+
+  async function _verificarNotificaciones() {
+    // Solo notificar si tenemos SW, permiso concedido, y el usuario está logueado
+    if (!_swReg) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!usuarioActual) return;
+
+    const ahora = new Date().toISOString();
+    try {
+      // Consultar operaciones que ya llegaron a su hora y no han sido notificadas
+      const pendientes = await sb('GET', 'operaciones', null,
+        `?estado=in.(pendiente,en_proceso)&push_enviado=eq.false&fecha_hora=lte.${ahora}&select=id,titulo,descripcion,tipo,prioridad`);
+
+      if (!pendientes || !pendientes.length) return;
+
+      for (const op of pendientes) {
+        const emoji = { medicamento:'💊', limpieza:'🧹', alimentacion:'🍖',
+          'baño':'🛁', vacuna:'💉', cobro:'💳', caja:'💰',
+          salida:'📤', reservacion:'📋', mantenimiento:'🔧', otro:'📌'
+        }[op.tipo] || '⚡';
+
+        // Mostrar notificación via Service Worker (funciona aunque la tab no esté en foco)
+        await _swReg.showNotification(`${emoji} ${op.titulo}`, {
+          body:    op.descripcion || 'Toca para ver los detalles en Centro de Operaciones',
+          icon:    '/petground/icon-192.png',
+          badge:   '/petground/icon-72.png',
+          tag:     `op-${op.id}`,          // evita duplicados para la misma operación
+          renotify: false,
+          data:    { id: op.id },
+          vibrate: [200, 100, 200],
+          actions: [
+            { action: 'ver',      title: '👁 Ver' },
+            { action: 'completar', title: '✅ Completar' }
+          ]
+        });
+
+        // Marcar como notificada para no volver a enviarla
+        await sb('PATCH', 'operaciones',
+          { push_enviado: true, push_enviado_at: new Date().toISOString() },
+          `?id=eq.${op.id}`
+        );
+
+        console.log(`[Alertas] Notificación enviada: op-${op.id} "${op.titulo}"`);
+      }
+    } catch(e) {
+      console.warn('[Alertas] Error en verificación de notificaciones:', e.message);
+    }
+  }
+
   // ── API pública ─────────────────────────────────────────────────────────
   return {
     crear, crearPlantilla,
@@ -3772,7 +3840,9 @@ const Alertas = (() => {
     cargar, renderLista,
     cambiarTab, aplicarFiltros, limpiarFiltros,
     abrirModalNueva, guardarNueva,
-    ejecutarAccion
+    ejecutarAccion,
+    _setSwRegistration,         // llamado desde DOMContentLoaded tras registrar SW
+    _verificarNotificaciones,   // expuesto para pruebas manuales desde consola
   };
 
 })();
@@ -3788,6 +3858,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ne-fecha-entrada').value = fechaLocal;
   document.getElementById('ne-fecha-salida').value  = fechaLocal;
   document.getElementById('ne-hora-entrada').value  = horaLocal;
+
+  // ── Etapa 1: Registro del Service Worker ──────────────────────────
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.register('/petground/sw.js', {
+        scope: '/petground/'
+      });
+      console.log('[PWA] Service Worker registrado. Scope:', reg.scope);
+      // Guardar el registration en el módulo Alertas para usarlo en Etapa 2
+      Alertas._setSwRegistration(reg);
+
+      // Escuchar mensajes del SW (click en notificación → abrir Centro)
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'NOTIF_CLICK') {
+          showScreen('centro-operaciones');
+        }
+      });
+
+      // Solicitar permiso de notificaciones (primera vez muestra el diálogo del sistema)
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permiso = await Notification.requestPermission();
+        console.log('[PWA] Permiso de notificaciones:', permiso);
+      }
+    } catch(e) {
+      console.warn('[PWA] Error registrando Service Worker:', e.message);
+    }
+  }
+
   await cargarConfig();
   await cargarTodo();
   aplicarConfigNegocio();

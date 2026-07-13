@@ -2354,10 +2354,31 @@
             <div class="stat-label">Plantillas activas</div>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="Alertas.abrirModalNueva()"
-          style="padding:10px 20px;font-weight:800;gap:6px">
-          ➕ Nueva operación
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <!-- Botón activar notificaciones — onclick sin await para cumplir con iOS -->
+          <button id="btn-activar-notif"
+            style="padding:9px 16px;font-size:12px;font-weight:700;border:1.5px solid #3b82f6;color:#3b82f6;background:white;border-radius:8px;cursor:pointer;display:none"
+            onclick="(function(){
+              console.log('[PWA] Antes:', Notification.permission);
+              Notification.requestPermission().then(function(result){
+                console.log('[PWA] Resultado:', result);
+                console.log('[PWA] Despues:', Notification.permission);
+                if(result==='granted'){
+                  Alertas._iniciarPolling();
+                  document.getElementById('btn-activar-notif').style.display='none';
+                  notify('✅ Notificaciones activadas', 'success');
+                } else {
+                  notify('⚠️ Permiso denegado — activa las notificaciones en Ajustes', 'error');
+                }
+              });
+            })()">
+            🔔 Activar notificaciones
+          </button>
+          <button class="btn btn-primary" onclick="Alertas.abrirModalNueva()"
+            style="padding:10px 20px;font-weight:800;gap:6px">
+            ➕ Nueva operación
+          </button>
+        </div>
       </div>
 
       <!-- Tabs -->
@@ -3520,6 +3541,12 @@ const Alertas = (() => {
     const el = document.getElementById('co-lista');
     if (!el) return;
     el.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div class="es-text">Cargando...</div></div>';
+
+    // Mostrar botón "Activar notificaciones" si el permiso aún no ha sido concedido
+    const btnNotif = document.getElementById('btn-activar-notif');
+    if (btnNotif && 'Notification' in window) {
+      btnNotif.style.display = Notification.permission === 'granted' ? 'none' : '';
+    }
     try {
       // Cargar plantillas primero
       _plantillas = await sb('GET', 'operaciones_plantillas', null, '?activa=eq.true&order=created_at.desc') || [];
@@ -3771,7 +3798,13 @@ const Alertas = (() => {
 
   function _setSwRegistration(reg) {
     _swReg = reg;
-    _iniciarPolling();
+    // El polling solo arranca si el permiso ya fue concedido previamente.
+    // Si es 'default', espera al tap del botón "Activar notificaciones".
+    // Si es 'granted', ya fue aceptado — arrancar directamente.
+    // (DOMContentLoaded lo verifica también, esta es la segunda guarda)
+    if ('Notification' in window && Notification.permission === 'granted') {
+      _iniciarPolling();
+    }
   }
 
   // ── G: Etapa 2 — polling cada 60s para notificaciones locales ────────────
@@ -3866,7 +3899,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         scope: '/petground/'
       });
       console.log('[PWA] Service Worker registrado. Scope:', reg.scope);
-      // Guardar el registration en el módulo Alertas para usarlo en Etapa 2
       Alertas._setSwRegistration(reg);
 
       // Escuchar mensajes del SW (click en notificación → abrir Centro)
@@ -3876,10 +3908,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
 
-      // Solicitar permiso de notificaciones (primera vez muestra el diálogo del sistema)
-      if ('Notification' in window && Notification.permission === 'default') {
-        const permiso = await Notification.requestPermission();
-        console.log('[PWA] Permiso de notificaciones:', permiso);
+      // Si el permiso ya fue concedido anteriormente, iniciar polling directamente
+      if ('Notification' in window && Notification.permission === 'granted') {
+        console.log('[PWA] Permiso ya concedido — polling activo');
+        Alertas._iniciarPolling();
       }
     } catch(e) {
       console.warn('[PWA] Error registrando Service Worker:', e.message);

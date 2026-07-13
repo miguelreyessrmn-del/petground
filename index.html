@@ -591,6 +591,10 @@
       <span class="icon">🔔</span><span>Recordatorios</span>
       <span class="nav-badge" id="badge-recordatorios" style="display:none">0</span>
     </div>
+    <div class="nav-item" onclick="showScreen('centro-operaciones')">
+      <span class="icon">⚡</span><span>Centro de Operaciones</span>
+      <span class="nav-badge" id="badge-centro-ops" style="display:none">0</span>
+    </div>
     <div class="nav-item" id="nav-usuarios" onclick="showScreen('usuarios')">
       <span class="icon">👤</span><span>Usuarios</span>
     </div>
@@ -2328,6 +2332,198 @@
       </div>
     </div>
 
+    <!-- =================== CENTRO DE OPERACIONES =================== -->
+    <div class="screen fade-in" id="screen-centro-operaciones">
+      <!-- Header con KPIs y botón nueva -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
+            <div class="stat-num" id="co-kpi-pendientes" style="font-size:22px;color:var(--orange)">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
+            <div class="stat-num" id="co-kpi-urgentes" style="font-size:22px;color:#dc2626">0</div>
+            <div class="stat-label">Urgentes</div>
+          </div>
+          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
+            <div class="stat-num" id="co-kpi-hoy" style="font-size:22px;color:var(--blue)">0</div>
+            <div class="stat-label">Para hoy</div>
+          </div>
+          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
+            <div class="stat-num" id="co-kpi-plantillas" style="font-size:22px;color:#16a34a">0</div>
+            <div class="stat-label">Plantillas activas</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="Alertas.abrirModalNueva()"
+          style="padding:10px 20px;font-weight:800;gap:6px">
+          ➕ Nueva operación
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--gray-100);margin-bottom:16px">
+        <button id="co-tab-pendientes" onclick="Alertas.cambiarTab('pendientes')"
+          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-2px">
+          ⏳ Pendientes
+        </button>
+        <button id="co-tab-completadas" onclick="Alertas.cambiarTab('completadas')"
+          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--gray-400)">
+          ✅ Completadas
+        </button>
+        <button id="co-tab-plantillas" onclick="Alertas.cambiarTab('plantillas')"
+          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--gray-400)">
+          🔄 Plantillas
+        </button>
+      </div>
+
+      <!-- Filtros -->
+      <div id="co-filtros" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <select id="co-fil-categoria" onchange="Alertas.aplicarFiltros()"
+          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
+          <option value="">Todas las categorías</option>
+          <option value="alerta">🔴 Alertas</option>
+          <option value="tarea">🟢 Tareas</option>
+        </select>
+        <select id="co-fil-prioridad" onchange="Alertas.aplicarFiltros()"
+          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
+          <option value="">Todas las prioridades</option>
+          <option value="urgente">🔴 Urgente</option>
+          <option value="alta">🟠 Alta</option>
+          <option value="normal">🟡 Normal</option>
+          <option value="baja">🟢 Baja</option>
+        </select>
+        <select id="co-fil-tipo" onchange="Alertas.aplicarFiltros()"
+          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
+          <option value="">Todos los tipos</option>
+          <option value="medicamento">💊 Medicamento</option>
+          <option value="limpieza">🧹 Limpieza</option>
+          <option value="alimentacion">🍖 Alimentación</option>
+          <option value="baño">🛁 Baño</option>
+          <option value="vacuna">💉 Vacuna</option>
+          <option value="cobro">💳 Cobro</option>
+          <option value="caja">💰 Caja</option>
+          <option value="salida">📤 Salida</option>
+          <option value="reservacion">📋 Reservación</option>
+          <option value="mantenimiento">🔧 Mantenimiento</option>
+          <option value="otro">📌 Otro</option>
+        </select>
+        <select id="co-fil-responsable" onchange="Alertas.aplicarFiltros()"
+          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
+          <option value="">Todos los responsables</option>
+        </select>
+        <button onclick="Alertas.limpiarFiltros()"
+          style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;background:white;cursor:pointer;color:var(--gray-500)">
+          ✕ Limpiar
+        </button>
+      </div>
+
+      <!-- Lista principal -->
+      <div id="co-lista" style="display:flex;flex-direction:column;gap:8px">
+        <div class="empty-state">
+          <div class="es-icon">⚡</div>
+          <div class="es-text">Cargando operaciones...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal nueva operación -->
+    <div class="modal-overlay" id="modal-nueva-operacion">
+      <div class="modal" style="max-width:520px;width:100%">
+        <div class="modal-header">
+          <div class="modal-title" id="co-modal-titulo">➕ Nueva operación</div>
+          <button class="modal-close" onclick="closeModal('modal-nueva-operacion')">✕</button>
+        </div>
+        <div style="padding:20px;display:grid;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Categoría *</label>
+              <select id="co-nueva-categoria" class="form-input" style="font-family:'Poppins',sans-serif">
+                <option value="alerta">🔴 Alerta</option>
+                <option value="tarea">🟢 Tarea</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Tipo *</label>
+              <select id="co-nueva-tipo" class="form-input" style="font-family:'Poppins',sans-serif">
+                <option value="medicamento">💊 Medicamento</option>
+                <option value="limpieza">🧹 Limpieza</option>
+                <option value="alimentacion">🍖 Alimentación</option>
+                <option value="baño">🛁 Baño</option>
+                <option value="vacuna">💉 Vacuna</option>
+                <option value="cobro">💳 Cobro</option>
+                <option value="caja">💰 Caja</option>
+                <option value="salida">📤 Salida</option>
+                <option value="reservacion">📋 Reservación</option>
+                <option value="mantenimiento">🔧 Mantenimiento</option>
+                <option value="otro">📌 Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Título *</label>
+            <input type="text" id="co-nueva-titulo" class="form-input" placeholder="Ej: Dar medicamento a Toby">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Descripción</label>
+            <textarea id="co-nueva-desc" class="form-input" rows="2" placeholder="Detalle adicional..." style="resize:vertical;font-family:'Poppins',sans-serif"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Prioridad</label>
+              <select id="co-nueva-prioridad" class="form-input" style="font-family:'Poppins',sans-serif">
+                <option value="normal">🟡 Normal</option>
+                <option value="alta">🟠 Alta</option>
+                <option value="urgente">🔴 Urgente</option>
+                <option value="baja">🟢 Baja</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Responsable</label>
+              <select id="co-nueva-responsable" class="form-input" style="font-family:'Poppins',sans-serif">
+                <option value="">— Cualquiera —</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Fecha</label>
+              <input type="date" id="co-nueva-fecha" class="form-input">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Hora</label>
+              <input type="time" id="co-nueva-hora" class="form-input">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px">
+            <button class="btn btn-ghost" onclick="closeModal('modal-nueva-operacion')">Cancelar</button>
+            <button class="btn btn-primary" onclick="Alertas.guardarNueva()">✅ Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal completar con comentario -->
+    <div class="modal-overlay" id="modal-completar-operacion">
+      <div class="modal" style="max-width:400px;width:100%">
+        <div class="modal-header">
+          <div class="modal-title">✅ Completar operación</div>
+          <button class="modal-close" onclick="closeModal('modal-completar-operacion')">✕</button>
+        </div>
+        <div style="padding:20px;display:grid;gap:14px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Comentario (opcional)</label>
+            <textarea id="co-completar-comentario" class="form-input" rows="3"
+              placeholder="¿Algún detalle a registrar?" style="resize:vertical;font-family:'Poppins',sans-serif"></textarea>
+          </div>
+          <input type="hidden" id="co-completar-id">
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button class="btn btn-ghost" onclick="closeModal('modal-completar-operacion')">Cancelar</button>
+            <button class="btn btn-primary" style="background:#16a34a" onclick="Alertas._confirmarCompletar()">✅ Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- =================== ASISTENTE IA =================== -->
     <div class="screen fade-in" id="screen-asistente">
       <div style="max-width:800px;margin:0 auto">
@@ -3117,6 +3313,470 @@ function setLoading(on) {
   loading = on;
   document.body.style.cursor = on ? 'wait' : 'default';
 }
+
+
+// ===================== ALERTAS — CENTRO DE OPERACIONES =====================
+const Alertas = (() => {
+
+  // ── Estado privado ──────────────────────────────────────────────────────
+  let _ops        = [];        // operaciones cargadas
+  let _plantillas = [];        // plantillas cargadas
+  let _tabActual  = 'pendientes';
+  let _filtros    = { categoria: '', prioridad: '', tipo: '', responsable: '' };
+
+  // Iconos y colores por prioridad
+  const _prioColor = { urgente:'#dc2626', alta:'#f97316', normal:'#eab308', baja:'#16a34a' };
+  const _prioLabel = { urgente:'🔴 Urgente', alta:'🟠 Alta', normal:'🟡 Normal', baja:'🟢 Baja' };
+  const _catLabel  = { alerta:'🔴 Alerta', tarea:'🟢 Tarea' };
+  const _tipoEmoji = { medicamento:'💊', limpieza:'🧹', alimentacion:'🍖', ba\u00f1o:'🛁',
+    vacuna:'💉', cobro:'💳', caja:'💰', salida:'📤', reservacion:'📋',
+    mantenimiento:'🔧', otro:'📌' };
+
+  // Mapa de acciones → navegación existente
+  const _acciones = {
+    'abrir_hospedaje':   (op) => op.entidad_id ? verDetalleHospedaje(op.entidad_id) : null,
+    'abrir_cliente':     (op) => op.entidad_id ? verPerfilCliente(op.entidad_id)    : null,
+    'abrir_reservacion': ()   => showScreen('reservaciones-admin'),
+    'abrir_caja':        ()   => showScreen('caja'),
+    'abrir_facturacion': ()   => showScreen('facturacion'),
+    'abrir_cobros':      ()   => showScreen('cobros-empleado'),
+    'abrir_mapa':        ()   => showScreen('mapa-ocupacion'),
+  };
+
+  // ── A: Escritura ─────────────────────────────────────────────────────────
+
+  async function crear(opts) {
+    const ahora = new Date();
+    const op = {
+      categoria:          opts.categoria          || 'alerta',
+      tipo:               opts.tipo               || 'otro',
+      titulo:             opts.titulo,
+      descripcion:        opts.descripcion        || null,
+      prioridad:          opts.prioridad          || 'normal',
+      fecha_hora:         opts.fechaHora          || ahora.toISOString(),
+      plantilla_id:       opts.plantillaId        || null,
+      es_recurrente:      opts.esRecurrente       || false,
+      responsable_id:     opts.responsableId      || usuarioActual?.id      || null,
+      responsable_nombre: opts.responsableNombre  || usuarioActual?.nombre  || 'Sistema',
+      estado:             'pendiente',
+      entidad:            opts.entidad            || null,
+      entidad_id:         opts.entidadId          || null,
+      accion:             opts.accion             || null,
+      push_enviado:       false,
+      creada_por_nombre:  usuarioActual?.nombre   || 'Sistema',
+    };
+    try {
+      const res = await sb('POST', 'operaciones', op);
+      _actualizarBadge();
+      return res;
+    } catch(e) {
+      console.error('Alertas.crear error:', e);
+      throw e;
+    }
+  }
+
+  async function crearPlantilla(opts) {
+    const p = {
+      categoria:         opts.categoria         || 'tarea',
+      tipo:              opts.tipo              || 'otro',
+      titulo:            opts.titulo,
+      descripcion:       opts.descripcion       || null,
+      prioridad:         opts.prioridad         || 'normal',
+      accion:            opts.accion            || null,
+      frecuencia:        opts.frecuencia,
+      intervalo:         opts.intervalo         || 1,
+      dias_semana:       opts.diasSemana        || null,
+      hora_ejecucion:    opts.horaEjecucion     || null,
+      activa:            true,
+      fecha_inicio:      opts.fechaInicio       || new Date().toISOString().split('T')[0],
+      proxima_ejecucion: _calcProxima(opts),
+      responsable_nombre: opts.responsableNombre || usuarioActual?.nombre || null,
+      creada_por_nombre:  usuarioActual?.nombre  || 'Sistema',
+    };
+    try {
+      return await sb('POST', 'operaciones_plantillas', p);
+    } catch(e) {
+      console.error('Alertas.crearPlantilla error:', e);
+      throw e;
+    }
+  }
+
+  // ── B: Cambios de estado ─────────────────────────────────────────────────
+
+  async function tomar(id) {
+    try {
+      await sb('PATCH', 'operaciones', { estado: 'en_proceso' }, `?id=eq.${id}`);
+      await cargar();
+    } catch(e) { notify('Error al tomar la operaci\u00f3n', 'error'); }
+  }
+
+  async function completar(id) {
+    document.getElementById('co-completar-id').value = id;
+    document.getElementById('co-completar-comentario').value = '';
+    document.getElementById('modal-completar-operacion').classList.add('open');
+  }
+
+  async function _confirmarCompletar() {
+    const id = document.getElementById('co-completar-id').value;
+    const comentario = document.getElementById('co-completar-comentario').value.trim();
+    try {
+      await sb('PATCH', 'operaciones', {
+        estado: 'completada',
+        completada_at: new Date().toISOString(),
+        completada_por_nombre: usuarioActual?.nombre || 'Sistema',
+        comentario: comentario || null
+      }, `?id=eq.${id}`);
+      closeModal('modal-completar-operacion');
+      await cargar();
+      notify('\u2705 Operaci\u00f3n completada', 'success');
+    } catch(e) { notify('Error al completar', 'error'); }
+  }
+
+  async function cancelar(id) {
+    if (!confirm('\u00bfCancelar esta operaci\u00f3n?')) return;
+    try {
+      await sb('PATCH', 'operaciones', {
+        estado: 'cancelada',
+        cancelada_at: new Date().toISOString()
+      }, `?id=eq.${id}`);
+      await cargar();
+      notify('Operaci\u00f3n cancelada', 'success');
+    } catch(e) { notify('Error al cancelar', 'error'); }
+  }
+
+  // ── C: Generación desde plantillas ───────────────────────────────────────
+
+  async function _generarDesdePlantillas() {
+    if (!_plantillas.length) return;
+    const ahora = new Date();
+    for (const p of _plantillas) {
+      if (!p.activa) continue;
+      const proxima = p.proxima_ejecucion ? new Date(p.proxima_ejecucion) : null;
+      if (!proxima || proxima > ahora) continue;
+      // Generar instancia
+      await crear({
+        plantillaId:       p.id,
+        esRecurrente:      true,
+        categoria:         p.categoria,
+        tipo:              p.tipo,
+        titulo:            p.titulo,
+        descripcion:       p.descripcion,
+        prioridad:         p.prioridad,
+        fechaHora:         proxima.toISOString(),
+        accion:            p.accion,
+        responsableNombre: p.responsable_nombre,
+      });
+      // Actualizar proxima_ejecucion
+      const nuevaProxima = _calcProximaDesde(p, proxima);
+      await sb('PATCH', 'operaciones_plantillas', {
+        ultima_ejecucion:    proxima.toISOString(),
+        proxima_ejecucion:   nuevaProxima.toISOString()
+      }, `?id=eq.${p.id}`);
+    }
+  }
+
+  function _calcProxima(opts) {
+    const ahora = new Date();
+    return _calcProximaDesde({
+      frecuencia: opts.frecuencia,
+      intervalo:  opts.intervalo || 1,
+      hora_ejecucion: opts.horaEjecucion
+    }, ahora).toISOString();
+  }
+
+  function _calcProximaDesde(p, desde) {
+    const d = new Date(desde);
+    switch (p.frecuencia) {
+      case 'horaria':
+        d.setHours(d.getHours() + (p.intervalo || 1));
+        break;
+      case 'diaria':
+        d.setDate(d.getDate() + (p.intervalo || 1));
+        if (p.hora_ejecucion) {
+          const [h, m] = p.hora_ejecucion.split(':');
+          d.setHours(parseInt(h), parseInt(m), 0, 0);
+        }
+        break;
+      case 'semanal':
+        d.setDate(d.getDate() + 7 * (p.intervalo || 1));
+        break;
+      case 'mensual':
+        d.setMonth(d.getMonth() + (p.intervalo || 1));
+        break;
+      case 'personalizada':
+        d.setDate(d.getDate() + (p.intervalo || 1));
+        break;
+      default:
+        d.setDate(d.getDate() + 1);
+    }
+    return d;
+  }
+
+  // ── D: Carga y render ────────────────────────────────────────────────────
+
+  async function cargar() {
+    const el = document.getElementById('co-lista');
+    if (!el) return;
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div class="es-text">Cargando...</div></div>';
+    try {
+      // Cargar plantillas primero
+      _plantillas = await sb('GET', 'operaciones_plantillas', null, '?activa=eq.true&order=created_at.desc') || [];
+      // Generar instancias pendientes desde plantillas
+      await _generarDesdePlantillas();
+      // Cargar operaciones (orden: urgentes primero, luego por fecha)
+      _ops = await sb('GET', 'operaciones', null,
+        '?order=created_at.desc&limit=200') || [];
+    } catch(e) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error al cargar. Verifica tu conexi\u00f3n.</div></div>';
+      return;
+    }
+    _actualizarKPIs();
+    _poblarFiltroResponsable();
+    renderLista();
+  }
+
+  function _actualizarKPIs() {
+    const pend    = _ops.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso');
+    const urgente = pend.filter(o => o.prioridad === 'urgente');
+    const hoy     = pend.filter(o => (o.fecha_hora||'').startsWith(new Date().toISOString().split('T')[0]));
+    const kpiP = document.getElementById('co-kpi-pendientes');
+    const kpiU = document.getElementById('co-kpi-urgentes');
+    const kpiH = document.getElementById('co-kpi-hoy');
+    const kpiPl = document.getElementById('co-kpi-plantillas');
+    if (kpiP) kpiP.textContent = pend.length;
+    if (kpiU) kpiU.textContent = urgente.length;
+    if (kpiH) kpiH.textContent = hoy.length;
+    if (kpiPl) kpiPl.textContent = _plantillas.length;
+    _actualizarBadge(pend.length);
+  }
+
+  function _actualizarBadge(n) {
+    const badge = document.getElementById('badge-centro-ops');
+    if (!badge) return;
+    const count = n !== undefined ? n : _ops.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso').length;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? '' : 'none';
+  }
+
+  function _poblarFiltroResponsable() {
+    const sel = document.getElementById('co-fil-responsable');
+    if (!sel) return;
+    const nombres = [...new Set(_ops.map(o => o.responsable_nombre).filter(Boolean))];
+    sel.innerHTML = '<option value="">Todos los responsables</option>'
+      + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+    // También el modal
+    const selModal = document.getElementById('co-nueva-responsable');
+    if (selModal) {
+      const users = getUsuarios();
+      selModal.innerHTML = '<option value="">— Cualquiera —</option>'
+        + users.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join('');
+    }
+  }
+
+  function renderLista() {
+    const el = document.getElementById('co-lista');
+    if (!el) return;
+
+    if (_tabActual === 'plantillas') {
+      _renderPlantillas(el);
+      return;
+    }
+
+    const fil = _filtros;
+    let lista = _ops.filter(o => {
+      if (_tabActual === 'pendientes') return o.estado === 'pendiente' || o.estado === 'en_proceso';
+      if (_tabActual === 'completadas') return o.estado === 'completada' || o.estado === 'cancelada';
+      return true;
+    });
+
+    if (fil.categoria)   lista = lista.filter(o => o.categoria   === fil.categoria);
+    if (fil.prioridad)   lista = lista.filter(o => o.prioridad   === fil.prioridad);
+    if (fil.tipo)        lista = lista.filter(o => o.tipo        === fil.tipo);
+    if (fil.responsable) lista = lista.filter(o => o.responsable_nombre === fil.responsable);
+
+    // Ordenar: urgente > alta > normal > baja, luego por fecha
+    const prioOrder = { urgente:0, alta:1, normal:2, baja:3 };
+    lista.sort((a,b) => {
+      const pd = (prioOrder[a.prioridad]||2) - (prioOrder[b.prioridad]||2);
+      if (pd !== 0) return pd;
+      return new Date(a.fecha_hora) - new Date(b.fecha_hora);
+    });
+
+    if (!lista.length) {
+      el.innerHTML = `<div class="empty-state"><div class="es-icon">\u2705</div><div class="es-text">
+        ${_tabActual === 'pendientes' ? 'Sin operaciones pendientes \u2014 \u00a1todo al d\u00eda!' : 'Sin operaciones completadas todav\u00eda'}
+      </div></div>`;
+      return;
+    }
+
+    el.innerHTML = lista.map(o => {
+      const color    = _prioColor[o.prioridad] || '#eab308';
+      const emoji    = _tipoEmoji[o.tipo] || '📌';
+      const catLabel = _catLabel[o.categoria] || o.categoria;
+      const dt       = new Date(o.fecha_hora);
+      const fechaStr = dt.toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit'});
+      const horaStr  = dt.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+      const enProceso = o.estado === 'en_proceso';
+      const completada = o.estado === 'completada';
+      const cancelada  = o.estado === 'cancelada';
+
+      const badges = `
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${color}20;color:${color}">${_prioLabel[o.prioridad]||o.prioridad}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--gray-100);color:var(--gray-600)">${catLabel}</span>
+        ${enProceso ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8">⚙️ En proceso</span>' : ''}
+        ${o.es_recurrente ? '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f0fdf4;color:#16a34a">🔄 Recurrente</span>' : ''}
+      `;
+
+      const acciones = !completada && !cancelada ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          ${!enProceso ? `<button onclick="Alertas.tomar(${o.id})" style="padding:5px 12px;border:1.5px solid #3b82f6;color:#3b82f6;background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">⚙️ Tomar</button>` : ''}
+          <button onclick="Alertas.completar(${o.id})" style="padding:5px 12px;border:1.5px solid #16a34a;color:#16a34a;background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">✅ Completar</button>
+          ${o.accion ? `<button onclick="Alertas.ejecutarAccion(${JSON.stringify(o).replace(/"/g,'&quot;')})" style="padding:5px 12px;border:1.5px solid var(--orange);color:var(--orange);background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">Ir →</button>` : ''}
+          <button onclick="Alertas.cancelar(${o.id})" style="padding:5px 12px;border:1.5px solid var(--gray-200);color:var(--gray-400);background:white;border-radius:7px;font-size:11px;cursor:pointer">✕</button>
+        </div>
+      ` : (o.comentario ? `<div style="font-size:11px;color:var(--gray-500);margin-top:6px;font-style:italic">"${o.comentario}"</div>` : '');
+
+      return `<div style="background:white;border-radius:10px;padding:14px 16px;border:1.5px solid ${enProceso?'#bfdbfe':completada?'#bbf7d0':cancelada?'var(--gray-200)':'var(--gray-100)'};border-left:4px solid ${completada?'#16a34a':cancelada?'var(--gray-300)':color}">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="font-size:22px;flex-shrink:0;margin-top:2px">${emoji}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${badges}</div>
+            <div style="font-weight:800;font-size:14px;color:${completada?'var(--gray-400)':'var(--blue)'}${cancelada?';text-decoration:line-through':''}">${o.titulo}</div>
+            ${o.descripcion ? `<div style="font-size:12px;color:var(--gray-500);margin-top:3px">${o.descripcion}</div>` : ''}
+            <div style="font-size:11px;color:var(--gray-400);margin-top:5px;display:flex;gap:12px;flex-wrap:wrap">
+              <span>📅 ${fechaStr} ${horaStr}</span>
+              ${o.responsable_nombre ? `<span>👤 ${o.responsable_nombre}</span>` : ''}
+              ${o.entidad ? `<span>🔗 ${o.entidad} #${o.entidad_id||''}</span>` : ''}
+              ${completada && o.completada_at ? `<span>✅ ${new Date(o.completada_at).toLocaleString('es-MX')}</span>` : ''}
+              ${completada && o.completada_por_nombre ? `<span>Por: ${o.completada_por_nombre}</span>` : ''}
+            </div>
+            ${acciones}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function _renderPlantillas(el) {
+    if (!_plantillas.length) {
+      el.innerHTML = '<div class="empty-state"><div class="es-icon">🔄</div><div class="es-text">Sin plantillas recurrentes todav\u00eda.<br>Crea una con el bot\u00f3n "Nueva operaci\u00f3n" seleccionando frecuencia.</div></div>';
+      return;
+    }
+    el.innerHTML = _plantillas.map(p => {
+      const emoji = _tipoEmoji[p.tipo] || '📌';
+      const proxima = p.proxima_ejecucion ? new Date(p.proxima_ejecucion).toLocaleString('es-MX') : '—';
+      return `<div style="background:white;border-radius:10px;padding:14px 16px;border:1.5px solid #d1fae5;border-left:4px solid #16a34a">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px">${emoji}</div>
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:14px;color:var(--blue)">${p.titulo}</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
+              🔄 ${p.frecuencia} · cada ${p.intervalo} · ${p.hora_ejecucion||''}
+              &nbsp;|&nbsp; Pr\u00f3xima: ${proxima}
+              ${p.responsable_nombre ? ` &nbsp;|&nbsp; 👤 ${p.responsable_nombre}` : ''}
+            </div>
+          </div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#d1fae5;color:#16a34a;font-weight:700">${p.activa?'Activa':'Pausada'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── E: UI helpers ─────────────────────────────────────────────────────────
+
+  function cambiarTab(tab) {
+    _tabActual = tab;
+    ['pendientes','completadas','plantillas'].forEach(t => {
+      const btn = document.getElementById(`co-tab-${t}`);
+      if (!btn) return;
+      const activa = t === tab;
+      btn.style.color        = activa ? 'var(--orange)' : 'var(--gray-400)';
+      btn.style.borderBottom = activa ? '2px solid var(--orange)' : '2px solid transparent';
+    });
+    // Mostrar/ocultar filtros (no aplican en plantillas)
+    const filDiv = document.getElementById('co-filtros');
+    if (filDiv) filDiv.style.display = tab === 'plantillas' ? 'none' : 'flex';
+    renderLista();
+  }
+
+  function aplicarFiltros() {
+    _filtros.categoria   = document.getElementById('co-fil-categoria')?.value   || '';
+    _filtros.prioridad   = document.getElementById('co-fil-prioridad')?.value   || '';
+    _filtros.tipo        = document.getElementById('co-fil-tipo')?.value        || '';
+    _filtros.responsable = document.getElementById('co-fil-responsable')?.value || '';
+    renderLista();
+  }
+
+  function limpiarFiltros() {
+    ['co-fil-categoria','co-fil-prioridad','co-fil-tipo','co-fil-responsable']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _filtros = { categoria:'', prioridad:'', tipo:'', responsable:'' };
+    renderLista();
+  }
+
+  function abrirModalNueva() {
+    // Prellenar fecha y hora actual
+    const ahora = new Date();
+    const fechaHoy = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+    const horaAhora = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}`;
+    const fechaEl = document.getElementById('co-nueva-fecha');
+    const horaEl  = document.getElementById('co-nueva-hora');
+    if (fechaEl) fechaEl.value = fechaHoy;
+    if (horaEl)  horaEl.value  = horaAhora;
+    // Limpiar campos
+    ['co-nueva-titulo','co-nueva-desc'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const cat = document.getElementById('co-nueva-categoria');
+    const pri = document.getElementById('co-nueva-prioridad');
+    if (cat) cat.value = 'alerta';
+    if (pri) pri.value = 'normal';
+    document.getElementById('modal-nueva-operacion').classList.add('open');
+  }
+
+  async function guardarNueva() {
+    const titulo = document.getElementById('co-nueva-titulo')?.value.trim();
+    if (!titulo) { notify('\u26a0\ufe0f El t\u00edtulo es obligatorio', 'error'); return; }
+    const fecha = document.getElementById('co-nueva-fecha')?.value;
+    const hora  = document.getElementById('co-nueva-hora')?.value || '00:00';
+    const fechaHora = fecha ? `${fecha}T${hora}:00` : new Date().toISOString();
+    const respNombre = document.getElementById('co-nueva-responsable')?.value || usuarioActual?.nombre || 'Sistema';
+    try {
+      await crear({
+        categoria:         document.getElementById('co-nueva-categoria')?.value || 'alerta',
+        tipo:              document.getElementById('co-nueva-tipo')?.value       || 'otro',
+        titulo,
+        descripcion:       document.getElementById('co-nueva-desc')?.value.trim() || null,
+        prioridad:         document.getElementById('co-nueva-prioridad')?.value  || 'normal',
+        fechaHora,
+        responsableNombre: respNombre,
+      });
+      closeModal('modal-nueva-operacion');
+      await cargar();
+      notify('\u2705 Operaci\u00f3n creada', 'success');
+    } catch(e) {
+      notify('Error al guardar: ' + e.message, 'error');
+    }
+  }
+
+  function ejecutarAccion(op) {
+    const fn = _acciones[op.accion];
+    if (fn) { closeModal('modal-detalle-hospedaje'); fn(op); }
+    else notify('No hay acci\u00f3n configurada para esta operaci\u00f3n', 'info');
+  }
+
+  // ── API pública ─────────────────────────────────────────────────────────
+  return {
+    crear, crearPlantilla,
+    tomar, completar, cancelar, _confirmarCompletar,
+    cargar, renderLista,
+    cambiarTab, aplicarFiltros, limpiarFiltros,
+    abrirModalNueva, guardarNueva,
+    ejecutarAccion
+  };
+
+})();
+// ===================== FIN ALERTAS — CENTRO DE OPERACIONES =====================
 
 // ===================== INIT — carga desde Supabase =====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -9913,8 +10573,8 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
-  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin','mapa-ocupacion':'mapa-ocupacion','nueva-salida':'nueva-salida',salidas:'salidas',recordatorios:'recordatorios'};
-  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','nueva-salida':'Registrar salida','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio','mapa-ocupacion':'Mapa de Ocupación',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas'};
+  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',importador:'importador',reportes:'reportes',asistente:'asistente','reservaciones-admin':'reservaciones-admin','mapa-ocupacion':'mapa-ocupacion','nueva-salida':'nueva-salida',salidas:'salidas',recordatorios:'recordatorios','centro-operaciones':'centro-operaciones'};
+  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','nueva-salida':'Registrar salida','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',importador:'Importar desde Gespet',reportes:'Reportes',asistente:'Asistente IA','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio','mapa-ocupacion':'Mapa de Ocupación',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas','centro-operaciones':'⚡ Centro de Operaciones'};
   document.getElementById('page-title').textContent = titles[name] || name;
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(navMap[name] || name))
@@ -9931,6 +10591,7 @@ function showScreen(name) {
   if (name === 'nueva-salida') renderNuevaSalidaScreen();
   if (name === 'salidas') renderSalidas();
   if (name === 'recordatorios') renderRecordatorios();
+  if (name === 'centro-operaciones') Alertas.cargar();
   if (name === 'caja') {
     initCaja();
     // Ocultar KPIs y corte a empleados

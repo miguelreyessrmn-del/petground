@@ -1248,7 +1248,7 @@
         </div>
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
-            <div class="card-title">📋 Reservaciones pendientes <span class="badge badge-orange" id="badge-res-count" style="display:none">0</span></div>
+            <div class="card-title">📋 Reservaciones pendientes <span class="badge badge-orange" id="badge-res-count" style="display:none">0</span> <span style="font-weight:800;color:var(--blue);margin-left:10px" id="reservaciones-total">$0.00</span></div>
             <button class="btn btn-primary btn-sm" onclick="showScreen('nueva-reservacion')">➕ Nueva reservación</button>
           </div>
           <div id="lista-reservaciones-interna">
@@ -1559,6 +1559,7 @@
       <div class="card" style="margin-bottom:16px" id="fac-seccion-activos">
         <div class="card-header">
           <div class="card-title">🏠 Pendiente — hospedajes activos</div>
+          <span style="font-weight:800;color:var(--red);margin-left:auto;margin-right:10px" id="pendientes-total">$0.00</span>
           <span class="badge badge-orange" id="badge-pendientes-count">0</span>
         </div>
         <div id="panel-pendientes">
@@ -1578,6 +1579,7 @@
       <div class="card" style="margin-bottom:16px" id="fac-seccion-deudas">
         <div class="card-header" style="background:#fef3c7">
           <div class="card-title" style="color:#92400e">⚠️ Deudas pendientes — clientes que ya salieron</div>
+          <span style="font-weight:800;color:#92400e;margin-left:auto;margin-right:10px" id="fac-deudas-total">$0.00</span>
           <span class="badge" style="background:#f59e0b;color:white" id="fac-deudas-count">0</span>
         </div>
         <div id="fac-deudas-lista">
@@ -3329,6 +3331,11 @@ let _cargandoServicioAuto = false; // evita confirmación al restaurar servicios
 let reservaciones = [];
 let loading = false;
 
+// ===================== FORMATO DE MONEDA =====================
+function formatoMoneda(valor) {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(valor || 0);
+}
+
 // ===================== LOADING STATE =====================
 function setLoading(on) {
   loading = on;
@@ -4205,6 +4212,15 @@ async function cargarReservaciones() {
     // También actualizar badge nav
     const navBadge = document.querySelector('#nav-reservaciones-admin .nav-badge') || document.getElementById('badge-reservaciones');
     if (navBadge) { navBadge.textContent = reservas.length; navBadge.style.display = reservas.length ? 'flex' : 'none'; }
+    // Saldo pendiente real = importe de la reservación menos adelantos ya cobrados sobre esa entrada
+    const totalReservaciones = reservas.reduce((s, r) => {
+      const importe = parseFloat(r.importe) || 0;
+      const adelR = cobros.filter(co => co.entradaId === r.id && (co.status === 'pagado' || co.status === 'adelanto'))
+        .reduce((sa, co) => sa + co.monto, 0);
+      return s + Math.max(0, importe - adelR);
+    }, 0);
+    const totalEl = document.getElementById('reservaciones-total');
+    if (totalEl) totalEl.textContent = formatoMoneda(totalReservaciones);
     if (!reservas.length) {
       lista.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin reservaciones pendientes</div></div>';
       return;
@@ -8930,6 +8946,8 @@ function renderDeudasPendientes() {
   if (!el) return;
   const pendientes = cobros.filter(c=>c.status==='pendiente')
     .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const totalEl = document.getElementById('fac-deudas-total');
+  if (totalEl) totalEl.textContent = formatoMoneda(pendientes.reduce((s,c)=>s+c.monto,0));
   if (!pendientes.length) {
     el.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin deudas pendientes</div></div>';
     return;
@@ -9461,18 +9479,6 @@ async function renderMovimientosCaja() {
       '?corte_id=is.null&order=fecha.asc&select=*');
   } catch(e) {}
 
-  // KPIs
-  const entradas = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const salidas  = movsTotal.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
-  const total    = entradas - salidas;
-
-  const elE = document.getElementById('caja-entradas');
-  const elS = document.getElementById('caja-salidas');
-  const elT = document.getElementById('caja-total');
-  if (elE) elE.textContent = '$' + entradas.toLocaleString('es-MX');
-  if (elS) elS.textContent = '$' + salidas.toLocaleString('es-MX');
-  if (elT) { elT.textContent = '$' + total.toLocaleString('es-MX'); elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b'; }
-
   // Filtro de fecha opcional (filtra en memoria sobre pendientes)
   const fechaInput = document.getElementById('caja-fecha-filtro');
   const fechaFiltro = fechaInput ? fechaInput.value : '';
@@ -9482,6 +9488,18 @@ async function renderMovimientosCaja() {
     const hasta = fechaFiltro + 'T23:59:59';
     movsLista = movsTotal.filter(m => m.fecha >= desde && m.fecha <= hasta);
   }
+
+  // KPIs — deben reflejar solo lo visible (movsLista, ya filtrado por fecha)
+  const entradas = movsLista.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const salidas  = movsLista.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+  const total    = entradas - salidas;
+
+  const elE = document.getElementById('caja-entradas');
+  const elS = document.getElementById('caja-salidas');
+  const elT = document.getElementById('caja-total');
+  if (elE) elE.textContent = formatoMoneda(entradas);
+  if (elS) elS.textContent = formatoMoneda(salidas);
+  if (elT) { elT.textContent = formatoMoneda(total); elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b'; }
 
   if (!movsLista.length) {
     el.innerHTML = fechaFiltro
@@ -9798,14 +9816,14 @@ function renderCobrosEmpleado() {
     });
   }
 
-  // KPIs
-  const totalDeuda = pendientes.reduce((s, c) => s + c.monto, 0);
+  // KPIs — el total debe reflejar solo lo visible tras el filtro de búsqueda (entradas2)
+  const totalDeuda = entradas2.reduce((s, [, cobs]) => s + cobs.reduce((ss, co) => ss + co.monto, 0), 0);
   const numClientes = Object.keys(porCliente).length;
   const elTotal = document.getElementById('ce-total-deuda');
   const elNum = document.getElementById('ce-num-clientes');
   const elBadge = document.getElementById('ce-badge-count');
   const elBadgeNav = document.getElementById('badge-cobros-empleado');
-  if (elTotal) elTotal.textContent = '$' + totalDeuda.toLocaleString('es-MX') + ' PM$';
+  if (elTotal) elTotal.textContent = formatoMoneda(totalDeuda);
   if (elNum) elNum.textContent = numClientes;
   if (elBadge) elBadge.textContent = numClientes;
   if (elBadgeNav) {
@@ -9979,6 +9997,7 @@ function renderPendientes() {
   const tbody = document.getElementById('tbody-pendientes');
   let rows = '';
   let count = 0;
+  let totalPendiente = 0;
   entradas.forEach(e => {
     const cl = clientes.find(c=>c.id===e.clienteId);
     // Solo cobros pagados o adelantos reales (no los pendientes diferidos)
@@ -9989,6 +10008,7 @@ function renderPendientes() {
     const pendiente = e.importe - adelE;
     if (pendiente <= 0) return;
     count++;
+    totalPendiente += pendiente;
     const atrasado = new Date(e.salidaPrevista) < new Date();
     rows += `<tr>
       <td><span style="font-weight:600;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cl?.id})">${cl?.nombre||'—'}</span></td>
@@ -10002,6 +10022,8 @@ function renderPendientes() {
   });
   const badge = document.getElementById('badge-pendientes-count');
   if (badge) badge.textContent = count+' pendientes';
+  const totalEl = document.getElementById('pendientes-total');
+  if (totalEl) totalEl.textContent = formatoMoneda(totalPendiente);
   tbody.innerHTML = rows || '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">✅</div><div class="es-text">¡Todo cobrado! Sin pendientes activos.</div></div></td></tr>';
 }
 

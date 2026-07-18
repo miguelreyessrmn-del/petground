@@ -4058,6 +4058,7 @@ async function cargarReservaciones() {
           <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
             <button class="btn btn-sm btn-primary" onclick="convertirEnEntrada(${r.id})">✅ El cliente llegó — Confirmar entrada</button>
             <button class="btn btn-sm btn-ghost" style="color:var(--blue);border-color:var(--blue)" onclick="editarReservacion(${r.id})">✏️ Editar</button>
+            <button class="btn btn-sm btn-ghost" style="color:#1a7a4a;border-color:#86efac" onclick="generarComprobantePDF(${r.id})">📄 PDF</button>
             <button class="btn btn-sm btn-ghost" onclick="abrirWhatsApp('${wa}')">💬 WhatsApp</button>
             <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="eliminarReservacion(${r.id},'${nombre}')">🗑️ Eliminar</button>
           </div>
@@ -5223,6 +5224,8 @@ async function generarComprobantePDF(entradaId) {
       const rows = await sb('GET','entradas',null,`?id=eq.${entradaId}&select=*`);
       if (rows && rows[0]) {
         const r = rows[0];
+        let descuentoParsed = null;
+        try { descuentoParsed = r.descuento ? (typeof r.descuento === 'string' ? JSON.parse(r.descuento) : r.descuento) : null; } catch(e2) { descuentoParsed = null; }
         e = {
           id: r.id, clienteId: r.cliente_id,
           mascotas: r.mascotas || [],
@@ -5231,7 +5234,13 @@ async function generarComprobantePDF(entradaId) {
           salidaPrevista: (r.fecha_salida_prevista||'').replace('T',' ').slice(0,16),
           salidaReal: (r.fecha_salida_real||'').replace('T',' ').slice(0,16),
           importe: parseFloat(r.importe)||0,
-          notas: r.notas||'', status: r.status||''
+          notas: r.notas||'', status: r.status||'',
+          descuento: descuentoParsed,
+          conceptos_json: r.conceptos_json || null,
+          subtotal: parseFloat(r.subtotal) || 0,
+          desc_tipo: r.desc_tipo || 'pct',
+          desc_valor: parseFloat(r.desc_valor) || 0,
+          desc_monto: parseFloat(r.desc_monto) || 0
         };
       }
     } catch(err) {}
@@ -5265,16 +5274,23 @@ async function generarComprobantePDF(entradaId) {
   const totalAdelantos = cobrosEntry.filter(co=>co.status==='adelanto').reduce((s,co)=>s+co.monto,0);
   const totalPendiente = Math.max(0, (e.importe||0) - totalPagado - totalAdelantos);
   const desc = e.descuento;
-  // Soporte para formato nuevo (porMascota) y viejo (valor/tipo)
-  const tieneDesc = desc && (desc.monto > 0 || desc.valor > 0);
-  const descBase = desc?.base || 0;
-  const descMonto = desc?.monto || 0;
-  const descDetalle = desc?.porMascota
-    ? Object.entries(desc.porMascota).map(([m,d]) => {
-        const v = typeof d === 'object' ? d : { valor: d, tipo: 'pct' };
-        return `${m}: ${v.valor}${v.tipo==='pct'?'%':' PM$'}`;
-      }).join(', ')
-    : (desc?.tipo === 'pct' ? `${desc?.valor}%` : `$${desc?.valor} PM$`);
+  // Soporte para formato viejo (descuento: {base,monto,valor,tipo,porMascota}) y formato
+  // nuevo plano (subtotal/desc_tipo/desc_valor/desc_monto) usado por "Registrar entrada".
+  const tieneDescViejo = desc && (desc.monto > 0 || desc.valor > 0);
+  const tieneDescNuevo = !tieneDescViejo && (e.desc_monto||0) > 0;
+  const tieneDesc = tieneDescViejo || tieneDescNuevo;
+  const descBase = tieneDescViejo ? (desc?.base || 0) : (e.subtotal || (e.importe||0) + (e.desc_monto||0));
+  const descMonto = tieneDescViejo ? (desc?.monto || 0) : (e.desc_monto || 0);
+  const descDetalle = tieneDescViejo
+    ? (desc?.porMascota
+        ? Object.entries(desc.porMascota).map(([m,d]) => {
+            const v = typeof d === 'object' ? d : { valor: d, tipo: 'pct' };
+            return `${m}: ${v.valor}${v.tipo==='pct'?'%':' PM$'}`;
+          }).join(', ')
+        : (desc?.tipo === 'pct' ? `${desc?.valor}%` : `$${desc?.valor} PM$`))
+    : (e.desc_tipo === 'pct' ? `${e.desc_valor}%` : `$${e.desc_valor} PM$`);
+  // Subtotal a mostrar siempre (con o sin descuento)
+  const subtotalMostrado = tieneDesc ? descBase : (e.subtotal || (e.importe||0));
 
   let modalComp = document.getElementById('modal-comprobante');
   if (!modalComp) {
@@ -5294,6 +5310,29 @@ async function generarComprobantePDF(entradaId) {
   compWrapper.appendChild(actBar);
 
   const noches = Math.max(0, Math.ceil((new Date(e.salidaPrevista) - new Date(e.entrada)) / (1000*60*60*24)));
+
+  // Tipo de comprobante — se detecta a partir del status de la entrada, sin necesidad
+  // de que el llamador indique el tipo (reutiliza generarComprobantePDF sin adaptarlo por fuera)
+  let tipoBadge = 'COMPROBANTE DE HOSPEDAJE';
+  let badgeColor = '#E8622A';
+  if (e.status === 'reservacion') { tipoBadge = '📅 RESERVACIÓN'; badgeColor = '#2563eb'; }
+  else if (e.status === 'completado' && totalPendiente > 0) { tipoBadge = '⚠️ CUENTA PENDIENTE / DEUDA'; badgeColor = '#dc2626'; }
+
+  // Conceptos itemizados (si la entrada los tiene guardados) — solo informativo,
+  // el total/subtotal/descuento siguen viniendo de e.importe / subtotalMostrado / descMonto.
+  let conceptosParsed = [];
+  try { conceptosParsed = e.conceptos_json ? (typeof e.conceptos_json === 'string' ? JSON.parse(e.conceptos_json) : e.conceptos_json) : []; } catch(e3) { conceptosParsed = []; }
+  const servicios = (typeof getServicios === 'function') ? getServicios() : [];
+  const conceptosHtml = (conceptosParsed && conceptosParsed.length) ? `
+  <div class="cp-section">
+    <div class="cp-stitle">🧾 Conceptos</div>
+    ${conceptosParsed.map(cn => {
+      const svc = servicios.find(s => s.id === cn.svc_id);
+      const nombreSvc = svc?.nombre || cn.servicio || '—';
+      const descInd = parseFloat(cn.desc||0) > 0 ? ` · desc. ${cn.desc}${(cn.desc_tipo||'pct')==='pct'?'%':' PM$'}` : '';
+      return `<div class="cp-row"><span class="lbl">${cn.mascota||''} — ${nombreSvc} ×${cn.uds||1}${descInd}</span><span class="val">$${(parseFloat(cn.precio)||0).toLocaleString('es-MX')} PM$</span></div>`;
+    }).join('')}
+  </div>` : '';
 
   const compContent = document.createElement('div');
   compContent.style.cssText = 'padding:20px 18px;font-family:Arial,sans-serif;font-size:12px;color:#222;';
@@ -5328,7 +5367,7 @@ async function generarComprobantePDF(entradaId) {
     <div class="cp-sub">${cfg.propietario||''} · ${cfg.direccion||'Puebla, México'}</div>
   </div>
 
-  <div style="text-align:center;margin-bottom:12px"><span class="cp-badge">COMPROBANTE DE HOSPEDAJE</span></div>
+  <div style="text-align:center;margin-bottom:12px"><span class="cp-badge" style="background:${badgeColor}">${tipoBadge}</span></div>
 
   <div class="cp-section">
     <div class="cp-stitle">👤 Cliente</div>
@@ -5349,15 +5388,16 @@ async function generarComprobantePDF(entradaId) {
     <div class="cp-row"><span class="lbl">Noches</span><span class="val">${noches}</span></div>
     ${e.notas ? `<div class="cp-row"><span class="lbl">Notas</span><span class="val" style="text-align:right;max-width:60%">${e.notas}</span></div>` : ''}
   </div>
+  ${conceptosHtml}
 
   <div class="cp-total">
     <div class="cp-stitle" style="color:rgba(255,255,255,0.6)">💰 Pagos</div>
+    <div class="cp-trow"><span>Subtotal</span><span>$${subtotalMostrado.toLocaleString('es-MX')} PM$</span></div>
     ${tieneDesc ? `
-    <div class="cp-trow"><span>Precio base</span><span>$${descBase.toLocaleString('es-MX')} PM$</span></div>
     <div class="cp-trow desc"><span>🏷️ Descuento (${descDetalle})</span><span>-$${descMonto.toLocaleString('es-MX')} PM$</span></div>
     ` : ''}
     <div class="cp-trow"><span>Total hospedaje</span><span>$${(e.importe||0).toLocaleString('es-MX')} PM$</span></div>
-    <div class="cp-trow"><span>Pagado</span><span>$${(totalPagado+totalAdelantos).toLocaleString('es-MX')} PM$</span></div>
+    <div class="cp-trow"><span>Adelantos / pagos aplicados</span><span>$${(totalPagado+totalAdelantos).toLocaleString('es-MX')} PM$</span></div>
     <div class="cp-trow big"><span>Pendiente</span><span>$${totalPendiente.toLocaleString('es-MX')} PM$</span></div>
   </div>
 
@@ -8765,11 +8805,15 @@ function renderDeudasPendientes() {
       }).join(', ');
       const fe = (ent.entrada||'').split(' ')[0];
       const fs = (ent.salidaPrevista||'').split(' ')[0];
-      return `<div style="font-size:11px;color:var(--gray-600);margin-top:4px;line-height:1.7">
-        🐕 ${mascs} &nbsp;·&nbsp; 🏠 Hab. ${ent.habitacion}<br>
-        📅 ${fe} → ${fs}
+      return `<div style="font-size:11px;color:var(--gray-600);margin-top:4px;line-height:1.7;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>🐕 ${mascs} &nbsp;·&nbsp; 🏠 Hab. ${ent.habitacion}<br>
+        📅 ${fe} → ${fs}</span>
+        <button class="btn btn-sm btn-ghost" style="flex-shrink:0;color:#1a7a4a;border-color:#86efac;padding:3px 8px;font-size:10px" onclick="generarComprobantePDF(${eid})">📄 PDF</button>
       </div>`;
     }).join('');
+    // Deudas sin entrada_id (registros antiguos importados o sin vínculo) — sin botón PDF,
+    // ya que generarComprobantePDF() requiere una entrada válida.
+    const cobsSinEntrada = cobs.filter(co => !co.entradaId).length;
     return `<div style="padding:12px 16px;border-bottom:1px solid #fde68a;background:#fffbeb">
       <div style="display:flex;align-items:center;gap:12px">
         <div class="avatar" style="background:var(--orange)">${init}</div>
@@ -8777,6 +8821,7 @@ function renderDeudasPendientes() {
           <div style="font-weight:700;font-size:13px;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cid})">${c?.nombre||'—'}</div>
           <div style="font-size:11px;color:var(--gray-400)">${cobs.length} deuda${cobs.length>1?'s':''} · Desde ${cobs[0].fecha}</div>
           ${entInfo}
+          ${cobsSinEntrada > 0 ? `<div style="font-size:10px;color:var(--gray-400);margin-top:2px;font-style:italic">ℹ️ ${cobsSinEntrada} deuda${cobsSinEntrada>1?'s':''} sin hospedaje vinculado — sin comprobante PDF disponible</div>` : ''}
           ${cobs.map(co=>`<div style="font-size:11px;color:var(--gray-600);margin-top:2px">• ${co.concepto} — $${co.monto.toLocaleString('es-MX')} PM$</div>`).join('')}
         </div>
         <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">

@@ -3144,6 +3144,12 @@ function formatoMoneda(valor) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(valor || 0);
 }
 
+// Fecha a usar en reportes financieros: la fecha real de pago si existe,
+// con fallback a la fecha original para compatibilidad con filas sin fecha_pago.
+function fechaFinanciera(cobro) {
+  return cobro.fechaPago || cobro.fecha;
+}
+
 // ===================== LOADING STATE =====================
 function setLoading(on) {
   loading = on;
@@ -3835,7 +3841,7 @@ async function cargarTodo() {
     const cobrosDB = todosCobros;
     cobros = cobrosDB.map(c => ({
       id: c.id, clienteId: c.cliente_id, entradaId: c.entrada_id,
-      fecha: c.fecha||'', metodo: c.metodo||'', monto: parseFloat(c.monto)||0,
+      fecha: c.fecha||'', fechaPago: c.fecha_pago || null, metodo: c.metodo||'', monto: parseFloat(c.monto)||0,
       concepto: c.concepto||'', notas: c.notas||'', status: c.status||'pagado'
     }));
 
@@ -4532,6 +4538,7 @@ async function guardarReservacion() {
           cliente_id: nr_clienteSeleccionado.id,
           entrada_id: entradaId,
           fecha: new Date().toISOString().split('T')[0],
+          fecha_pago: new Date().toISOString(),
           metodo: metodoAdelanto,
           monto: montoAdelanto,
           concepto: 'Anticipo / Adelanto',
@@ -4625,8 +4632,9 @@ function renderGraficaFac() {
   const facPorMesAnt = Array(12).fill(0);
   cobros.filter(c=>c.status==='pagado').forEach(c => {
     if (!c.fecha) return;
-    const y = parseInt(c.fecha.slice(0,4));
-    const m = parseInt(c.fecha.slice(5,7)) - 1;
+    const f = fechaFinanciera(c);
+    const y = parseInt(f.slice(0,4));
+    const m = parseInt(f.slice(5,7)) - 1;
     if (y === año) facPorMes[m] += c.monto;
     if (modo === 'comparativo' && y === año-1) facPorMesAnt[m] += c.monto;
   });
@@ -5162,6 +5170,7 @@ async function mdh_guardarAdelanto() {
       cliente_id: e.clienteId,
       entrada_id: detalleHospedajeId,
       fecha: new Date().toISOString().split('T')[0],
+      fecha_pago: new Date().toISOString(),
       metodo, monto,
       concepto: 'Pago / Adelanto',
       notas: '', status: 'adelanto'
@@ -6267,7 +6276,7 @@ async function confirmarAplicarPago() {
       if (restante <= 0) break;
       if (restante >= co.monto) {
         // Paga completo este cobro
-        await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}` });
+        await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}`, fecha_pago: new Date().toISOString() });
         restante -= co.monto;
       } else {
         // Pago parcial — actualizar monto pendiente
@@ -6275,6 +6284,7 @@ async function confirmarAplicarPago() {
         // Registrar el pago aplicado
         await sb('POST', 'cobros', {
           cliente_id: id, fecha: new Date().toISOString().split('T')[0],
+          fecha_pago: new Date().toISOString(),
           metodo, monto: restante, concepto: 'Abono a cuenta pendiente',
           notas: `Abono parcial`, status: 'pagado'
         });
@@ -7878,6 +7888,7 @@ async function guardarEntrada() {
         cliente_id: clienteEntradaSeleccionado.id,
         entrada_id: entradaIdFinal,
         fecha: new Date().toISOString().split('T')[0],
+        fecha_pago: new Date().toISOString(),
         metodo: metodoAdelantoNE,
         monto: montoAdelantoNE,
         concepto: 'Adelanto al registrar entrada',
@@ -8138,6 +8149,7 @@ async function confirmarSalida() {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
         fecha: new Date().toISOString().split('T')[0],
+        fecha_pago: new Date().toISOString(),
         metodo, monto: cobrado,
         concepto: 'Cobro al hacer salida',
         notas: pendiente > 0 ? `Pendiente: $${pendiente}` : 'Pago completo',
@@ -8536,7 +8548,10 @@ function getFechasPeriodo() {
 
 function cobrosDelPeriodo() {
   const { desde, hasta } = getFechasPeriodo();
-  return cobros.filter(c => c.fecha >= desde && c.fecha <= hasta && c.status === 'pagado');
+  return cobros.filter(c => {
+    const f = fechaFinanciera(c).slice(0,10);
+    return f >= desde && f <= hasta && c.status === 'pagado';
+  });
 }
 
 function calcFacKPIs() {
@@ -8564,7 +8579,7 @@ function calcFacKPIs() {
   const diasMes = finMes.getDate();
   const diaActual = hoy.getDate();
   const cobradoMes = cobros.filter(c => {
-    const d = new Date(c.fecha);
+    const d = new Date(fechaFinanciera(c));
     return d.getMonth()===hoy.getMonth() && d.getFullYear()===hoy.getFullYear() && c.status==='pagado';
   }).reduce((s,c)=>s+c.monto,0);
   const proyeccion = diaActual > 0 ? Math.round((cobradoMes / diaActual) * diasMes) : 0;
@@ -8574,7 +8589,10 @@ function calcFacKPIs() {
   const añoAnt = (parseInt(desde.slice(0,4))-1);
   const desdeAnt = (añoAnt)+desde.slice(4);
   const hastaAnt = (añoAnt)+hasta.slice(4);
-  const totalAnt = cobros.filter(c=>c.fecha>=desdeAnt&&c.fecha<=hastaAnt&&c.status==='pagado').reduce((s,c)=>s+c.monto,0);
+  const totalAnt = cobros.filter(c=>{
+    const f = fechaFinanciera(c).slice(0,10);
+    return f>=desdeAnt&&f<=hastaAnt&&c.status==='pagado';
+  }).reduce((s,c)=>s+c.monto,0);
   const crecimiento = totalAnt > 0 ? Math.round((total-totalAnt)/totalAnt*100) : null;
 
   document.getElementById('fac-total-mes').textContent = '$'+total.toLocaleString('es-MX');
@@ -8608,12 +8626,13 @@ function renderGraficaCompleta() {
   const grupos = {};
   periodo.forEach(c => {
     let key;
-    const d = new Date(c.fecha+'T12:00');
+    const fechaBase = fechaFinanciera(c).slice(0,10);
+    const d = new Date(fechaBase+'T12:00');
     if (agrupacion === 'semana') {
       const lunes = new Date(d); lunes.setDate(d.getDate()-((d.getDay()+6)%7));
       key = lunes.toISOString().split('T')[0];
     } else {
-      key = c.fecha.slice(0,7); // YYYY-MM
+      key = fechaBase.slice(0,7); // YYYY-MM
     }
     grupos[key] = (grupos[key]||0) + c.monto;
   });
@@ -8676,8 +8695,9 @@ function renderGraficaComparativo() {
   const facAnt = Array(12).fill(0);
   cobros.filter(c=>c.status==='pagado').forEach(c => {
     if (!c.fecha) return;
-    const y = parseInt(c.fecha.slice(0,4));
-    const m = parseInt(c.fecha.slice(5,7))-1;
+    const f = fechaFinanciera(c);
+    const y = parseInt(f.slice(0,4));
+    const m = parseInt(f.slice(5,7))-1;
     if (y===año) facEste[m]+=c.monto;
     if (y===año-1) facAnt[m]+=c.monto;
   });
@@ -8728,7 +8748,7 @@ function renderProyeccion() {
 
   // Lo cobrado este mes
   const cobradoMes = cobros.filter(c => {
-    const d = new Date(c.fecha);
+    const d = new Date(fechaFinanciera(c));
     return d.getMonth()===hoy.getMonth() && d.getFullYear()===hoy.getFullYear() && c.status==='pagado';
   }).reduce((s,c)=>s+c.monto,0);
 
@@ -9912,6 +9932,7 @@ async function guardarCobro() {
       cliente_id: cid,
       entrada_id: parseInt(document.getElementById('cobro-entrada').value)||null,
       fecha: document.getElementById('cobro-fecha').value,
+      fecha_pago: new Date().toISOString(),
       metodo: document.getElementById('cobro-metodo').value,
       monto,
       concepto: document.getElementById('cobro-concepto').value || 'Hospedaje',
@@ -9969,6 +9990,7 @@ async function guardarAdelanto() {
       cliente_id: cid,
       entrada_id: entActiva?.id||null,
       fecha: document.getElementById('adel-fecha').value,
+      fecha_pago: new Date().toISOString(),
       metodo,
       monto, concepto:'Adelanto',
       notas: document.getElementById('adel-notas').value,
@@ -11488,6 +11510,7 @@ async function cobrarRapido() {
       cliente_id: null,
       entrada_id: null,
       fecha: new Date().toISOString().split('T')[0],
+      fecha_pago: new Date().toISOString(),
       metodo: 'Efectivo',
       monto,
       concepto,

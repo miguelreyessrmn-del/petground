@@ -3827,7 +3827,7 @@ async function cargarTodo() {
     page = 0;
     while (true) {
       const lote = await sb('GET', 'cobros', null,
-        `?select=*&order=fecha.desc&limit=${pageSize}&offset=${page * pageSize}`);
+        `?estado=eq.activo&select=*&order=fecha.desc&limit=${pageSize}&offset=${page * pageSize}`);
       todosCobros = [...todosCobros, ...lote];
       if (lote.length < pageSize) break;
       page++;
@@ -4082,7 +4082,7 @@ async function editarReservacion(id) {
   let adelantosExistentes = [];
   try {
     adelantosExistentes = await sb('GET', 'cobros', null,
-      `?entrada_id=eq.${id}&status=eq.adelanto&select=*`);
+      `?entrada_id=eq.${id}&status=eq.adelanto&estado=eq.activo&select=*`);
   } catch(e) {}
 
   nr_reservacionEditandoId = id;
@@ -5256,7 +5256,7 @@ async function generarComprobantePDF(entradaId) {
   // Jalar cobros directo de Supabase para tener datos actualizados
   let cobrosEntry = cobros.filter(co => co.entradaId === entradaId);
   try {
-    const cobrosDB = await sb('GET', 'cobros', null, `?entrada_id=eq.${entradaId}&select=*`);
+    const cobrosDB = await sb('GET', 'cobros', null, `?entrada_id=eq.${entradaId}&estado=eq.activo&select=*`);
     if (cobrosDB && cobrosDB.length > 0) {
       cobrosEntry = cobrosDB.map(co => ({
         id: co.id,

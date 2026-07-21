@@ -3842,7 +3842,8 @@ async function cargarTodo() {
     cobros = cobrosDB.map(c => ({
       id: c.id, clienteId: c.cliente_id, entradaId: c.entrada_id,
       fecha: c.fecha||'', fechaPago: c.fecha_pago || null, metodo: c.metodo||'', monto: parseFloat(c.monto)||0,
-      concepto: c.concepto||'', notas: c.notas||'', status: c.status||'pagado'
+      concepto: c.concepto||'', notas: c.notas||'', status: c.status||'pagado',
+      estado: c.estado || null, aplicacion: c.aplicacion || null
     }));
 
     // Calcular alojamientos y facturación por cliente
@@ -10661,7 +10662,33 @@ function showScreen(name) {
 }
 
 // ===================== REPORTES =====================
-function renderRetencion() {
+
+// Determina la última visita real de un cliente sin usar cobros como sustituto
+// de estancias. Jerarquía aprobada: entrada activa > entrada completada
+// (fecha de ENTRADA, no de salida) > cobro histórico de Gespet (aproximado) > sin datos.
+// Autosuficiente: no asume que `entradas`/`cobros` ya vengan pre-filtrados.
+function ultimaVisitaCliente(clienteId, completadasPorCliente) {
+  const activa = entradas.find(e => e.clienteId === clienteId && e.status === 'activo');
+  if (activa) return { tipo: 'activo' };
+
+  const fechaCompletada = completadasPorCliente.get(clienteId);
+  if (fechaCompletada) return { tipo: 'completada', fecha: fechaCompletada };
+
+  const cobrosHotel = cobros.filter(co =>
+    co.clienteId === clienteId &&
+    co.estado === 'activo' &&
+    co.aplicacion === 'Hotel' &&
+    co.status === 'pagado'
+  );
+  if (cobrosHotel.length) {
+    const masReciente = cobrosHotel.reduce((a,b) => a.fecha > b.fecha ? a : b);
+    return { tipo: 'aproximado', fecha: masReciente.fecha };
+  }
+
+  return { tipo: 'sin_datos' };
+}
+
+async function renderRetencion() {
   const hoy = new Date();
 
   // --- RECENCIA: tiempo desde última visita ---
@@ -10673,30 +10700,66 @@ function renderRetencion() {
     { label: 'Más de 2 años', color: '#8b5cf6', max: Infinity, count: 0, clientes: [] },
   ];
 
-  clientes.forEach(c => {
-    // Buscar la última visita de este cliente en historial de cobros o entradas completadas
-    const fechas = cobros.filter(co => co.clienteId === c.id && co.fecha).map(co => new Date(co.fecha));
-    if (!fechas.length) return;
-    const ultima = new Date(Math.max(...fechas));
-    const dias = Math.floor((hoy - ultima) / (1000*60*60*24));
-    const b = buckets.find(bk => dias < bk.max);
-    if (b) { b.count++; b.clientes.push({...c, diasDesde: dias, ultimaVisita: ultima.toLocaleDateString('es-MX')}); }
-  });
-
-  const totalRec = buckets.reduce((s,b)=>s+b.count,0);
-  const chartRec = document.getElementById('rep-chart-recencia');
-  if (chartRec && totalRec > 0) {
-    chartRec.innerHTML = renderPieChart(buckets.filter(b=>b.count>0), totalRec);
+  // Traer TODAS las entradas completadas, paginado explícito (nunca depender de
+  // una sola respuesta que PostgREST pudiera truncar).
+  let entradasCompletadas = [];
+  let errorRecencia = false;
+  try {
+    const pageSizeEC = 1000;
+    let pageEC = 0;
+    while (true) {
+      const lote = await sb('GET', 'entradas', null,
+        `?status=eq.completado&select=cliente_id,fecha_entrada&order=fecha_entrada.desc&limit=${pageSizeEC}&offset=${pageEC*pageSizeEC}`);
+      entradasCompletadas = entradasCompletadas.concat(lote);
+      if (lote.length < pageSizeEC) break;
+      pageEC++;
+    }
+  } catch(err) {
+    errorRecencia = true;
   }
+
+  const chartRec = document.getElementById('rep-chart-recencia');
   const listaRec = document.getElementById('rep-recencia-lista');
-  if (listaRec) {
-    listaRec.innerHTML = buckets.filter(b=>b.count>0).map(b => `
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${b.color};flex-shrink:0"></div>
-        <span style="flex:1">${b.label}</span>
-        <span style="font-weight:700;color:var(--blue)">${b.count}</span>
-        <span style="color:var(--gray-400)">${Math.round(b.count/totalRec*100)}%</span>
-      </div>`).join('');
+
+  if (errorRecencia) {
+    // No usar cobros generales como sustituto ni clasificar con información incompleta.
+    if (chartRec) chartRec.innerHTML = '';
+    if (listaRec) listaRec.innerHTML = '<div style="color:var(--red);font-size:12px;padding:8px 0">⚠️ No se pudo cargar el historial de estancias. Reintenta más tarde.</div>';
+  } else {
+    // Most reciente por cliente (ya viene ordenado desc, primera ocurrencia = más reciente)
+    const completadasPorCliente = new Map();
+    entradasCompletadas.forEach(e => {
+      if (!completadasPorCliente.has(e.cliente_id)) completadasPorCliente.set(e.cliente_id, e.fecha_entrada);
+    });
+
+    clientes.forEach(c => {
+      const visita = ultimaVisitaCliente(c.id, completadasPorCliente);
+      if (visita.tipo === 'activo' || visita.tipo === 'sin_datos') return;
+      const ultima = new Date(visita.fecha);
+      const dias = Math.floor((hoy - ultima) / (1000*60*60*24));
+      const b = buckets.find(bk => dias < bk.max);
+      if (b) {
+        b.count++;
+        b.clientes.push({
+          ...c, diasDesde: dias,
+          ultimaVisita: ultima.toLocaleDateString('es-MX') + (visita.tipo === 'aproximado' ? ' (aprox., historial Gespet)' : '')
+        });
+      }
+    });
+
+    const totalRec = buckets.reduce((s,b)=>s+b.count,0);
+    if (chartRec && totalRec > 0) {
+      chartRec.innerHTML = renderPieChart(buckets.filter(b=>b.count>0), totalRec);
+    }
+    if (listaRec) {
+      listaRec.innerHTML = buckets.filter(b=>b.count>0).map(b => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${b.color};flex-shrink:0"></div>
+          <span style="flex:1">${b.label}</span>
+          <span style="font-weight:700;color:var(--blue)">${b.count}</span>
+          <span style="color:var(--gray-400)">${Math.round(b.count/totalRec*100)}%</span>
+        </div>`).join('');
+    }
   }
 
   // --- FRECUENCIA: veces que han venido ---
@@ -10735,26 +10798,32 @@ function renderRetencion() {
   }
 
   // --- CLIENTES EN RIESGO: solo 6-18 meses, más recientes primero ---
-  const riesgo = buckets.slice(1, 3).flatMap(b => b.clientes) // Entre 2-6 meses (bordeline) + 6-12 meses
-    .filter(c => c.diasDesde >= 180) // solo los de +6 meses
-    .filter(c => c.diasDesde <= 548) // máximo 18 meses (~548 días)
-    .sort((a,b) => a.diasDesde - b.diasDesde); // más recientes primero
   const countEl = document.getElementById('rep-riesgo-count');
-  if (countEl) countEl.textContent = riesgo.length + ' clientes';
   const riesgoLista = document.getElementById('rep-riesgo-lista');
-  if (riesgoLista) {
-    if (!riesgo.length) {
-      riesgoLista.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Sin clientes en ese rango actualmente 🎉</div>';
-    } else {
-      riesgoLista.innerHTML = riesgo.map(c => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-          <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
-            <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
-            <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · <span style="color:var(--orange);font-weight:700">${c.diasDesde} días sin venir</span></div>
-          </div>
-          <button onclick="abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 10px;font-size:11px;flex-shrink:0">💬 WA</button>
-        </div>`).join('');
+  if (errorRecencia) {
+    // Misma regla: sin datos confiables, no se clasifica a nadie.
+    if (countEl) countEl.textContent = '—';
+    if (riesgoLista) riesgoLista.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0">⚠️ No se pudo calcular clientes en riesgo. Reintenta más tarde.</div>';
+  } else {
+    const riesgo = buckets.slice(1, 3).flatMap(b => b.clientes) // Entre 2-6 meses (bordeline) + 6-12 meses
+      .filter(c => c.diasDesde >= 180) // solo los de +6 meses
+      .filter(c => c.diasDesde <= 548) // máximo 18 meses (~548 días)
+      .sort((a,b) => a.diasDesde - b.diasDesde); // más recientes primero
+    if (countEl) countEl.textContent = riesgo.length + ' clientes';
+    if (riesgoLista) {
+      if (!riesgo.length) {
+        riesgoLista.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Sin clientes en ese rango actualmente 🎉</div>';
+      } else {
+        riesgoLista.innerHTML = riesgo.map(c => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+            <div class="avatar" style="width:32px;height:32px;font-size:11px;flex-shrink:0">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+            <div style="flex:1;cursor:pointer" onclick="verPerfilCliente(${c.id})">
+              <div style="font-weight:600;font-size:13px;color:var(--blue)">${c.nombre}</div>
+              <div style="font-size:11px;color:var(--gray-400)">Última visita: ${c.ultimaVisita} · <span style="color:var(--orange);font-weight:700">${c.diasDesde} días sin venir</span></div>
+            </div>
+            <button onclick="abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 10px;font-size:11px;flex-shrink:0">💬 WA</button>
+          </div>`).join('');
+      }
     }
   }
 }

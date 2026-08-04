@@ -6276,12 +6276,15 @@ function abrirAplicarPago(clienteId) {
   document.getElementById('modal-aplicar-pago').classList.add('open');
 }
 
+let _aplicandoPago = false;
 async function confirmarAplicarPago() {
+  if (_aplicandoPago) return;
+  _aplicandoPago = true;
   const id = _aplicarPagoClienteId;
-  if (!id) return;
+  if (!id) { _aplicandoPago = false; return; }
   const monto = parseFloat(document.getElementById('ap-monto')?.value)||0;
   const metodo = document.getElementById('ap-metodo')?.value||'Efectivo';
-  if (monto <= 0) { notify('⚠️ Ingresa un monto mayor a 0', 'error'); return; }
+  if (monto <= 0) { notify('⚠️ Ingresa un monto mayor a 0', 'error'); _aplicandoPago = false; return; }
 
   const c = clientes.find(cl=>cl.id===id);
   const pendientes = cobros.filter(co=>co.clienteId===id && co.status==='pendiente')
@@ -6332,6 +6335,7 @@ async function confirmarAplicarPago() {
     if (screen?.classList.contains('active')) verPerfilCliente(id);
   } catch(e) { notify('Error: '+e.message, 'error'); }
   setLoading(false);
+  _aplicandoPago = false;
 }
 
 // ===================== FOTO MASCOTA =====================
@@ -8152,7 +8156,10 @@ function actualizarResumenSalida() {
   }
 }
 
+let _confirmandoSalida = false;
 async function confirmarSalida() {
+  if (_confirmandoSalida) return;
+  _confirmandoSalida = true;
   const e = entradas.find(en=>en.id===salidaActual);
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id).reduce((s,co)=>s+co.monto,0);
@@ -8210,6 +8217,7 @@ async function confirmarSalida() {
     notify('❌ Error al registrar salida: ' + err.message, 'error');
   }
   setLoading(false);
+  _confirmandoSalida = false;
 }
 
 // Aplica variables a una plantilla WA

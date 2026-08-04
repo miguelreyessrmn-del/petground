@@ -1984,7 +1984,7 @@
         </div>
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🔁 Frecuencia de visitas</div>
+            <div class="card-title">🔁 Frecuencia de visitas (sistema actual)</div>
           </div>
           <div style="padding:16px 20px">
             <div id="rep-chart-frecuencia" style="width:100%;height:220px;display:flex;align-items:center;justify-content:center"></div>
@@ -2033,7 +2033,7 @@
         <!-- Top clientes -->
         <div class="card">
           <div class="card-header">
-            <div class="card-title">🏆 Top clientes frecuentes</div>
+            <div class="card-title">🏆 Top clientes frecuentes (sistema actual)</div>
           </div>
           <div style="padding:0 16px" id="rep-top-clientes"></div>
         </div>
@@ -3846,9 +3846,27 @@ async function cargarTodo() {
       estado: c.estado || null, aplicacion: c.aplicacion || null
     }));
 
-    // Calcular alojamientos y facturación por cliente
+    // Estancias reales por cliente: entradas activas (ya cargadas arriba) + completadas
+    // (paginado explícito). Una fila de entradas = una estancia; nunca se cuentan cobros.
+    let entradasCompletadasParaConteo = [];
+    try {
+      let pageEC = 0;
+      while (true) {
+        const lote = await sb('GET', 'entradas', null,
+          `?status=eq.completado&select=cliente_id&limit=${pageSize}&offset=${pageEC * pageSize}`);
+        entradasCompletadasParaConteo = entradasCompletadasParaConteo.concat(lote);
+        if (lote.length < pageSize) break;
+        pageEC++;
+      }
+    } catch(err) { /* si falla, se cuentan solo las entradas activas ya cargadas */ }
+
+    const estanciasPorCliente = {};
+    entradas.forEach(e => { estanciasPorCliente[e.clienteId] = (estanciasPorCliente[e.clienteId]||0) + 1; });
+    entradasCompletadasParaConteo.forEach(e => { estanciasPorCliente[e.cliente_id] = (estanciasPorCliente[e.cliente_id]||0) + 1; });
+
+    // Calcular alojamientos (estancias reales, desde entradas) y facturación por cliente
     clientes.forEach(c => {
-      c.alojamientos = cobros.filter(co=>co.clienteId===c.id&&co.status==='pagado').length;
+      c.alojamientos = estanciasPorCliente[c.id] || 0;
       c.facturacion = cobros.filter(co=>co.clienteId===c.id&&co.status==='pagado').reduce((s,co)=>s+co.monto,0);
     });
 
@@ -10941,7 +10959,7 @@ function renderReportes() {
       </div>
     </div>
     <div style="margin-top:12px;background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--gray-600)">
-      📊 <strong>${Math.round(clientesRecurrentes/Math.max(clientes.length,1)*100)}%</strong> de tus clientes han regresado más de una vez
+      📊 <strong>${Math.round(clientesRecurrentes/Math.max(clientes.length,1)*100)}%</strong> de tus clientes han regresado más de una vez (desde que se usa el sistema actual)
     </div>
   `;
 

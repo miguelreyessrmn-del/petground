@@ -6321,8 +6321,9 @@ async function confirmarAplicarPago() {
     await cargarTodo();
     closeModal('modal-aplicar-pago');
     // Cajón + ticket + caja_movimientos si el pago es en efectivo
+    let cajaOk = true;
     if (metodo === 'Efectivo' && monto > 0) {
-      await Printer.cobro(
+      cajaOk = await Printer.cobro(
         c?.nombre || 'Cliente',
         'Cobro de saldo pendiente',
         monto,
@@ -6330,9 +6331,13 @@ async function confirmarAplicarPago() {
       );
     }
     const restanteTotal = Math.max(0, totalPendiente - monto);
-    notify(restanteTotal > 0
-      ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
-      : `✅ ¡Cuenta liquidada! $${monto.toLocaleString('es-MX')} cobrados`, 'success');
+    if (!cajaOk) {
+      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — ⚠️ no se pudo registrar en caja`, 'error');
+    } else {
+      notify(restanteTotal > 0
+        ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
+        : `✅ ¡Cuenta liquidada! $${monto.toLocaleString('es-MX')} cobrados`, 'success');
+    }
     // Refrescar banner si estamos en nueva entrada
     if (clienteEntradaSeleccionado?.id === id) seleccionarClienteEntrada(id);
     // Refrescar perfil si está abierto
@@ -8201,9 +8206,10 @@ async function confirmarSalida() {
     closeModal('modal-salida');
     // Ofrecer comprobante WA
     // Si pagó en efectivo → abrir cajón + imprimir ticket
+    let cajaOk = true;
     if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
-      await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
+      cajaOk = await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
     }
 
     if (c?.whatsapp && cobrado > 0) {
@@ -8215,8 +8221,10 @@ async function confirmarSalida() {
     }
     if (pendiente > 0) {
       notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
-    } else {
+    } else if (cajaOk) {
       notify('✅ Salida registrada y cobro completo', 'success');
+    } else {
+      notify('✅ Salida registrada — ⚠️ el cobro se guardó pero no se registró en caja', 'error');
     }
   } catch(err) {
     notify('❌ Error al registrar salida: ' + err.message, 'error');
@@ -9103,9 +9111,10 @@ const Printer = (() => {
   async function cobro(cliente, mascota, monto, entradaId) {
     const ticket = _buildTicket('cobro_efectivo', {cliente, mascota, monto});
     await _enviarCajonYTicket(ticket);
-    await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
+    const cajaOk = await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
       `${cliente} - ${mascota}`, entradaId);
     renderMovimientosCaja();
+    return cajaOk;
   }
 
   // Apertura manual / retiro: abre cajón + imprime ticket
@@ -9244,8 +9253,11 @@ async function guardarMovimientoCaja(tipo, motivo, monto, nota, entradaId=null) 
       entrada_id: entradaId,
       fecha: new Date().toISOString()
     });
+    return true;
   } catch(e) {
     console.error('Error guardando movimiento caja:', e);
+    notify('⚠️ No se pudo registrar el movimiento en caja. Verifica el corte de caja manualmente.', 'error');
+    return false;
   }
 }
 
@@ -9344,11 +9356,11 @@ async function confirmarAperturaCaja() {
   await Printer.apertura(motivo, monto, notaFinal, _cajaTipo);
 
   if (_cajaTipo === 'salida') {
-    await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
-    notify('✅ Cajón abierto — ' + motivo, 'success');
+    const cajaOk = await guardarMovimientoCaja('salida', motivo, monto, notaFinal);
+    if (cajaOk) notify('✅ Cajón abierto — ' + motivo, 'success');
   } else {
-    await guardarMovimientoCaja('entrada', motivo, monto, notaFinal);
-    notify('✅ Ingreso registrado — ' + motivo + (mascota ? ' · ' + mascota : ''), 'success');
+    const cajaOk = await guardarMovimientoCaja('entrada', motivo, monto, notaFinal);
+    if (cajaOk) notify('✅ Ingreso registrado — ' + motivo + (mascota ? ' · ' + mascota : ''), 'success');
   }
 
   renderMovimientosCaja();
@@ -9975,13 +9987,18 @@ async function guardarCobro() {
     closeModal('modal-nuevo-cobro');
     // Cajón + ticket + caja_movimientos si el cobro es en efectivo
     const metodoCobro = document.getElementById('cobro-metodo').value;
+    let cajaOk = true;
     if (metodoCobro === 'Efectivo' && monto > 0) {
       const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
       const conceptoCobro = document.getElementById('cobro-concepto').value || 'Cobro';
       const entradaIdCobro = parseInt(document.getElementById('cobro-entrada').value) || null;
-      await Printer.cobro(nombreCliente, conceptoCobro, monto, entradaIdCobro);
+      cajaOk = await Printer.cobro(nombreCliente, conceptoCobro, monto, entradaIdCobro);
     }
-    notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
+    if (cajaOk) {
+      notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
+    } else {
+      notify('✅ Cobro registrado: $'+monto.toLocaleString('es-MX')+' PM$ — ⚠️ no se pudo registrar en caja','error');
+    }
     initFacturacion();
   } catch(e) {
     notify('Error: '+e.message,'error');
@@ -11618,9 +11635,13 @@ async function cobrarRapido() {
       status: 'pagado'
     });
     // Abrir cajón + ticket
-    await Printer.cobro('Cobro rápido', concepto, monto, null);
+    const cajaOk = await Printer.cobro('Cobro rápido', concepto, monto, null);
     closeModal('modal-cobro-rapido');
-    notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
+    if (cajaOk) {
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
+    } else {
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ registrado — ⚠️ no se pudo guardar en caja`, 'error');
+    }
   } catch(err) {
     notify('Error: ' + err.message, 'error');
   }

@@ -5126,13 +5126,18 @@ function mdh_renderAdelantos() {
 }
 
 async function mdh_eliminarAdelanto(cobId) {
-  if (!confirm('¿Eliminar este pago/adelanto?')) return;
+  if (!confirm('¿Anular este pago/adelanto?')) return;
   setLoading(true);
   try {
-    await sb('DELETE', `cobros?id=eq.${cobId}`, null);
+    await sb('PATCH', `cobros?id=eq.${cobId}`, {
+      estado: 'anulado',
+      estado_motivo: 'Anulado manualmente desde Adelantos',
+      estado_por: usuarioActual?.nombre || 'Sistema',
+      estado_fecha: new Date().toISOString()
+    });
     await cargarTodo();
     mdh_renderAdelantos();
-    notify('🗑️ Pago eliminado', 'success');
+    notify('🗑️ Pago anulado', 'success');
   } catch(e) { notify('Error: ' + e.message, 'error'); }
   setLoading(false);
 }

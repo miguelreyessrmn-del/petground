@@ -94,7 +94,6 @@
   .nav-item.active .nav-badge { background:rgba(255,255,255,0.3); }
 
   .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.08); }
-  .user-card { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); background:rgba(255,255,255,0.06); }
   .user-avatar { width:32px; height:32px; border-radius:50%; background:var(--orange); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:white; }
   .user-info .user-name { font-size:12px; font-weight:600; color:white; }
   .user-info .user-role { font-size:10px; color:rgba(255,255,255,0.4); }
@@ -182,13 +181,6 @@
   .occ-bar-label { font-size:12px; opacity:0.7; margin-bottom:8px; }
   .occ-bar { height:10px; background:rgba(255,255,255,0.15); border-radius:10px; overflow:hidden; }
   .occ-bar-fill { height:100%; background:var(--orange); border-radius:10px; transition:width 1s ease; }
-  .link-btns { display:flex; gap:10px; margin-bottom:24px; }
-  .link-btn { flex:1; background:white; border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:14px 18px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.2s; box-shadow:var(--shadow-sm); }
-  .link-btn:hover { border-color:var(--orange); box-shadow:0 4px 16px rgba(244,123,32,0.15); }
-  .link-btn .link-icon { width:38px; height:38px; border-radius:10px; background:rgba(244,123,32,0.1); display:flex; align-items:center; justify-content:center; font-size:18px; }
-  .link-btn .link-text .t1 { font-size:13px; font-weight:600; color:var(--blue); }
-  .link-btn .link-text .t2 { font-size:11px; color:var(--gray-400); }
-
   /* TABLES */
   .card { background:white; border-radius:var(--radius); box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); overflow:hidden; }
   .card-header { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--gray-100); }
@@ -198,7 +190,6 @@
   .badge-green { background:var(--green-light); color:var(--green); }
   .badge-red { background:var(--red-light); color:var(--red); }
   .badge-blue { background:rgba(27,47,91,0.1); color:var(--blue); }
-  .badge-yellow { background:var(--yellow-light); color:var(--yellow); }
   table { width:100%; border-collapse:collapse; }
   thead th { background:var(--gray-50); padding:10px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.8px; }
   tbody tr { border-bottom:1px solid var(--gray-100); transition:background 0.15s; }
@@ -228,7 +219,6 @@
   /* GRID 2 COL */
   .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-  .mt-6 { margin-top:24px; }
   .mt-4 { margin-top:16px; }
 
   /* MODAL */
@@ -246,7 +236,6 @@
   /* FORM */
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
   .form-row.single { grid-template-columns:1fr; }
-  .form-row.triple { grid-template-columns:1fr 1fr 1fr; }
   .form-group { display:flex; flex-direction:column; gap:5px; }
   .form-label { font-size:12px; font-weight:600; color:var(--gray-600); }
   .form-input { padding:9px 12px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-size:13px; font-family:'Poppins',sans-serif; color:var(--gray-800); outline:none; transition:all 0.2s; background:white; }
@@ -288,26 +277,6 @@
   .history-dates { font-size:12.5px; font-weight:600; color:var(--blue); }
   .history-pets { font-size:11px; color:var(--gray-400); }
   .history-amount { font-family:'Nunito',sans-serif; font-weight:800; color:var(--green); font-size:14px; }
-
-  /* PLANNING */
-  .planning-grid { overflow-x:auto; }
-  .planning-table { min-width:800px; width:100%; }
-  .planning-table th { background:var(--blue); color:white; padding:10px 8px; font-size:11px; font-weight:700; text-align:center; letter-spacing:0.5px; }
-  .planning-table th:first-child { text-align:left; padding-left:16px; background:var(--blue-mid); }
-  .planning-table td { padding:6px 4px; text-align:center; }
-  .planning-table td:first-child { text-align:left; padding-left:16px; font-weight:600; font-size:12px; color:var(--blue); background:var(--gray-50); }
-  .planning-table tr:hover td { background:rgba(244,123,32,0.04); }
-  .planning-table tr:hover td:first-child { background:var(--gray-100); }
-  .day-cell { width:28px; height:28px; border-radius:6px; margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; cursor:pointer; transition:all 0.15s; }
-  .day-cell.occupied { background:var(--orange); color:white; }
-  .day-cell.free { background:var(--gray-100); color:var(--gray-400); }
-  .day-cell.occupied:hover { background:var(--orange-dark); transform:scale(1.1); }
-  .day-cell.today { ring:2px solid var(--blue); }
-
-  /* TABS */
-  .tabs { display:flex; gap:4px; background:var(--gray-100); border-radius:var(--radius-sm); padding:4px; margin-bottom:20px; }
-  .tab { padding:7px 16px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; color:var(--gray-600); }
-  .tab.active { background:white; color:var(--blue); box-shadow:var(--shadow-sm); }
 
   /* EMPTY STATE */
   .empty-state { text-align:center; padding:48px 20px; }
@@ -373,7 +342,6 @@
     .link-btns { flex-direction:column; }
     .modal { width:95vw !important; margin:16px; }
     .form-row { grid-template-columns:1fr !important; }
-    .form-row.triple { grid-template-columns:1fr !important; }
     table { font-size:12px; }
     td, th { padding:8px 10px !important; }
     .btn { padding:8px 12px; font-size:12px; }
@@ -2709,21 +2677,6 @@
   </div>
 </div>
 
-<!-- MODAL VER RECIBO -->
-<div class="modal-overlay" id="modal-recibo">
-  <div class="modal" style="width:480px">
-    <div class="modal-header">
-      <div class="modal-title">🧾 Recibo de Cobro</div>
-      <button class="modal-close" onclick="closeModal('modal-recibo')">✕</button>
-    </div>
-    <div class="modal-body" id="recibo-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-recibo')">Cerrar</button>
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL NUEVO/EDITAR USUARIO -->
 <div class="modal-overlay" id="modal-usuario">
   <div class="modal" style="width:420px">
@@ -3247,8 +3200,6 @@ function detenerAutoLogout() {
 
 // ===================== RESERVACIONES INTERNAS =====================
 
-let _resClienteId = null;
-let _resMascotasSeleccionadas = [];
 let nr_reservacionEditandoId = null; // ID de reservación en modo edición (null = nueva)
 
 async function cargarReservaciones() {
@@ -3435,69 +3386,6 @@ async function editarReservacion(id) {
     if (titulo) titulo.textContent = '✏️ Editar reservación';
     notify(`✏️ Editando reservación de ${clientes.find(c=>c.id===r.cliente_id)?.nombre||''}`, 'success');
   }, 200);
-}
-
-function res_buscarCliente(q) {
-  const el = document.getElementById('res-resultados-cliente');
-  if (!q.trim()) { el.innerHTML=''; return; }
-  const f = q.toLowerCase();
-  const found = clientes.filter(c =>
-    c.nombre?.toLowerCase().includes(f) ||
-    c.whatsapp?.includes(f) ||
-    (c.mascotas||[]).some(m=>(m.nombre||m).toLowerCase().includes(f))
-  ).slice(0,6);
-  if (!found.length) { el.innerHTML='<div style="font-size:12px;color:var(--gray-400);padding:8px">Sin resultados</div>'; return; }
-  el.innerHTML = found.map(c=>`
-    <div onclick="res_seleccionarCliente(${c.id})" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:4px;cursor:pointer;background:white">
-      <div class="avatar" style="width:30px;height:30px;font-size:11px">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:13px">${c.nombre}</div>
-        <div style="font-size:11px;color:var(--gray-400)">📱 ${c.whatsapp||'—'} · 🐕 ${(c.mascotas||[]).map(m=>m.nombre||m).join(', ')||'Sin mascotas'}</div>
-      </div>
-    </div>`).join('');
-}
-
-function res_seleccionarCliente(id) {
-  const c = clientes.find(cl=>cl.id===id);
-  if (!c) return;
-  _resClienteId = id;
-  _resMascotasSeleccionadas = (c.mascotas||[]).map(m=>m.nombre||m);
-  document.getElementById('res-resultados-cliente').innerHTML='';
-  document.getElementById('res-buscar-cliente').value='';
-  document.getElementById('res-cliente-nombre').textContent = c.nombre;
-  document.getElementById('res-cliente-wa').textContent = '📱 '+(c.whatsapp||'Sin WhatsApp');
-  document.getElementById('res-cliente-seleccionado').style.display='block';
-  const macs = c.mascotas||[];
-  document.getElementById('res-mascotas-lista').innerHTML = macs.map(m=>{
-    const nm = m.nombre||m;
-    return `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer">
-      <input type="checkbox" checked onchange="res_toggleMascota('${nm}',this.checked)" style="width:16px;height:16px;accent-color:var(--orange)">
-      <span style="font-size:13px">🐕 ${nm}</span>
-    </label>`;
-  }).join('') || '<div style="font-size:12px;color:var(--gray-400)">Sin mascotas registradas</div>';
-}
-
-function res_toggleMascota(nombre, checked) {
-  if (checked) { if (!_resMascotasSeleccionadas.includes(nombre)) _resMascotasSeleccionadas.push(nombre); }
-  else { _resMascotasSeleccionadas = _resMascotasSeleccionadas.filter(m=>m!==nombre); }
-}
-
-function res_limpiarCliente() {
-  _resClienteId = null;
-  _resMascotasSeleccionadas = [];
-  document.getElementById('res-cliente-seleccionado').style.display='none';
-  document.getElementById('res-buscar-cliente').value='';
-}
-
-function res_nuevoCliente() { openModalNuevoCliente(); }
-
-function res_calcNoches() {
-  const fe = document.getElementById('res-fecha-entrada').value;
-  const fs = document.getElementById('res-fecha-salida').value;
-  if (fe && fs) {
-    const n = Math.max(0, Math.ceil((new Date(fs)-new Date(fe))/(1000*60*60*24)));
-    document.getElementById('res-noches').value = n + ' noche' + (n!==1?'s':'');
-  }
 }
 
 // ===================== NUEVA RESERVACIÓN — funciones nr_ =====================
@@ -4665,8 +4553,6 @@ async function generarComprobantePDF(entradaId) {
     .cp-ok{background:#d6f0e4;border-radius:8px;padding:8px 12px;color:#1a7a4a;font-size:11px;margin-bottom:10px;font-weight:700}
     .cp-footer{text-align:center;color:#aaa;font-size:9px;margin-top:12px;padding-top:10px;border-top:1px dashed #ddd}
     .cp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-    .cp-tag{background:#fde8de;color:#E8622A;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:700}
-    @media print{.cp-actbar{display:none!important}}
   </style>
 
   <div class="cp-header">
@@ -6831,9 +6717,6 @@ function calcResumen() {
   }
 }
 
-// Mantener compatibilidad con calcTotal
-function calcTotal() { calcResumen(); }
-
 // Toggle tipo descuento GLOBAL (% o $)
 function ne_toggleDescTipo() {
   const btn = document.getElementById('ne-desc-tipo-btn');
@@ -7786,16 +7669,7 @@ function notify(msg, type='') {
 }
 
 // ===================== FACTURACIÓN DATA =====================
-let cobros = [
-  { id:1, clienteId:1, entradaId:1, fecha:'2026-03-15', metodo:'Efectivo', monto:4800, concepto:'Hospedaje', notas:'', status:'pagado' },
-  { id:2, clienteId:2, entradaId:2, fecha:'2026-03-20', metodo:'Transferencia', monto:3000, concepto:'Adelanto hospedaje', notas:'OXXO Pay ref: 123456', status:'adelanto' },
-  { id:3, clienteId:2, entradaId:2, fecha:'2026-04-05', metodo:'Transferencia', monto:2544, concepto:'Saldo pendiente', notas:'', status:'pagado' },
-  { id:4, clienteId:5, entradaId:5, fecha:'2026-04-01', metodo:'Tarjeta', monto:1500, concepto:'Adelanto hospedaje', notas:'', status:'adelanto' },
-  { id:5, clienteId:8, entradaId:8, fecha:'2026-04-08', metodo:'Efectivo', monto:1000, concepto:'Adelanto', notas:'', status:'adelanto' },
-  { id:6, clienteId:11, entradaId:11, fecha:'2026-04-09', metodo:'Transferencia', monto:2000, concepto:'Adelanto hospedaje', notas:'BBVA ref: 789', status:'adelanto' },
-];
-
-let facTabActual = 'cobros';
+let cobros = []; // datos reales cargados desde Supabase en cargarTodo()
 
 // ===================== FACTURACIÓN INIT =====================
 function setPeriodo(tipo) {
@@ -9064,40 +8938,6 @@ function renderCobrosEmpleado() {
   }).join('');
 }
 
-function renderGraficaSemanas() {
-  const { desde, hasta } = getFechasPeriodo();
-  const el = document.getElementById('fac-grafica-semanas');
-  if (!el) return;
-  const periodo = cobrosDelPeriodo();
-  if (!periodo.length) { el.innerHTML='<div style="color:var(--gray-400);font-size:13px;padding:8px 0">Sin datos en este período</div>'; return; }
-
-  // Agrupar por semana
-  const semanas = {};
-  periodo.forEach(c => {
-    const d = new Date(c.fecha);
-    const lunes = new Date(d); lunes.setDate(d.getDate() - ((d.getDay()+6)%7));
-    const key = lunes.toISOString().split('T')[0];
-    semanas[key] = (semanas[key]||0) + c.monto;
-  });
-  const keys = Object.keys(semanas).sort();
-  const maxVal = Math.max(...Object.values(semanas), 1);
-
-  el.innerHTML = `<div style="display:flex;align-items:flex-end;gap:4px;height:120px">
-    ${keys.map(k => {
-      const h = Math.round((semanas[k]/maxVal)*100);
-      const label = new Date(k+'T12:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0">
-        <div style="font-size:9px;color:var(--gray-400)">${semanas[k]>=1000?(semanas[k]/1000).toFixed(0)+'k':semanas[k]}</div>
-        <div style="width:100%;height:${Math.max(h,2)}px;background:var(--orange);border-radius:3px 3px 0 0;opacity:0.85" title="$${semanas[k].toLocaleString('es-MX')}"></div>
-        <div style="font-size:8px;color:var(--gray-400);white-space:nowrap;overflow:hidden;max-width:100%">${label}</div>
-      </div>`;
-    }).join('')}
-  </div>`;
-
-  const label = document.getElementById('fac-periodo-label');
-  if (label) label.textContent = `${desde} → ${hasta}`;
-}
-
 function renderMetodosPago() {
   const el = document.getElementById('fac-metodos');
   if (!el) return;
@@ -9138,37 +8978,9 @@ function renderTopClientesPeriodo() {
 }
 
 function switchFacTab(tab) {
-  facTabActual = tab;
-  // Legacy — ya no hay tabs pero se mantiene por compatibilidad
+  // Legacy — ya no hay tabs pero se mantiene por compatibilidad (llamada desde cobrarDirecto())
 }
 
-// ===================== RENDER COBROS =====================
-function renderCobros() {
-  // Solo se usa en perfil de cliente — tabla compacta
-  const tbody = document.getElementById('tbody-cobros');
-  if (!tbody) return;
-  const metodo = document.getElementById('filtro-metodo')?.value || '';
-  const filtrados = cobros.filter(c => !metodo || c.metodo===metodo);
-  const badge = document.getElementById('badge-cobros-count');
-  if (badge) badge.textContent = filtrados.length+' cobros';
-  if (!filtrados.length) { tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="es-icon">💸</div><div class="es-text">Sin cobros</div></div></td></tr>'; return; }
-  const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
-  tbody.innerHTML = filtrados.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,100).map(c => {
-    const cl = clientes.find(cl=>cl.id===c.clienteId);
-    const init = cl ? cl.nombre.split(' ').map(w=>w[0]).slice(0,2).join('') : '??';
-    const statusBadge = c.status==='pagado' ? '<span class="badge badge-green">✅ Pagado</span>' : '<span class="badge badge-orange">🔖 Adelanto</span>';
-    return `<tr>
-      <td><div class="date-cell"><div class="date">${c.fecha}</div></div></td>
-      <td onclick="verPerfilCliente(${cl?.id})" style="cursor:pointer"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${init}</div><div class="client-link" style="font-size:12px">${cl?.nombre||'—'}</div></div></td>
-      <td><div style="font-size:11px;color:var(--gray-600)">—</div></td>
-      <td><div style="font-size:12px">${c.concepto}</div></td>
-      <td><span style="font-size:12px">${metIcon[c.metodo]||''} ${c.metodo}</span></td>
-      <td><span class="amount" style="font-size:13px">$${c.monto.toLocaleString('es-MX')} PM$</span></td>
-      <td>${statusBadge}</td>
-      <td><button class="btn btn-sm btn-ghost" onclick="verRecibo(${c.id})">🧾</button></td>
-    </tr>`;
-  }).join('');
-}
 // ===================== RENDER ADELANTOS =====================
 async function renderAdelantos() {
   const tbody = document.getElementById('tbody-adelantos');
@@ -9422,36 +9234,6 @@ async function guardarAdelanto() {
   setLoading(false);
 }
 
-// ===================== RECIBO =====================
-function verRecibo(id) {
-  const c = cobros.find(co=>co.id===id);
-  const cl = clientes.find(cl=>cl.id===c.clienteId);
-  const ent = entradas.find(e=>e.id===c.entradaId);
-  const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
-  document.getElementById('recibo-body').innerHTML = `
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:32px">🐾</div>
-      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:20px;color:var(--blue)">PetGround</div>
-      <div style="font-size:11px;color:var(--gray-400)">PetGround · Puebla, Mex.</div>
-    </div>
-    <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Folio</span><span style="font-weight:700">#${String(c.id).padStart(4,'0')}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Fecha</span><span style="font-weight:600">${c.fecha}</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Cliente</span><span style="font-weight:600">${cl?.nombre}</span></div>
-      ${ent?`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Mascotas</span><span style="font-weight:600">${ent.mascotas.join(', ')}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--gray-600);font-size:12px">Concepto</span><span style="font-weight:600">${c.concepto}</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--gray-600);font-size:12px">Método</span><span>${metIcon[c.metodo]} ${c.metodo}</span></div>
-    </div>
-    <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:16px;text-align:center">
-      <div style="font-size:11px;color:var(--gray-600);margin-bottom:4px">TOTAL COBRADO</div>
-      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:32px;color:var(--green)">$${c.monto.toLocaleString('es-MX')} PM$</div>
-    </div>
-    ${c.notas?`<div style="margin-top:12px;font-size:12px;color:var(--gray-600)">📝 ${c.notas}</div>`:''}
-    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--gray-400)">Gracias por confiar en PetGround 🐾</div>
-  `;
-  document.getElementById('modal-recibo').classList.add('open');
-}
-
 // ===================== RAZAS =====================
 const RAZAS_DEFAULT = [
   'Affenpinscher','Afgano','Airedale Terrier','Akita','Akita Americano','Alaskan Malamute',
@@ -9486,8 +9268,6 @@ function getRazas() {
   const extras = extra ? extra.split('\n').map(r=>r.trim()).filter(Boolean) : [];
   return [...new Set([...RAZAS_DEFAULT, ...extras])].sort();
 }
-const RAZAS = RAZAS_DEFAULT; // backwards compat
-
 let mascotasNuevas = []; // array de tarjetas de mascotas en el modal
 
 function agregarTarjetaMascota(datos={}) {
@@ -10008,7 +9788,6 @@ function showScreen(name) {
   }
   if (name === 'nueva-entrada') {
     actualizarDropdownsHabitacion();
-    poblarSelectServicios();
     // Solo asignar fecha/hora actuales si NO estamos editando una entrada existente
     if (!entradaEditandoId) {
       const ahora = new Date();
@@ -10381,8 +10160,7 @@ function renderReportes() {
   renderHistorialDescuentos();
 }
 
-// ===================== HISTORIAL DE SALIDAS =====================
-let salidasCache = [];
+// ===================== HISTORIAL DE COBROS =====================
 async function renderCobros() {
   const loading = document.getElementById('sal-loading');
   const table = document.getElementById('sal-table');
@@ -10760,24 +10538,6 @@ function renderServiciosList() {
   `).join('') || '<div style="padding:16px;color:var(--gray-400);font-size:13px">Sin servicios. Agrega uno.</div>';
 }
 
-function poblarSelectServicios() {
-  const sel = document.getElementById('ne-servicio');
-  if (!sel) return;
-  const servicios = getServicios();
-  sel.innerHTML = '<option value="">— Seleccionar servicio —</option>' +
-    servicios.map(s => `<option value="${s.id}" data-precio="${s.precio}">${s.nombre} — $${s.precio} PM$</option>`).join('');
-}
-
-function onServicioChange() {
-  const sel = document.getElementById('ne-servicio');
-  const opt = sel.options[sel.selectedIndex];
-  const precio = opt?.dataset?.precio;
-  if (precio) {
-    document.getElementById('ne-precio').value = precio;
-    calcTotal();
-  }
-}
-
 function abrirModalNuevoServicio() {
   editandoServicioId = null;
   document.getElementById('modal-servicio-title').textContent = '🏷️ Nuevo Servicio';
@@ -10814,7 +10574,6 @@ function guardarServicio() {
   }
   setServicios(servicios);
   renderServiciosList();
-  poblarSelectServicios();
   closeModal('modal-servicio');
   notify(`✅ Servicio "${nombre}" guardado — $${precio} PM$`, 'success');
 }
@@ -10824,7 +10583,6 @@ function eliminarServicio(id) {
   if (!confirm(`¿Eliminar "${s?.nombre}"?`)) return;
   setServicios(getServicios().filter(s=>s.id!==id));
   renderServiciosList();
-  poblarSelectServicios();
   notify('Servicio eliminado','success');
 }
 </script>

@@ -565,15 +565,7 @@
       <span class="icon">📈</span><span>Reportes</span>
     </div>
     <div class="nav-item" onclick="showScreen('salidas')">
-      <span class="icon">🚪</span><span>Historial Salidas</span>
-    </div>
-    <div class="nav-item" onclick="showScreen('recordatorios')">
-      <span class="icon">🔔</span><span>Recordatorios</span>
-      <span class="nav-badge" id="badge-recordatorios" style="display:none">0</span>
-    </div>
-    <div class="nav-item" onclick="showScreen('centro-operaciones')">
-      <span class="icon">⚡</span><span>Centro de Operaciones</span>
-      <span class="nav-badge" id="badge-centro-ops" style="display:none">0</span>
+      <span class="icon">🧾</span><span>Historial de Cobros</span>
     </div>
     <div class="nav-item" id="nav-usuarios" onclick="showScreen('usuarios')">
       <span class="icon">👤</span><span>Usuarios</span>
@@ -1370,7 +1362,7 @@
             <div class="card-title" style="color:#166534">💰 Anticipo / Adelanto (opcional)</div>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#166534;font-weight:600">
               <input type="checkbox" id="nr-tiene-adelanto" style="width:16px;height:16px;accent-color:var(--green)" onchange="nr_toggleAdelanto()">
-              El cliente deja anticipo ahora
+              <span id="nr-adelanto-texto">El cliente deja anticipo ahora</span>
             </label>
           </div>
           <div id="nr-adelanto-form" style="display:none;padding:16px 20px">
@@ -2092,6 +2084,22 @@
         </div>
         <div id="rep-servicios-uso" style="padding:0 16px 8px"></div>
       </div>
+
+      <!-- HISTORIAL DE DESCUENTOS -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div class="card-title">🏷️ Historial de descuentos</div>
+          <span class="badge badge-orange" id="rep-descuentos-count">0</span>
+        </div>
+        <div id="rep-descuentos-loading" style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
+        <table id="rep-descuentos-table" style="display:none">
+          <thead>
+            <tr><th>Fecha</th><th>Cliente</th><th>Mascota / Estancia</th><th>Descuento</th><th>Motivo</th><th>Aplicado por</th></tr>
+          </thead>
+          <tbody id="rep-descuentos-tbody"></tbody>
+        </table>
+        <div id="rep-descuentos-vacio" style="display:none;padding:30px;text-align:center;color:var(--gray-400);font-size:13px">Sin descuentos registrados</div>
+      </div>
     </div>
 
     <!-- =================== HISTORIAL DE SALIDAS =================== -->
@@ -2100,298 +2108,32 @@
         <div style="padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div class="search-wrap">
             <span class="search-icon">🔍</span>
-            <input type="text" id="sal-buscar" placeholder="Buscar cliente..." class="form-input" style="padding-left:36px;width:200px" oninput="renderSalidas()">
+            <input type="text" id="sal-buscar" placeholder="Buscar cliente o mascota..." class="form-input" style="padding-left:36px;width:200px" oninput="renderCobros()">
           </div>
-          <input type="date" class="form-input" id="sal-desde" style="width:150px" onchange="renderSalidas()">
+          <input type="date" class="form-input" id="sal-desde" style="width:150px" onchange="renderCobros()">
           <span style="font-size:12px;color:var(--gray-400)">—</span>
-          <input type="date" class="form-input" id="sal-hasta" style="width:150px" onchange="renderSalidas()">
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sal-desde').value='';document.getElementById('sal-hasta').value='';renderSalidas()">✕ Limpiar</button>
+          <input type="date" class="form-input" id="sal-hasta" style="width:150px" onchange="renderCobros()">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sal-desde').value='';document.getElementById('sal-hasta').value='';renderCobros()">✕ Limpiar</button>
           <div id="sal-total-badge" style="margin-left:auto;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)"></div>
         </div>
       </div>
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🚪 Salidas registradas</div>
+          <div class="card-title">🧾 Cobros registrados</div>
           <span class="badge badge-blue" id="sal-count-badge">0</span>
         </div>
         <div id="sal-loading" style="padding:30px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
         <table id="sal-table" style="display:none">
           <thead>
             <tr>
-              <th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Entrada</th><th>Salida</th><th>Días</th><th>Total</th><th>Método</th>
+              <th>Fecha/Hora</th><th>Cliente</th><th>Mascota</th><th>Concepto</th><th>Monto</th><th>Método</th><th>Estado</th><th>Estancia vinculada</th>
             </tr>
           </thead>
           <tbody id="sal-tbody"></tbody>
         </table>
         <div id="sal-vacio" style="display:none;padding:40px;text-align:center">
-          <div style="font-size:40px;margin-bottom:8px">🚪</div>
-          <div style="font-size:14px;color:var(--gray-400)">No hay salidas en el período seleccionado</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- =================== RECORDATORIOS =================== -->
-    <div class="screen fade-in" id="screen-recordatorios">
-      <div class="stats-row" id="rec-kpis" style="margin-bottom:20px"></div>
-      <div style="display:grid;gap:16px">
-        <!-- Salidas hoy y mañana -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">📤 Salidas hoy y mañana</div>
-            <span class="badge badge-orange" id="rec-salidas-badge">0</span>
-          </div>
-          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Salida prevista</th><th>Importe</th><th>Acción</th></tr></thead>
-          <tbody id="rec-salidas-tbody"></tbody></table>
-        </div>
-        <!-- Atrasados -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">⚠️ Atrasados — debieron salir</div>
-            <span class="badge badge-red" id="rec-atrasados-badge">0</span>
-          </div>
-          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Debió salir</th><th>Días extra</th><th>Acción</th></tr></thead>
-          <tbody id="rec-atrasados-tbody"></tbody></table>
-        </div>
-        <!-- Próximas entradas (reservaciones) -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">📥 Reservaciones próximas (7 días)</div>
-            <span class="badge badge-blue" id="rec-reservas-badge">0</span>
-          </div>
-          <table><thead><tr><th>Cliente</th><th>Mascotas</th><th>Hab.</th><th>Fecha entrada</th><th>Días</th><th>WhatsApp</th></tr></thead>
-          <tbody id="rec-reservas-tbody"></tbody></table>
-        </div>
-        <!-- Clientes inactivos -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">😴 Clientes sin visita en 90+ días</div>
-            <span class="badge badge-yellow" id="rec-inactivos-badge">0</span>
-          </div>
-          <div style="padding:12px 20px;font-size:12px;color:var(--gray-600);background:var(--yellow-light);border-bottom:1px solid var(--gray-100)">
-            💡 Estos clientes no han traído a sus mascotas en más de 3 meses. Un mensaje de WhatsApp puede reactivarlos.
-          </div>
-          <div id="rec-inactivos-lista" style="padding:8px 16px 16px"></div>
-        </div>
-        <!-- Cumpleaños de mascotas este mes -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">🎂 Cumpleaños de mascotas este mes</div>
-            <span class="badge badge-green" id="rec-cumple-badge">0</span>
-          </div>
-          <div id="rec-cumple-lista" style="padding:8px 16px 16px"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- =================== CENTRO DE OPERACIONES =================== -->
-    <div class="screen fade-in" id="screen-centro-operaciones">
-      <!-- Header con KPIs y botón nueva -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
-            <div class="stat-num" id="co-kpi-pendientes" style="font-size:22px;color:var(--orange)">0</div>
-            <div class="stat-label">Pendientes</div>
-          </div>
-          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
-            <div class="stat-num" id="co-kpi-urgentes" style="font-size:22px;color:#dc2626">0</div>
-            <div class="stat-label">Urgentes</div>
-          </div>
-          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
-            <div class="stat-num" id="co-kpi-hoy" style="font-size:22px;color:var(--blue)">0</div>
-            <div class="stat-label">Para hoy</div>
-          </div>
-          <div class="stat-card" style="min-width:110px;padding:10px 14px;cursor:default">
-            <div class="stat-num" id="co-kpi-plantillas" style="font-size:22px;color:#16a34a">0</div>
-            <div class="stat-label">Plantillas activas</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <!-- Botón activar notificaciones — onclick sin await para cumplir con iOS -->
-          <button id="btn-activar-notif"
-            style="padding:9px 16px;font-size:12px;font-weight:700;border:1.5px solid #3b82f6;color:#3b82f6;background:white;border-radius:8px;cursor:pointer;display:none"
-            onclick="(function(){
-              console.log('[PWA] Antes:', Notification.permission);
-              Notification.requestPermission().then(function(result){
-                console.log('[PWA] Resultado:', result);
-                console.log('[PWA] Despues:', Notification.permission);
-                if(result==='granted'){
-                  Alertas._iniciarPolling();
-                  document.getElementById('btn-activar-notif').style.display='none';
-                  notify('✅ Notificaciones activadas', 'success');
-                } else {
-                  notify('⚠️ Permiso denegado — activa las notificaciones en Ajustes', 'error');
-                }
-              });
-            })()">
-            🔔 Activar notificaciones
-          </button>
-          <button class="btn btn-primary" onclick="Alertas.abrirModalNueva()"
-            style="padding:10px 20px;font-weight:800;gap:6px">
-            ➕ Nueva operación
-          </button>
-        </div>
-      </div>
-
-      <!-- Tabs -->
-      <div style="display:flex;gap:0;border-bottom:2px solid var(--gray-100);margin-bottom:16px">
-        <button id="co-tab-pendientes" onclick="Alertas.cambiarTab('pendientes')"
-          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-2px">
-          ⏳ Pendientes
-        </button>
-        <button id="co-tab-completadas" onclick="Alertas.cambiarTab('completadas')"
-          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--gray-400)">
-          ✅ Completadas
-        </button>
-        <button id="co-tab-plantillas" onclick="Alertas.cambiarTab('plantillas')"
-          style="padding:10px 20px;font-weight:700;font-size:13px;border:none;background:none;cursor:pointer;color:var(--gray-400)">
-          🔄 Plantillas
-        </button>
-      </div>
-
-      <!-- Filtros -->
-      <div id="co-filtros" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-        <select id="co-fil-categoria" onchange="Alertas.aplicarFiltros()"
-          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
-          <option value="">Todas las categorías</option>
-          <option value="alerta">🔴 Alertas</option>
-          <option value="tarea">🟢 Tareas</option>
-        </select>
-        <select id="co-fil-prioridad" onchange="Alertas.aplicarFiltros()"
-          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
-          <option value="">Todas las prioridades</option>
-          <option value="urgente">🔴 Urgente</option>
-          <option value="alta">🟠 Alta</option>
-          <option value="normal">🟡 Normal</option>
-          <option value="baja">🟢 Baja</option>
-        </select>
-        <select id="co-fil-tipo" onchange="Alertas.aplicarFiltros()"
-          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
-          <option value="">Todos los tipos</option>
-          <option value="medicamento">💊 Medicamento</option>
-          <option value="limpieza">🧹 Limpieza</option>
-          <option value="alimentacion">🍖 Alimentación</option>
-          <option value="baño">🛁 Baño</option>
-          <option value="vacuna">💉 Vacuna</option>
-          <option value="cobro">💳 Cobro</option>
-          <option value="caja">💰 Caja</option>
-          <option value="salida">📤 Salida</option>
-          <option value="reservacion">📋 Reservación</option>
-          <option value="mantenimiento">🔧 Mantenimiento</option>
-          <option value="otro">📌 Otro</option>
-        </select>
-        <select id="co-fil-responsable" onchange="Alertas.aplicarFiltros()"
-          style="padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;font-family:'Poppins',sans-serif">
-          <option value="">Todos los responsables</option>
-        </select>
-        <button onclick="Alertas.limpiarFiltros()"
-          style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;background:white;cursor:pointer;color:var(--gray-500)">
-          ✕ Limpiar
-        </button>
-      </div>
-
-      <!-- Lista principal -->
-      <div id="co-lista" style="display:flex;flex-direction:column;gap:8px">
-        <div class="empty-state">
-          <div class="es-icon">⚡</div>
-          <div class="es-text">Cargando operaciones...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal nueva operación -->
-    <div class="modal-overlay" id="modal-nueva-operacion">
-      <div class="modal" style="max-width:520px;width:100%">
-        <div class="modal-header">
-          <div class="modal-title" id="co-modal-titulo">➕ Nueva operación</div>
-          <button class="modal-close" onclick="closeModal('modal-nueva-operacion')">✕</button>
-        </div>
-        <div style="padding:20px;display:grid;gap:14px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Categoría *</label>
-              <select id="co-nueva-categoria" class="form-input" style="font-family:'Poppins',sans-serif">
-                <option value="alerta">🔴 Alerta</option>
-                <option value="tarea">🟢 Tarea</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Tipo *</label>
-              <select id="co-nueva-tipo" class="form-input" style="font-family:'Poppins',sans-serif">
-                <option value="medicamento">💊 Medicamento</option>
-                <option value="limpieza">🧹 Limpieza</option>
-                <option value="alimentacion">🍖 Alimentación</option>
-                <option value="baño">🛁 Baño</option>
-                <option value="vacuna">💉 Vacuna</option>
-                <option value="cobro">💳 Cobro</option>
-                <option value="caja">💰 Caja</option>
-                <option value="salida">📤 Salida</option>
-                <option value="reservacion">📋 Reservación</option>
-                <option value="mantenimiento">🔧 Mantenimiento</option>
-                <option value="otro">📌 Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group" style="margin:0">
-            <label class="form-label">Título *</label>
-            <input type="text" id="co-nueva-titulo" class="form-input" placeholder="Ej: Dar medicamento a Toby">
-          </div>
-          <div class="form-group" style="margin:0">
-            <label class="form-label">Descripción</label>
-            <textarea id="co-nueva-desc" class="form-input" rows="2" placeholder="Detalle adicional..." style="resize:vertical;font-family:'Poppins',sans-serif"></textarea>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Prioridad</label>
-              <select id="co-nueva-prioridad" class="form-input" style="font-family:'Poppins',sans-serif">
-                <option value="normal">🟡 Normal</option>
-                <option value="alta">🟠 Alta</option>
-                <option value="urgente">🔴 Urgente</option>
-                <option value="baja">🟢 Baja</option>
-              </select>
-            </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Responsable</label>
-              <select id="co-nueva-responsable" class="form-input" style="font-family:'Poppins',sans-serif">
-                <option value="">— Cualquiera —</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Fecha</label>
-              <input type="date" id="co-nueva-fecha" class="form-input">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Hora</label>
-              <input type="time" id="co-nueva-hora" class="form-input">
-            </div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px">
-            <button class="btn btn-ghost" onclick="closeModal('modal-nueva-operacion')">Cancelar</button>
-            <button class="btn btn-primary" onclick="Alertas.guardarNueva()">✅ Guardar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal completar con comentario -->
-    <div class="modal-overlay" id="modal-completar-operacion">
-      <div class="modal" style="max-width:400px;width:100%">
-        <div class="modal-header">
-          <div class="modal-title">✅ Completar operación</div>
-          <button class="modal-close" onclick="closeModal('modal-completar-operacion')">✕</button>
-        </div>
-        <div style="padding:20px;display:grid;gap:14px">
-          <div class="form-group" style="margin:0">
-            <label class="form-label">Comentario (opcional)</label>
-            <textarea id="co-completar-comentario" class="form-input" rows="3"
-              placeholder="¿Algún detalle a registrar?" style="resize:vertical;font-family:'Poppins',sans-serif"></textarea>
-          </div>
-          <input type="hidden" id="co-completar-id">
-          <div style="display:flex;justify-content:flex-end;gap:10px">
-            <button class="btn btn-ghost" onclick="closeModal('modal-completar-operacion')">Cancelar</button>
-            <button class="btn btn-primary" style="background:#16a34a" onclick="Alertas._confirmarCompletar()">✅ Confirmar</button>
-          </div>
+          <div style="font-size:40px;margin-bottom:8px">🧾</div>
+          <div style="font-size:14px;color:var(--gray-400)">No hay cobros en el período seleccionado</div>
         </div>
       </div>
     </div>
@@ -3150,556 +2892,45 @@ function fechaFinanciera(cobro) {
   return cobro.fechaPago || cobro.fecha;
 }
 
+// Resuelve el descuento real de una entrada, sin importar en cuál de los dos
+// formatos se haya guardado. Mismo criterio de prioridad ya usado y probado
+// en generarComprobantePDF(): si existe el formato viejo (descuento jsonb
+// por mascota), ese manda; si no, se usa el formato nuevo (desc_tipo/
+// desc_valor/desc_monto). Acepta tanto el objeto ya mapeado en memoria como
+// una fila cruda de Supabase (mismos nombres de campo en ambos casos).
+function resolverDescuento(e) {
+  let desc = null;
+  if (e.descuento) {
+    try { desc = typeof e.descuento === 'string' ? JSON.parse(e.descuento) : e.descuento; } catch(err) { desc = null; }
+  }
+  const tieneDescViejo = desc && (desc.monto > 0 || desc.valor > 0);
+  const tieneDescNuevo = !tieneDescViejo && (parseFloat(e.desc_monto)||0) > 0;
+  if (!tieneDescViejo && !tieneDescNuevo) return null;
+  if (tieneDescViejo) {
+    return {
+      monto: desc.monto || 0,
+      base: desc.base || 0,
+      detalle: desc.porMascota
+        ? Object.entries(desc.porMascota).map(([m,d]) => {
+            const v = typeof d === 'object' ? d : { valor: d, tipo: 'pct' };
+            return `${m}: ${v.valor}${v.tipo==='pct'?'%':' PM$'}`;
+          }).join(', ')
+        : (desc.tipo === 'pct' ? `${desc.valor}%` : `$${desc.valor} PM$`)
+    };
+  }
+  return {
+    monto: parseFloat(e.desc_monto)||0,
+    base: parseFloat(e.subtotal||0) || ((parseFloat(e.importe)||0) + (parseFloat(e.desc_monto)||0)),
+    detalle: e.desc_tipo === 'pct' ? `${e.desc_valor}%` : `$${e.desc_valor} PM$`
+  };
+}
+
 // ===================== LOADING STATE =====================
 function setLoading(on) {
   loading = on;
   document.body.style.cursor = on ? 'wait' : 'default';
 }
 
-
-// ===================== ALERTAS — CENTRO DE OPERACIONES =====================
-const Alertas = (() => {
-
-  // ── Estado privado ──────────────────────────────────────────────────────
-  let _ops        = [];        // operaciones cargadas
-  let _plantillas = [];        // plantillas cargadas
-  let _tabActual  = 'pendientes';
-  let _filtros    = { categoria: '', prioridad: '', tipo: '', responsable: '' };
-  let _swReg      = null;      // ServiceWorkerRegistration (inyectado en Etapa 1)
-  let _pollingId  = null;      // ID del setInterval de Etapa 2
-
-  // Iconos y colores por prioridad
-  const _prioColor = { urgente:'#dc2626', alta:'#f97316', normal:'#eab308', baja:'#16a34a' };
-  const _prioLabel = { urgente:'🔴 Urgente', alta:'🟠 Alta', normal:'🟡 Normal', baja:'🟢 Baja' };
-  const _catLabel  = { alerta:'🔴 Alerta', tarea:'🟢 Tarea' };
-  const _tipoEmoji = { medicamento:'💊', limpieza:'🧹', alimentacion:'🍖', ba\u00f1o:'🛁',
-    vacuna:'💉', cobro:'💳', caja:'💰', salida:'📤', reservacion:'📋',
-    mantenimiento:'🔧', otro:'📌' };
-
-  // Mapa de acciones → navegación existente
-  const _acciones = {
-    'abrir_hospedaje':   (op) => op.entidad_id ? verDetalleHospedaje(op.entidad_id) : null,
-    'abrir_cliente':     (op) => op.entidad_id ? verPerfilCliente(op.entidad_id)    : null,
-    'abrir_reservacion': ()   => showScreen('reservaciones-admin'),
-    'abrir_caja':        ()   => showScreen('caja'),
-    'abrir_facturacion': ()   => showScreen('facturacion'),
-    'abrir_cobros':      ()   => showScreen('cobros-empleado'),
-  };
-
-  // ── A: Escritura ─────────────────────────────────────────────────────────
-
-  async function crear(opts) {
-    const ahora = new Date();
-    const op = {
-      categoria:          opts.categoria          || 'alerta',
-      tipo:               opts.tipo               || 'otro',
-      titulo:             opts.titulo,
-      descripcion:        opts.descripcion        || null,
-      prioridad:          opts.prioridad          || 'normal',
-      fecha_hora:         opts.fechaHora          || ahora.toISOString(),
-      plantilla_id:       opts.plantillaId        || null,
-      es_recurrente:      opts.esRecurrente       || false,
-      responsable_id:     opts.responsableId      || usuarioActual?.id      || null,
-      responsable_nombre: opts.responsableNombre  || usuarioActual?.nombre  || 'Sistema',
-      estado:             'pendiente',
-      entidad:            opts.entidad            || null,
-      entidad_id:         opts.entidadId          || null,
-      accion:             opts.accion             || null,
-      push_enviado:       false,
-      creada_por_nombre:  usuarioActual?.nombre   || 'Sistema',
-    };
-    try {
-      const res = await sb('POST', 'operaciones', op);
-      _actualizarBadge();
-      return res;
-    } catch(e) {
-      console.error('Alertas.crear error:', e);
-      throw e;
-    }
-  }
-
-  async function crearPlantilla(opts) {
-    const p = {
-      categoria:         opts.categoria         || 'tarea',
-      tipo:              opts.tipo              || 'otro',
-      titulo:            opts.titulo,
-      descripcion:       opts.descripcion       || null,
-      prioridad:         opts.prioridad         || 'normal',
-      accion:            opts.accion            || null,
-      frecuencia:        opts.frecuencia,
-      intervalo:         opts.intervalo         || 1,
-      dias_semana:       opts.diasSemana        || null,
-      hora_ejecucion:    opts.horaEjecucion     || null,
-      activa:            true,
-      fecha_inicio:      opts.fechaInicio       || new Date().toISOString().split('T')[0],
-      proxima_ejecucion: _calcProxima(opts),
-      responsable_nombre: opts.responsableNombre || usuarioActual?.nombre || null,
-      creada_por_nombre:  usuarioActual?.nombre  || 'Sistema',
-    };
-    try {
-      return await sb('POST', 'operaciones_plantillas', p);
-    } catch(e) {
-      console.error('Alertas.crearPlantilla error:', e);
-      throw e;
-    }
-  }
-
-  // ── B: Cambios de estado ─────────────────────────────────────────────────
-
-  async function tomar(id) {
-    try {
-      await sb('PATCH', 'operaciones', { estado: 'en_proceso' }, `?id=eq.${id}`);
-      await cargar();
-    } catch(e) { notify('Error al tomar la operaci\u00f3n', 'error'); }
-  }
-
-  async function completar(id) {
-    document.getElementById('co-completar-id').value = id;
-    document.getElementById('co-completar-comentario').value = '';
-    document.getElementById('modal-completar-operacion').classList.add('open');
-  }
-
-  async function _confirmarCompletar() {
-    const id = document.getElementById('co-completar-id').value;
-    const comentario = document.getElementById('co-completar-comentario').value.trim();
-    try {
-      await sb('PATCH', 'operaciones', {
-        estado: 'completada',
-        completada_at: new Date().toISOString(),
-        completada_por_nombre: usuarioActual?.nombre || 'Sistema',
-        comentario: comentario || null
-      }, `?id=eq.${id}`);
-      closeModal('modal-completar-operacion');
-      await cargar();
-      notify('\u2705 Operaci\u00f3n completada', 'success');
-    } catch(e) { notify('Error al completar', 'error'); }
-  }
-
-  async function cancelar(id) {
-    if (!confirm('\u00bfCancelar esta operaci\u00f3n?')) return;
-    try {
-      await sb('PATCH', 'operaciones', {
-        estado: 'cancelada',
-        cancelada_at: new Date().toISOString()
-      }, `?id=eq.${id}`);
-      await cargar();
-      notify('Operaci\u00f3n cancelada', 'success');
-    } catch(e) { notify('Error al cancelar', 'error'); }
-  }
-
-  // ── C: Generación desde plantillas ───────────────────────────────────────
-
-  async function _generarDesdePlantillas() {
-    if (!_plantillas.length) return;
-    const ahora = new Date();
-    for (const p of _plantillas) {
-      if (!p.activa) continue;
-      const proxima = p.proxima_ejecucion ? new Date(p.proxima_ejecucion) : null;
-      if (!proxima || proxima > ahora) continue;
-      // Generar instancia
-      await crear({
-        plantillaId:       p.id,
-        esRecurrente:      true,
-        categoria:         p.categoria,
-        tipo:              p.tipo,
-        titulo:            p.titulo,
-        descripcion:       p.descripcion,
-        prioridad:         p.prioridad,
-        fechaHora:         proxima.toISOString(),
-        accion:            p.accion,
-        responsableNombre: p.responsable_nombre,
-      });
-      // Actualizar proxima_ejecucion
-      const nuevaProxima = _calcProximaDesde(p, proxima);
-      await sb('PATCH', 'operaciones_plantillas', {
-        ultima_ejecucion:    proxima.toISOString(),
-        proxima_ejecucion:   nuevaProxima.toISOString()
-      }, `?id=eq.${p.id}`);
-    }
-  }
-
-  function _calcProxima(opts) {
-    const ahora = new Date();
-    return _calcProximaDesde({
-      frecuencia: opts.frecuencia,
-      intervalo:  opts.intervalo || 1,
-      hora_ejecucion: opts.horaEjecucion
-    }, ahora).toISOString();
-  }
-
-  function _calcProximaDesde(p, desde) {
-    const d = new Date(desde);
-    switch (p.frecuencia) {
-      case 'horaria':
-        d.setHours(d.getHours() + (p.intervalo || 1));
-        break;
-      case 'diaria':
-        d.setDate(d.getDate() + (p.intervalo || 1));
-        if (p.hora_ejecucion) {
-          const [h, m] = p.hora_ejecucion.split(':');
-          d.setHours(parseInt(h), parseInt(m), 0, 0);
-        }
-        break;
-      case 'semanal':
-        d.setDate(d.getDate() + 7 * (p.intervalo || 1));
-        break;
-      case 'mensual':
-        d.setMonth(d.getMonth() + (p.intervalo || 1));
-        break;
-      case 'personalizada':
-        d.setDate(d.getDate() + (p.intervalo || 1));
-        break;
-      default:
-        d.setDate(d.getDate() + 1);
-    }
-    return d;
-  }
-
-  // ── D: Carga y render ────────────────────────────────────────────────────
-
-  async function cargar() {
-    const el = document.getElementById('co-lista');
-    if (!el) return;
-    el.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div class="es-text">Cargando...</div></div>';
-
-    // Mostrar botón "Activar notificaciones" si el permiso aún no ha sido concedido
-    const btnNotif = document.getElementById('btn-activar-notif');
-    if (btnNotif && 'Notification' in window) {
-      btnNotif.style.display = Notification.permission === 'granted' ? 'none' : '';
-    }
-    try {
-      // Cargar plantillas primero
-      _plantillas = await sb('GET', 'operaciones_plantillas', null, '?activa=eq.true&order=created_at.desc') || [];
-      // Generar instancias pendientes desde plantillas
-      await _generarDesdePlantillas();
-      // Cargar operaciones (orden: urgentes primero, luego por fecha)
-      _ops = await sb('GET', 'operaciones', null,
-        '?order=created_at.desc&limit=200') || [];
-    } catch(e) {
-      el.innerHTML = '<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error al cargar. Verifica tu conexi\u00f3n.</div></div>';
-      return;
-    }
-    _actualizarKPIs();
-    _poblarFiltroResponsable();
-    renderLista();
-  }
-
-  function _actualizarKPIs() {
-    const pend    = _ops.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso');
-    const urgente = pend.filter(o => o.prioridad === 'urgente');
-    const hoy     = pend.filter(o => (o.fecha_hora||'').startsWith(new Date().toISOString().split('T')[0]));
-    const kpiP = document.getElementById('co-kpi-pendientes');
-    const kpiU = document.getElementById('co-kpi-urgentes');
-    const kpiH = document.getElementById('co-kpi-hoy');
-    const kpiPl = document.getElementById('co-kpi-plantillas');
-    if (kpiP) kpiP.textContent = pend.length;
-    if (kpiU) kpiU.textContent = urgente.length;
-    if (kpiH) kpiH.textContent = hoy.length;
-    if (kpiPl) kpiPl.textContent = _plantillas.length;
-    _actualizarBadge(pend.length);
-  }
-
-  function _actualizarBadge(n) {
-    const badge = document.getElementById('badge-centro-ops');
-    if (!badge) return;
-    const count = n !== undefined ? n : _ops.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso').length;
-    badge.textContent = count;
-    badge.style.display = count > 0 ? '' : 'none';
-  }
-
-  function _poblarFiltroResponsable() {
-    const sel = document.getElementById('co-fil-responsable');
-    if (!sel) return;
-    const nombres = [...new Set(_ops.map(o => o.responsable_nombre).filter(Boolean))];
-    sel.innerHTML = '<option value="">Todos los responsables</option>'
-      + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
-    // También el modal
-    const selModal = document.getElementById('co-nueva-responsable');
-    if (selModal) {
-      const users = getUsuarios();
-      selModal.innerHTML = '<option value="">— Cualquiera —</option>'
-        + users.map(u => `<option value="${u.nombre}">${u.nombre}</option>`).join('');
-    }
-  }
-
-  function renderLista() {
-    const el = document.getElementById('co-lista');
-    if (!el) return;
-
-    if (_tabActual === 'plantillas') {
-      _renderPlantillas(el);
-      return;
-    }
-
-    const fil = _filtros;
-    let lista = _ops.filter(o => {
-      if (_tabActual === 'pendientes') return o.estado === 'pendiente' || o.estado === 'en_proceso';
-      if (_tabActual === 'completadas') return o.estado === 'completada' || o.estado === 'cancelada';
-      return true;
-    });
-
-    if (fil.categoria)   lista = lista.filter(o => o.categoria   === fil.categoria);
-    if (fil.prioridad)   lista = lista.filter(o => o.prioridad   === fil.prioridad);
-    if (fil.tipo)        lista = lista.filter(o => o.tipo        === fil.tipo);
-    if (fil.responsable) lista = lista.filter(o => o.responsable_nombre === fil.responsable);
-
-    // Ordenar: urgente > alta > normal > baja, luego por fecha
-    const prioOrder = { urgente:0, alta:1, normal:2, baja:3 };
-    lista.sort((a,b) => {
-      const pd = (prioOrder[a.prioridad]||2) - (prioOrder[b.prioridad]||2);
-      if (pd !== 0) return pd;
-      return new Date(a.fecha_hora) - new Date(b.fecha_hora);
-    });
-
-    if (!lista.length) {
-      el.innerHTML = `<div class="empty-state"><div class="es-icon">\u2705</div><div class="es-text">
-        ${_tabActual === 'pendientes' ? 'Sin operaciones pendientes \u2014 \u00a1todo al d\u00eda!' : 'Sin operaciones completadas todav\u00eda'}
-      </div></div>`;
-      return;
-    }
-
-    el.innerHTML = lista.map(o => {
-      const color    = _prioColor[o.prioridad] || '#eab308';
-      const emoji    = _tipoEmoji[o.tipo] || '📌';
-      const catLabel = _catLabel[o.categoria] || o.categoria;
-      const dt       = new Date(o.fecha_hora);
-      const fechaStr = dt.toLocaleDateString('es-MX', {day:'2-digit', month:'2-digit'});
-      const horaStr  = dt.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
-      const enProceso = o.estado === 'en_proceso';
-      const completada = o.estado === 'completada';
-      const cancelada  = o.estado === 'cancelada';
-
-      const badges = `
-        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${color}20;color:${color}">${_prioLabel[o.prioridad]||o.prioridad}</span>
-        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--gray-100);color:var(--gray-600)">${catLabel}</span>
-        ${enProceso ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8">⚙️ En proceso</span>' : ''}
-        ${o.es_recurrente ? '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#f0fdf4;color:#16a34a">🔄 Recurrente</span>' : ''}
-      `;
-
-      const acciones = !completada && !cancelada ? `
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          ${!enProceso ? `<button onclick="Alertas.tomar(${o.id})" style="padding:5px 12px;border:1.5px solid #3b82f6;color:#3b82f6;background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">⚙️ Tomar</button>` : ''}
-          <button onclick="Alertas.completar(${o.id})" style="padding:5px 12px;border:1.5px solid #16a34a;color:#16a34a;background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">✅ Completar</button>
-          ${o.accion ? `<button onclick="Alertas.ejecutarAccion(${JSON.stringify(o).replace(/"/g,'&quot;')})" style="padding:5px 12px;border:1.5px solid var(--orange);color:var(--orange);background:white;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">Ir →</button>` : ''}
-          <button onclick="Alertas.cancelar(${o.id})" style="padding:5px 12px;border:1.5px solid var(--gray-200);color:var(--gray-400);background:white;border-radius:7px;font-size:11px;cursor:pointer">✕</button>
-        </div>
-      ` : (o.comentario ? `<div style="font-size:11px;color:var(--gray-500);margin-top:6px;font-style:italic">"${o.comentario}"</div>` : '');
-
-      return `<div style="background:white;border-radius:10px;padding:14px 16px;border:1.5px solid ${enProceso?'#bfdbfe':completada?'#bbf7d0':cancelada?'var(--gray-200)':'var(--gray-100)'};border-left:4px solid ${completada?'#16a34a':cancelada?'var(--gray-300)':color}">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div style="font-size:22px;flex-shrink:0;margin-top:2px">${emoji}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${badges}</div>
-            <div style="font-weight:800;font-size:14px;color:${completada?'var(--gray-400)':'var(--blue)'}${cancelada?';text-decoration:line-through':''}">${o.titulo}</div>
-            ${o.descripcion ? `<div style="font-size:12px;color:var(--gray-500);margin-top:3px">${o.descripcion}</div>` : ''}
-            <div style="font-size:11px;color:var(--gray-400);margin-top:5px;display:flex;gap:12px;flex-wrap:wrap">
-              <span>📅 ${fechaStr} ${horaStr}</span>
-              ${o.responsable_nombre ? `<span>👤 ${o.responsable_nombre}</span>` : ''}
-              ${o.entidad ? `<span>🔗 ${o.entidad} #${o.entidad_id||''}</span>` : ''}
-              ${completada && o.completada_at ? `<span>✅ ${new Date(o.completada_at).toLocaleString('es-MX')}</span>` : ''}
-              ${completada && o.completada_por_nombre ? `<span>Por: ${o.completada_por_nombre}</span>` : ''}
-            </div>
-            ${acciones}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function _renderPlantillas(el) {
-    if (!_plantillas.length) {
-      el.innerHTML = '<div class="empty-state"><div class="es-icon">🔄</div><div class="es-text">Sin plantillas recurrentes todav\u00eda.<br>Crea una con el bot\u00f3n "Nueva operaci\u00f3n" seleccionando frecuencia.</div></div>';
-      return;
-    }
-    el.innerHTML = _plantillas.map(p => {
-      const emoji = _tipoEmoji[p.tipo] || '📌';
-      const proxima = p.proxima_ejecucion ? new Date(p.proxima_ejecucion).toLocaleString('es-MX') : '—';
-      return `<div style="background:white;border-radius:10px;padding:14px 16px;border:1.5px solid #d1fae5;border-left:4px solid #16a34a">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="font-size:22px">${emoji}</div>
-          <div style="flex:1">
-            <div style="font-weight:800;font-size:14px;color:var(--blue)">${p.titulo}</div>
-            <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
-              🔄 ${p.frecuencia} · cada ${p.intervalo} · ${p.hora_ejecucion||''}
-              &nbsp;|&nbsp; Pr\u00f3xima: ${proxima}
-              ${p.responsable_nombre ? ` &nbsp;|&nbsp; 👤 ${p.responsable_nombre}` : ''}
-            </div>
-          </div>
-          <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#d1fae5;color:#16a34a;font-weight:700">${p.activa?'Activa':'Pausada'}</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // ── E: UI helpers ─────────────────────────────────────────────────────────
-
-  function cambiarTab(tab) {
-    _tabActual = tab;
-    ['pendientes','completadas','plantillas'].forEach(t => {
-      const btn = document.getElementById(`co-tab-${t}`);
-      if (!btn) return;
-      const activa = t === tab;
-      btn.style.color        = activa ? 'var(--orange)' : 'var(--gray-400)';
-      btn.style.borderBottom = activa ? '2px solid var(--orange)' : '2px solid transparent';
-    });
-    // Mostrar/ocultar filtros (no aplican en plantillas)
-    const filDiv = document.getElementById('co-filtros');
-    if (filDiv) filDiv.style.display = tab === 'plantillas' ? 'none' : 'flex';
-    renderLista();
-  }
-
-  function aplicarFiltros() {
-    _filtros.categoria   = document.getElementById('co-fil-categoria')?.value   || '';
-    _filtros.prioridad   = document.getElementById('co-fil-prioridad')?.value   || '';
-    _filtros.tipo        = document.getElementById('co-fil-tipo')?.value        || '';
-    _filtros.responsable = document.getElementById('co-fil-responsable')?.value || '';
-    renderLista();
-  }
-
-  function limpiarFiltros() {
-    ['co-fil-categoria','co-fil-prioridad','co-fil-tipo','co-fil-responsable']
-      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    _filtros = { categoria:'', prioridad:'', tipo:'', responsable:'' };
-    renderLista();
-  }
-
-  function abrirModalNueva() {
-    // Prellenar fecha y hora actual
-    const ahora = new Date();
-    const fechaHoy = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
-    const horaAhora = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}`;
-    const fechaEl = document.getElementById('co-nueva-fecha');
-    const horaEl  = document.getElementById('co-nueva-hora');
-    if (fechaEl) fechaEl.value = fechaHoy;
-    if (horaEl)  horaEl.value  = horaAhora;
-    // Limpiar campos
-    ['co-nueva-titulo','co-nueva-desc'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    const cat = document.getElementById('co-nueva-categoria');
-    const pri = document.getElementById('co-nueva-prioridad');
-    if (cat) cat.value = 'alerta';
-    if (pri) pri.value = 'normal';
-    document.getElementById('modal-nueva-operacion').classList.add('open');
-  }
-
-  async function guardarNueva() {
-    const titulo = document.getElementById('co-nueva-titulo')?.value.trim();
-    if (!titulo) { notify('\u26a0\ufe0f El t\u00edtulo es obligatorio', 'error'); return; }
-    const fecha = document.getElementById('co-nueva-fecha')?.value;
-    const hora  = document.getElementById('co-nueva-hora')?.value || '00:00';
-    const fechaHora = fecha ? `${fecha}T${hora}:00` : new Date().toISOString();
-    const respNombre = document.getElementById('co-nueva-responsable')?.value || usuarioActual?.nombre || 'Sistema';
-    try {
-      await crear({
-        categoria:         document.getElementById('co-nueva-categoria')?.value || 'alerta',
-        tipo:              document.getElementById('co-nueva-tipo')?.value       || 'otro',
-        titulo,
-        descripcion:       document.getElementById('co-nueva-desc')?.value.trim() || null,
-        prioridad:         document.getElementById('co-nueva-prioridad')?.value  || 'normal',
-        fechaHora,
-        responsableNombre: respNombre,
-      });
-      closeModal('modal-nueva-operacion');
-      await cargar();
-      notify('\u2705 Operaci\u00f3n creada', 'success');
-    } catch(e) {
-      notify('Error al guardar: ' + e.message, 'error');
-    }
-  }
-
-  function ejecutarAccion(op) {
-    const fn = _acciones[op.accion];
-    if (fn) { closeModal('modal-detalle-hospedaje'); fn(op); }
-    else notify('No hay acci\u00f3n configurada para esta operaci\u00f3n', 'info');
-  }
-
-  // ── F: Etapa 1 — recibir el SW registration desde DOMContentLoaded ──────
-
-  function _setSwRegistration(reg) {
-    _swReg = reg;
-    // El polling solo arranca si el permiso ya fue concedido previamente.
-    // Si es 'default', espera al tap del botón "Activar notificaciones".
-    // Si es 'granted', ya fue aceptado — arrancar directamente.
-    // (DOMContentLoaded lo verifica también, esta es la segunda guarda)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      _iniciarPolling();
-    }
-  }
-
-  // ── G: Etapa 2 — polling cada 60s para notificaciones locales ────────────
-
-  function _iniciarPolling() {
-    if (_pollingId) clearInterval(_pollingId);
-    // Primera verificación a los 30s de cargar (tiempo para que el usuario inicie sesión)
-    setTimeout(_verificarNotificaciones, 30000);
-    // Luego cada 60 segundos
-    _pollingId = setInterval(_verificarNotificaciones, 60000);
-    console.log('[Alertas] Polling de notificaciones iniciado (cada 60s)');
-  }
-
-  async function _verificarNotificaciones() {
-    // Solo notificar si tenemos SW, permiso concedido, y el usuario está logueado
-    if (!_swReg) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    if (!usuarioActual) return;
-
-    const ahora = new Date().toISOString();
-    try {
-      // Consultar operaciones que ya llegaron a su hora y no han sido notificadas
-      const pendientes = await sb('GET', 'operaciones', null,
-        `?estado=in.(pendiente,en_proceso)&push_enviado=eq.false&fecha_hora=lte.${ahora}&select=id,titulo,descripcion,tipo,prioridad`);
-
-      if (!pendientes || !pendientes.length) return;
-
-      for (const op of pendientes) {
-        const emoji = { medicamento:'💊', limpieza:'🧹', alimentacion:'🍖',
-          'baño':'🛁', vacuna:'💉', cobro:'💳', caja:'💰',
-          salida:'📤', reservacion:'📋', mantenimiento:'🔧', otro:'📌'
-        }[op.tipo] || '⚡';
-
-        // Mostrar notificación via Service Worker (funciona aunque la tab no esté en foco)
-        await _swReg.showNotification(`${emoji} ${op.titulo}`, {
-          body:    op.descripcion || 'Toca para ver los detalles en Centro de Operaciones',
-          icon:    '/petground/icon-192.png',
-          badge:   '/petground/icon-72.png',
-          tag:     `op-${op.id}`,          // evita duplicados para la misma operación
-          renotify: false,
-          data:    { id: op.id },
-          vibrate: [200, 100, 200],
-          actions: [
-            { action: 'ver',      title: '👁 Ver' },
-            { action: 'completar', title: '✅ Completar' }
-          ]
-        });
-
-        // Marcar como notificada para no volver a enviarla
-        await sb('PATCH', 'operaciones',
-          { push_enviado: true, push_enviado_at: new Date().toISOString() },
-          `?id=eq.${op.id}`
-        );
-
-        console.log(`[Alertas] Notificación enviada: op-${op.id} "${op.titulo}"`);
-      }
-    } catch(e) {
-      console.warn('[Alertas] Error en verificación de notificaciones:', e.message);
-    }
-  }
-
-  // ── API pública ─────────────────────────────────────────────────────────
-  return {
-    crear, crearPlantilla,
-    tomar, completar, cancelar, _confirmarCompletar,
-    cargar, renderLista,
-    cambiarTab, aplicarFiltros, limpiarFiltros,
-    abrirModalNueva, guardarNueva,
-    ejecutarAccion,
-    _setSwRegistration,         // llamado desde DOMContentLoaded tras registrar SW
-    _verificarNotificaciones,   // expuesto para pruebas manuales desde consola
-  };
-
-})();
-// ===================== FIN ALERTAS — CENTRO DE OPERACIONES =====================
 
 // ===================== INIT — carga desde Supabase =====================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -3719,20 +2950,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         scope: '/petground/'
       });
       console.log('[PWA] Service Worker registrado. Scope:', reg.scope);
-      Alertas._setSwRegistration(reg);
-
-      // Escuchar mensajes del SW (click en notificación → abrir Centro)
-      navigator.serviceWorker.addEventListener('message', event => {
-        if (event.data?.type === 'NOTIF_CLICK') {
-          showScreen('centro-operaciones');
-        }
-      });
-
-      // Si el permiso ya fue concedido anteriormente, iniciar polling directamente
-      if ('Notification' in window && Notification.permission === 'granted') {
-        console.log('[PWA] Permiso ya concedido — polling activo');
-        Alertas._iniciarPolling();
-      }
     } catch(e) {
       console.warn('[PWA] Error registrando Service Worker:', e.message);
     }
@@ -4123,7 +3340,51 @@ async function editarReservacion(id) {
     document.querySelectorAll('#nr-mascotas-checklist input[type=checkbox]').forEach(cb => {
       cb.checked = mascotasReserv.includes(cb.value);
     });
-    nr_sincronizarConceptos();
+    // Reconstruir conceptos desde conceptos_json guardado (ruta preferida);
+    // si no existe (reservaciones antiguas sin este dato), usar el servicio
+    // predeterminado por mascota como hace nr_sincronizarConceptos()
+    let conceptosRestaurados = [];
+    if (r.conceptos_json) {
+      try { conceptosRestaurados = JSON.parse(r.conceptos_json); } catch(ex) {}
+    }
+    if (conceptosRestaurados.length > 0) {
+      const tbody = document.getElementById('nr-conceptos-tbody');
+      tbody.innerHTML = '';
+      const servicios = getServicios();
+      const opcionesServ = servicios.map(s=>`<option value="${s.id}" data-precio="${s.precio}">${s.nombre}</option>`).join('');
+      conceptosRestaurados.forEach(con => {
+        const tr = document.createElement('tr');
+        if (con.mascota) tr.dataset.mascota = con.mascota;
+        tr.style.borderBottom = '1px solid var(--gray-100)';
+        const etiqueta = con.mascota ? `🐕 ${con.mascota}` : 'Extra';
+        tr.innerHTML = `
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:var(--blue)">${etiqueta}</td>
+          <td style="padding:10px 14px">
+            <select style="width:100%;padding:7px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:'Poppins',sans-serif;outline:none" onchange="nr_onServicioChange(this)">
+              <option value="">— Servicio —</option>${opcionesServ}
+            </select>
+          </td>
+          <td style="padding:10px 8px;text-align:center">
+            <input type="text" inputmode="numeric" value="${con.uds || 1}" style="width:60px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:center;font-family:'Poppins',sans-serif;outline:none;font-weight:700" oninput="nr_calcResumen()">
+          </td>
+          <td style="padding:10px 8px;text-align:right">
+            <input type="text" inputmode="numeric" placeholder="0" value="${con.precio || ''}" style="width:80px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none" oninput="nr_calcResumen()">
+            <span style="font-size:11px;color:var(--gray-400);margin-left:2px">PM$</span>
+          </td>
+          <td style="padding:10px 8px;text-align:right">
+            <input type="text" inputmode="numeric" placeholder="0" value="${con.desc || ''}" style="width:55px;padding:7px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:'Poppins',sans-serif;outline:none" oninput="nr_calcResumen()">
+            <span style="font-size:11px;color:var(--gray-400)">%</span>
+          </td>
+          <td style="padding:10px 14px;text-align:right;font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;color:var(--green)" class="col-total">0.00 PM$</td>
+          <td style="padding:10px 8px"><button onclick="this.closest('tr').remove();nr_calcResumen()" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:16px">🗑️</button></td>`;
+        tbody.appendChild(tr);
+        const sel = tr.querySelector('select');
+        if (sel && con.svc_id) sel.value = String(con.svc_id);
+      });
+      nr_calcResumen();
+    } else {
+      nr_sincronizarConceptos();
+    }
 
     // 3. Fechas y horas
     const fe = (r.fecha_entrada||'').split('T')[0];
@@ -4155,7 +3416,7 @@ async function editarReservacion(id) {
     // 6. Adelantos existentes — solo mostrar como info, NO generar nuevos
     const adelantoForm = document.getElementById('nr-adelanto-form');
     const adelantoCb   = document.getElementById('nr-tiene-adelanto');
-    const adelantoLabel = adelantoCb?.closest('div')?.querySelector('label');
+    const adelantoLabel = document.getElementById('nr-adelanto-texto');
     if (adelantosExistentes.length > 0) {
       const totalAdelanto = adelantosExistentes.reduce((s,a) => s + parseFloat(a.monto||0), 0);
       if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = true; }
@@ -4523,12 +3784,26 @@ async function guardarReservacion() {
 
   const he = document.getElementById('nr-hora-entrada').value;
   const hs = document.getElementById('nr-hora-salida').value;
+  // Serializar conceptos para poder restaurarlos al editar (mismo patrón que guardarEntrada())
+  const conceptosParaGuardar = [];
+  document.querySelectorAll('#nr-conceptos-tbody tr').forEach(tr => {
+    const servSel = tr.querySelector('select');
+    const inputs = tr.querySelectorAll('input');
+    const svcId = servSel ? parseInt(servSel.value) || null : null;
+    const uds = parseFloat(inputs[0]?.value) || 0;
+    const precio = parseFloat(inputs[1]?.value) || 0;
+    const desc = parseFloat(inputs[2]?.value) || 0;
+    if (svcId || precio > 0) {
+      conceptosParaGuardar.push({ mascota: tr.dataset.mascota || null, svc_id: svcId, uds, precio, desc });
+    }
+  });
   const datos = {
     cliente_id: nr_clienteSeleccionado.id, mascotas, habitacion: hab,
     fecha_entrada: `${fe}T${he}:00`, fecha_salida_prevista: `${fs}T${hs}:00`,
     importe: totalFinal,
     notas: document.getElementById('nr-notas').value,
-    status: 'reservacion'
+    status: 'reservacion',
+    conceptos_json: JSON.stringify(conceptosParaGuardar)
   };
 
   setLoading(true);
@@ -4544,7 +3819,7 @@ async function guardarReservacion() {
       if (titulo) titulo.textContent = '📋 Nueva Reservación';
       const adelantoCb = document.getElementById('nr-tiene-adelanto');
       if (adelantoCb) adelantoCb.disabled = false;
-      const adelantoLabel = adelantoCb?.closest('div')?.querySelector('label');
+      const adelantoLabel = document.getElementById('nr-adelanto-texto');
       if (adelantoLabel) adelantoLabel.innerHTML = '💵 Registrar adelanto recibido';
       notify('✅ Reservación actualizada', 'success');
     } else {
@@ -5094,15 +4369,15 @@ function mdh_renderAdelantos() {
 
   const colorPend = pendiente === 0 ? '#16a34a' : '#dc2626';
   const e = entradas.find(en => en.id === detalleHospedajeId);
-  const desc = e?.descuento;
-  const descLine = desc && desc.monto > 0 ? `
+  const descResuelto = e ? resolverDescuento(e) : null;
+  const descLine = descResuelto ? `
     <div style="display:flex;justify-content:space-between;font-size:12px;color:#dc2626;margin-bottom:4px">
       <span>🏷️ Descuentos individuales</span>
-      <span style="font-weight:700">-$${desc.monto.toLocaleString('es-MX')} PM$</span>
+      <span style="font-weight:700">-$${descResuelto.monto.toLocaleString('es-MX')} PM$</span>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-400);margin-bottom:4px">
       <span>Precio base sin descuentos</span>
-      <span>$${(desc.base||0).toLocaleString('es-MX')} PM$</span>
+      <span>$${(descResuelto.base||0).toLocaleString('es-MX')} PM$</span>
     </div>` : '';
   resumenEl.innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);margin-bottom:4px">
@@ -8293,9 +7568,9 @@ function reenviarComprobanteWA(cobId) {
 function enviarComprobanteWA(e, c, cobrado, metodo, pendiente) {
   const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
   const adelantos = cobros.filter(co=>co.entradaId===e.id&&co.status==='pagado'&&co.monto!==cobrado).reduce((s,co)=>s+co.monto,0);
-  const desc = e.descuento;
-  const descLineWA = desc && desc.valor > 0
-    ? `🏷️ Descuento ${desc.tipo==='pct'?desc.valor+'%':'fijo'}: -$${desc.monto.toLocaleString('es-MX')} PM$\n`
+  const desc = resolverDescuento(e);
+  const descLineWA = desc && desc.monto > 0
+    ? `🏷️ Descuento (${desc.detalle}): -$${desc.monto.toLocaleString('es-MX')} PM$\n`
     : '';
   const detallePago = descLineWA
     + (adelantos>0?`✅ Adelantos previos: $${adelantos.toLocaleString('es-MX')} PM$\n`:'')
@@ -8833,7 +8108,7 @@ function renderProyeccion() {
 }
 
 // ===================== DEUDAS PENDIENTES =====================
-function renderDeudasPendientes() {
+async function renderDeudasPendientes() {
   const el = document.getElementById('fac-deudas-lista');
   if (!el) return;
   const pendientes = cobros.filter(c=>c.status==='pendiente')
@@ -8844,6 +8119,27 @@ function renderDeudasPendientes() {
     el.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin deudas pendientes</div></div>';
     return;
   }
+
+  // Resolver las entradas vinculadas aunque ya no estén activas — estas son
+  // deudas de clientes que ya salieron, así que su entrada nunca está en el
+  // array `entradas` en memoria (solo trae status='activo').
+  const entIdsTodos = [...new Set(pendientes.map(co => co.entradaId).filter(Boolean))];
+  const entradasMap = {};
+  if (entIdsTodos.length) {
+    try {
+      const rows = await sb('GET', 'entradas', null,
+        `?id=in.(${entIdsTodos.join(',')})&select=id,habitacion,mascotas,fecha_entrada,fecha_salida_prevista`);
+      rows.forEach(e => {
+        entradasMap[e.id] = {
+          habitacion: e.habitacion || '',
+          mascotas: e.mascotas || [],
+          entrada: (e.fecha_entrada||'').replace('T',' ').slice(0,16),
+          salidaPrevista: (e.fecha_salida_prevista||'').replace('T',' ').slice(0,16)
+        };
+      });
+    } catch(e) {}
+  }
+
   // Agrupar por cliente
   const porCliente = {};
   pendientes.forEach(co => {
@@ -8857,7 +8153,7 @@ function renderDeudasPendientes() {
     // Hospedajes únicos vinculados a estas deudas
     const entIds = [...new Set(cobs.map(co=>co.entradaId).filter(Boolean))];
     const entInfo = entIds.map(eid => {
-      const ent = entradas.find(e=>e.id===eid);
+      const ent = entradasMap[eid];
       if (!ent) return '';
       const mascs = (ent.mascotas||[]).map(m => {
         const raza = c?.mascotas?.find(mo=>mo.nombre===m)?.raza||'';
@@ -9874,21 +9170,73 @@ function renderCobros() {
   }).join('');
 }
 // ===================== RENDER ADELANTOS =====================
-function renderAdelantos() {
+async function renderAdelantos() {
   const tbody = document.getElementById('tbody-adelantos');
   const adels = cobros.filter(c=>c.status==='adelanto');
   if (!adels.length) { tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🔖</div><div class="es-text">Sin adelantos registrados</div></div></td></tr>'; return; }
   const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
-  tbody.innerHTML = adels.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(c => {
+
+  // Resolver la entrada vinculada aunque ya no esté activa (el array `entradas`
+  // en memoria solo trae status='activo'; aquí necesitamos completadas/eliminadas también)
+  const entradaIds = [...new Set(adels.map(c => c.entradaId).filter(Boolean))];
+  const entradasMap = {};
+  if (entradaIds.length) {
+    try {
+      const rows = await sb('GET', 'entradas', null,
+        `?id=in.(${entradaIds.join(',')})&select=id,habitacion,mascotas,status`);
+      rows.forEach(e => { entradasMap[e.id] = e; });
+    } catch(e) {}
+  }
+
+  const PRIORIDAD = { 'Pendiente aplicar': 0, 'Revisar': 1, 'Sin vincular': 2, 'Aplicado en checkout': 3 };
+  const BADGE = {
+    'Pendiente aplicar':   '<span class="badge badge-orange">🔖 Pendiente aplicar</span>',
+    'Aplicado en checkout':'<span class="badge badge-green">✅ Aplicado en checkout</span>',
+    'Revisar':             '<span class="badge" style="background:#fecaca;color:#991b1b">⚠️ Revisar</span>',
+    'Sin vincular':        '<span class="badge" style="background:#e5e7eb;color:#6b7280">— Sin vincular</span>'
+  };
+
+  const filas = adels.map(c => {
+    const ent = entradasMap[c.entradaId];
+    let estadoReal, aplicadoA;
+    if (!c.entradaId) {
+      estadoReal = 'Sin vincular';
+      aplicadoA = 'Sin vincular';
+    } else if (!ent) {
+      estadoReal = 'Revisar';
+      aplicadoA = `Entrada #${c.entradaId} (no encontrada)`;
+    } else if (ent.status === 'activo' || ent.status === 'reservacion') {
+      estadoReal = 'Pendiente aplicar';
+      aplicadoA = `Hab. ${ent.habitacion||'—'} · ${(ent.mascotas||[]).join(', ')}`;
+    } else if (ent.status === 'completado') {
+      estadoReal = 'Aplicado en checkout';
+      aplicadoA = `Hab. ${ent.habitacion||'—'} · ${(ent.mascotas||[]).join(', ')}`;
+    } else if (ent.status === 'eliminado') {
+      estadoReal = 'Revisar';
+      aplicadoA = `Hab. ${ent.habitacion||'—'} · ${(ent.mascotas||[]).join(', ')} (cancelada)`;
+    } else {
+      estadoReal = 'Revisar';
+      aplicadoA = `Entrada #${c.entradaId} (estado: ${ent.status||'—'})`;
+    }
+    return { c, estadoReal, aplicadoA };
+  });
+
+  filas.sort((a,b) => {
+    const pa = PRIORIDAD[a.estadoReal] ?? 99;
+    const pb = PRIORIDAD[b.estadoReal] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return new Date(b.c.fecha) - new Date(a.c.fecha);
+  });
+
+  tbody.innerHTML = filas.map(({c, estadoReal, aplicadoA}) => {
     const cl = clientes.find(cl=>cl.id===c.clienteId);
-    const ent = entradas.find(e=>e.id===c.entradaId);
     return `<tr>
       <td>${c.fecha}</td>
       <td onclick="verPerfilCliente(${cl?.id})" style="cursor:pointer"><span style="font-weight:600;color:var(--blue)">${cl?.nombre||'—'}</span></td>
       <td>${metIcon[c.metodo]||''} ${c.metodo}</td>
       <td><span class="amount">$${c.monto.toLocaleString('es-MX')} PM$</span></td>
-      <td><span style="font-size:11px;color:var(--gray-600)">${ent?'Hab. '+ent.habitacion+' · '+ent.mascotas.join(', '):'Sin vincular'}</span></td>
-      <td><span class="badge badge-orange">🔖 Pendiente aplicar</span></td>
+      <td><span style="font-size:11px;color:var(--gray-600)">${aplicadoA}</span></td>
+      <td>${BADGE[estadoReal]}</td>
     </tr>`;
   }).join('');
 }
@@ -9913,7 +9261,7 @@ function renderPendientes() {
     const atrasado = new Date(e.salidaPrevista) < new Date();
     rows += `<tr>
       <td><span style="font-weight:600;color:var(--blue);cursor:pointer" onclick="verPerfilCliente(${cl?.id})">${cl?.nombre||'—'}</span></td>
-      <td><div style="font-size:11px">${e.mascotas.join(', ')}</div></td>
+      <td><div class="dogs-list" style="font-size:11px">${e.mascotas.map(m=>mascotaTag(m, cl)).join('')}</div></td>
       <td><span style="${atrasado?'color:var(--red);font-weight:700':''}">${(e.salidaPrevista||'').split(' ')[0]} ${atrasado?'⚠️':''}</span></td>
       <td><span style="font-weight:600">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
       <td><span style="color:var(--blue)">$${adelE.toLocaleString('es-MX')} PM$</span></td>
@@ -10632,8 +9980,8 @@ function showScreen(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
   if (screen) screen.classList.add('active');
-  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',reportes:'reportes','reservaciones-admin':'reservaciones-admin',salidas:'salidas',recordatorios:'recordatorios','centro-operaciones':'centro-operaciones'};
-  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',reportes:'Reportes','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio',salidas:'Historial de Salidas',recordatorios:'Recordatorios y Alertas','centro-operaciones':'⚡ Centro de Operaciones'};
+  const navMap = {dashboard:'dashboard',entradas:'entradas',clientes:'clientes','nueva-entrada':'nueva-entrada','nueva-reservacion':'reservaciones-admin','perfil-cliente':'clientes',facturacion:'facturacion','cobros-empleado':'cobros-empleado',caja:'caja',usuarios:'usuarios',reportes:'reportes','reservaciones-admin':'reservaciones-admin',salidas:'salidas'};
+  const titles = {dashboard:'Inicio — Agenda del día',entradas:'Hospedados ahora',clientes:'Clientes',mascotas:'Mascotas','nueva-entrada':'Registrar entrada','perfil-cliente':'Perfil de Cliente',facturacion:'Cobros y reportes','cobros-empleado':'Cobros pendientes',caja:'Control de Caja',usuarios:'Usuarios y Roles',reportes:'Reportes','reservaciones-admin':'Reservaciones','nueva-reservacion':'Nueva Reservación',negocio:'Mi Negocio',salidas:'Historial de Cobros'};
   document.getElementById('page-title').textContent = titles[name] || name;
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(navMap[name] || name))
@@ -10646,9 +9994,7 @@ function showScreen(name) {
   if (name === 'reservaciones-admin') cargarReservaciones();
   if (name === 'facturacion') initFacturacion();
   if (name === 'cobros-empleado') renderCobrosEmpleado();
-  if (name === 'salidas') renderSalidas();
-  if (name === 'recordatorios') renderRecordatorios();
-  if (name === 'centro-operaciones') Alertas.cargar();
+  if (name === 'salidas') renderCobros();
   if (name === 'caja') {
     initCaja();
     // Ocultar KPIs y corte a empleados
@@ -11032,11 +10378,12 @@ function renderReportes() {
 
   // Secciones avanzadas
   renderReportesExtra();
+  renderHistorialDescuentos();
 }
 
 // ===================== HISTORIAL DE SALIDAS =====================
 let salidasCache = [];
-async function renderSalidas() {
+async function renderCobros() {
   const loading = document.getElementById('sal-loading');
   const table = document.getElementById('sal-table');
   const vacio = document.getElementById('sal-vacio');
@@ -11062,17 +10409,54 @@ async function renderSalidas() {
       hasta.value = new Date().toISOString().split('T')[0];
     }
 
-    let query = '?status=eq.completado&order=updated_at.desc&select=*&limit=200';
-    if (desde.value) query += `&updated_at=gte.${desde.value}`;
-    if (hasta.value) query += `&updated_at=lte.${hasta.value}T23:59:59`;
+    // Historial completo: TODOS los estados (activo/anulado/duplicado), sin filtrar por estado.
+    // No se reutiliza el array global `cobros` porque ese ya excluye estado != activo.
+    let todosRaw = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+      const lote = await sb('GET', 'cobros', null,
+        `?select=*&order=fecha.desc&limit=${pageSize}&offset=${page * pageSize}`);
+      todosRaw = todosRaw.concat(lote);
+      if (lote.length < pageSize) break;
+      page++;
+    }
+    const todosCobros = todosRaw.map(c => ({
+      id: c.id, clienteId: c.cliente_id, entradaId: c.entrada_id,
+      fecha: c.fecha || '', fechaPago: c.fecha_pago || null, metodo: c.metodo || '',
+      monto: parseFloat(c.monto) || 0, concepto: c.concepto || '',
+      status: c.status || 'pagado', estado: c.estado || 'activo'
+    }));
 
-    const rows = await sb('GET', 'entradas', null, query);
+    // Resolver mascota/estancia vinculada: solo las entradas realmente referenciadas en este lote
+    const entradaIds = [...new Set(todosCobros.map(c => c.entradaId).filter(Boolean))];
+    const entradasMap = {};
+    if (entradaIds.length) {
+      try {
+        const chunkSize = 200;
+        for (let i = 0; i < entradaIds.length; i += chunkSize) {
+          const chunk = entradaIds.slice(i, i + chunkSize);
+          const rows = await sb('GET', 'entradas', null,
+            `?id=in.(${chunk.join(',')})&select=id,mascotas,habitacion`);
+          rows.forEach(e => { entradasMap[e.id] = e; });
+        }
+      } catch(e) {}
+    }
+
     const buscar = (document.getElementById('sal-buscar')?.value||'').toLowerCase();
-    const filtradas = rows.filter(e => {
-      if (!buscar) return true;
-      const c = clientes.find(cl => cl.id === e.cliente_id);
-      return (c?.nombre||'').toLowerCase().includes(buscar) || (e.mascotas||[]).join(' ').toLowerCase().includes(buscar);
-    });
+    const filtradas = todosCobros.filter(c => {
+      const f = fechaFinanciera(c).slice(0,10);
+      if (desde.value && f < desde.value) return false;
+      if (hasta.value && f > hasta.value) return false;
+      if (buscar) {
+        const cli = clientes.find(cl => cl.id === c.clienteId);
+        const ent = entradasMap[c.entradaId];
+        const nombreCliente = (cli?.nombre||'').toLowerCase();
+        const nombresMascotas = (ent?.mascotas||[]).join(' ').toLowerCase();
+        if (!nombreCliente.includes(buscar) && !nombresMascotas.includes(buscar)) return false;
+      }
+      return true;
+    }).sort((a,b) => fechaFinanciera(b).localeCompare(fechaFinanciera(a)));
 
     loading.style.display = 'none';
     if (filtradas.length === 0) { vacio.style.display = 'block'; if(countBadge)countBadge.textContent='0'; return; }
@@ -11080,178 +10464,112 @@ async function renderSalidas() {
     table.style.display = 'table';
     if (countBadge) countBadge.textContent = filtradas.length;
 
-    let totalIngresos = 0;
-    tbody.innerHTML = filtradas.map(e => {
-      const c = clientes.find(cl => cl.id === e.cliente_id);
-      const nombre = c?.nombre || '—';
-      const mascs = (e.mascotas||[]).slice(0,2).join(', ');
-      const fechaEnt = (e.fecha_entrada||'').slice(0,10);
-      const fechaSal = (e.updated_at||'').slice(0,10);
-      const dias = fechaEnt && fechaSal ? Math.max(1, Math.ceil((new Date(fechaSal)-new Date(fechaEnt))/(1000*60*60*24))) : '—';
-      const importe = parseFloat(e.importe)||0;
-      totalIngresos += importe;
-      // Buscar método de pago en cobros
-      const cobrosSalida = cobros.filter(co => co.entradaId === e.id);
-      const metodo = cobrosSalida[cobrosSalida.length-1]?.metodo || '—';
-      return `<tr onclick="verPerfilCliente(${c?.id})" style="cursor:pointer">
-        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombre}</div></div></td>
-        <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
-        <td><div class="room-num">${e.habitacion||'—'}</div></td>
-        <td><div class="date-cell"><div class="date">${fechaEnt}</div></div></td>
-        <td><div class="date-cell"><div class="date">${fechaSal}</div></div></td>
-        <td style="font-weight:700;text-align:center">${dias}</td>
-        <td><span class="amount">$${importe.toLocaleString('es-MX')} PM$</span></td>
-        <td><span class="badge badge-green" style="font-size:10px">${metodo}</span></td>
+    let totalActivo = 0;
+    tbody.innerHTML = filtradas.map(c => {
+      const cli = clientes.find(cl => cl.id === c.clienteId);
+      const nombreCliente = cli?.nombre || (c.clienteId ? `Cliente #${c.clienteId}` : 'Sin vincular');
+      const tieneEntrada = !!c.entradaId;
+      const ent = entradasMap[c.entradaId];
+      const mascotaTxt = !tieneEntrada
+        ? 'Sin vincular'
+        : (ent ? (ent.mascotas?.length ? ent.mascotas.join(', ') : 'Sin mascotas registradas') : `#${c.entradaId} no encontrada`);
+      const estanciaTxt = !tieneEntrada
+        ? 'Sin vincular'
+        : (ent ? `Hab. ${ent.habitacion||'—'} (#${c.entradaId})` : `#${c.entradaId} no encontrada`);
+
+      const fechaMostrar = fechaFinanciera(c);
+      const fechaTxt = fechaMostrar
+        ? new Date(fechaMostrar).toLocaleString('es-MX', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : '—';
+
+      const esActivo = c.estado === 'activo';
+      if (esActivo) totalActivo += c.monto;
+      const estadoBadge = esActivo
+        ? `<span class="badge badge-green" style="font-size:10px">ACTIVO</span>`
+        : `<span class="badge" style="font-size:10px;background:#e5e7eb;color:#6b7280;font-weight:700">${(c.estado||'').toUpperCase()}</span>`;
+      const filaStyle = esActivo ? '' : 'opacity:0.55';
+      const onclickAttr = cli ? ` onclick="verPerfilCliente(${cli.id})" style="cursor:pointer;${filaStyle}"` : ` style="${filaStyle}"`;
+
+      return `<tr${onclickAttr}>
+        <td><div class="date-cell"><div class="date">${fechaTxt}</div></div></td>
+        <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${nombreCliente.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${nombreCliente}</div></div></td>
+        <td style="font-size:12px">${mascotaTxt}</td>
+        <td style="font-size:12px">${c.concepto||'—'}</td>
+        <td><span class="amount">${formatoMoneda(c.monto)}</span></td>
+        <td><span class="badge badge-blue" style="font-size:10px">${c.metodo||'—'}</span></td>
+        <td>${estadoBadge}</td>
+        <td style="font-size:12px">${estanciaTxt}</td>
       </tr>`;
     }).join('');
 
-    if (totalBadge) totalBadge.innerHTML = `Total período: <span style="color:var(--green)">$${totalIngresos.toLocaleString('es-MX')} PM$</span>`;
+    if (totalBadge) totalBadge.innerHTML = `Total activo: <span style="color:var(--green)">${formatoMoneda(totalActivo)}</span>`;
   } catch(err) {
     loading.style.display = 'none';
     vacio.style.display = 'block';
-    console.error('Error cargando salidas:', err);
+    console.error('Error cargando historial de cobros:', err);
   }
 }
 
-// ===================== RECORDATORIOS =====================
-function renderRecordatorios() {
-  const hoy = new Date();
-  const hoyStr = hoy.toISOString().split('T')[0];
-  const mananaStr = new Date(hoy.getTime() + 86400000).toISOString().split('T')[0];
-  const en7Dias = new Date(hoy.getTime() + 7*86400000);
-  const mesActual = hoy.getMonth();
+// ===================== HISTORIAL DE DESCUENTOS =====================
+// Reutiliza resolverDescuento() (mismo criterio que ya usa el PDF) para no
+// depender de un solo formato. No inventa motivo/usuario cuando el sistema
+// no los guarda — se muestra explícitamente "No registrado".
+async function renderHistorialDescuentos() {
+  const loading = document.getElementById('rep-descuentos-loading');
+  const table = document.getElementById('rep-descuentos-table');
+  const vacio = document.getElementById('rep-descuentos-vacio');
+  const tbody = document.getElementById('rep-descuentos-tbody');
+  const countBadge = document.getElementById('rep-descuentos-count');
+  if (!tbody) return;
+  loading.style.display = 'block';
+  table.style.display = 'none';
+  vacio.style.display = 'none';
 
-  // --- KPIs ---
-  const atrasados = entradas.filter(e => new Date(e.salidaPrevista) < hoy);
-  const salenProx = entradas.filter(e => {
-    const d = new Date(e.salidaPrevista);
-    return d >= hoy && d <= new Date(hoy.getTime() + 2*86400000);
-  });
-  const reservasProx = (reservaciones||[]).filter(r => {
-    const d = new Date(r.entrada);
-    return d >= hoy && d <= en7Dias;
-  });
-
-  // Clientes inactivos (último cobro > 90 días)
-  const INACTIVO_DIAS = 90;
-  const inactivos = clientes.filter(c => {
-    const ultimoCobro = cobros.filter(co => co.clienteId === c.id).sort((a,b) => new Date(b.fecha)-new Date(a.fecha))[0];
-    if (!ultimoCobro) return (c.alojamientos||0) > 0; // tuvo visitas pero no cobros recientes
-    const diasDesde = (hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24);
-    return diasDesde >= INACTIVO_DIAS;
-  }).slice(0, 20);
-
-  // Badge en nav
-  const totalAlertas = atrasados.length + salenProx.length;
-  const badge = document.getElementById('badge-recordatorios');
-  if (badge) { badge.textContent = totalAlertas; badge.style.display = totalAlertas > 0 ? '' : 'none'; }
-
-  document.getElementById('rec-kpis').innerHTML = `
-    <div class="stat-card"><div class="stat-icon red">⚠️</div><div class="stat-info"><div class="stat-num">${atrasados.length}</div><div class="stat-label">Atrasados</div></div></div>
-    <div class="stat-card"><div class="stat-icon orange">📤</div><div class="stat-info"><div class="stat-num">${salenProx.length}</div><div class="stat-label">Salen hoy/mañana</div></div></div>
-    <div class="stat-card"><div class="stat-icon blue">📅</div><div class="stat-info"><div class="stat-num">${reservasProx.length}</div><div class="stat-label">Reservas próx. 7 días</div></div></div>
-    <div class="stat-card"><div class="stat-icon yellow">😴</div><div class="stat-info"><div class="stat-num">${inactivos.length}</div><div class="stat-label">Clientes inactivos</div></div></div>
-  `;
-
-  // --- Salidas hoy y mañana ---
-  const salenTodayTomorrow = entradas.filter(e => {
-    const sal = (e.salidaPrevista||'').slice(0,10);
-    return sal === hoyStr || sal === mananaStr;
-  }).sort((a,b) => new Date(a.salidaPrevista)-new Date(b.salidaPrevista));
-  document.getElementById('rec-salidas-badge').textContent = salenTodayTomorrow.length;
-  document.getElementById('rec-salidas-tbody').innerHTML = salenTodayTomorrow.map(e => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    const esHoy = (e.salidaPrevista||'').startsWith(hoyStr);
-    return `<tr>
-      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
-      <td><div class="room-num">${e.habitacion}</div></td>
-      <td><span class="badge ${esHoy?'badge-red':'badge-orange'}">${esHoy?'🔴 HOY':'🟡 Mañana'} ${(e.salidaPrevista||'').slice(0,10)}</span></td>
-      <td><span class="amount" style="font-size:12px">$${e.importe.toLocaleString('es-MX')} PM$</span></td>
-      <td><button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-      ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20recordamos%20que%20hoy%20es%20el%20d%C3%ADa%20de%20salida%20de%20tu%20mascota%20en%20PetGround%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬</a>`:''}
-      </td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin salidas en las próximas 24 horas</td></tr>';
-
-  // --- Atrasados ---
-  document.getElementById('rec-atrasados-badge').textContent = atrasados.length;
-  document.getElementById('rec-atrasados-tbody').innerHTML = atrasados.map(e => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    const diasExtra = Math.ceil((hoy - new Date(e.salidaPrevista)) / (1000*60*60*24));
-    return `<tr>
-      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px;background:var(--red)">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(e.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===e.clienteId))).join('')}</div></td>
-      <td><div class="room-num">${e.habitacion}</div></td>
-      <td style="color:var(--red);font-weight:700;font-size:12px">${(e.salidaPrevista||'').slice(0,10)}</td>
-      <td><span class="badge badge-red">+${diasExtra} día${diasExtra!==1?'s':''}</span></td>
-      <td>
-        <button class="btn btn-sm btn-green" onclick="hacerSalida('',${e.id})">📤 Salida</button>
-        ${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20avisamos%20que%20la%20estancia%20de%20tu%20mascota%20en%20PetGround%20ya%20venci%C3%B3.%20%C2%BFA%20qu%C3%A9%20hora%20lo%20recoges%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;margin-left:4px">💬 WA</a>`:''}
-      </td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">✅ Sin atrasados</td></tr>';
-
-  // --- Reservaciones próximas ---
-  document.getElementById('rec-reservas-badge').textContent = reservasProx.length;
-  document.getElementById('rec-reservas-tbody').innerHTML = reservasProx.map(r => {
-    const c = clientes.find(cl => cl.id === r.clienteId);
-    const diasFaltan = Math.ceil((new Date(r.entrada) - hoy) / (1000*60*60*24));
-    return `<tr>
-      <td><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="client-name" style="font-size:12px">${c?.nombre||'—'}</div></div></td>
-      <td><div class="dogs-list">${(r.mascotas||[]).map(m=>mascotaTag(m,clientes.find(cl=>cl.id===r.cliente_id))).join('')}</div></td>
-      <td><div class="room-num">${r.habitacion||'—'}</div></td>
-      <td style="font-weight:600;font-size:12px">${(r.entrada||'').slice(0,10)}</td>
-      <td><span class="badge badge-blue">En ${diasFaltan} día${diasFaltan!==1?'s':''}</span></td>
-      <td>${c?.whatsapp?`<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent((c?.nombre||'').split(' ')[0])}%2C%20te%20recordamos%20tu%20reservaci%C3%B3n%20en%20PetGround%20para%20el%20${encodeURIComponent((r.entrada||'').slice(0,10))}%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white">💬 Recordar</a>`:'—'}</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--gray-400);font-size:13px">Sin reservaciones en los próximos 7 días</td></tr>';
-
-  // --- Clientes inactivos ---
-  document.getElementById('rec-inactivos-badge').textContent = inactivos.length;
-  document.getElementById('rec-inactivos-lista').innerHTML = inactivos.length === 0
-    ? '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px">✅ Todos los clientes activos</div>'
-    : inactivos.map(c => {
-        const ultimoCobro = cobros.filter(co => co.clienteId === c.id).sort((a,b) => new Date(b.fecha)-new Date(a.fecha))[0];
-        const diasInactivo = ultimoCobro ? Math.ceil((hoy - new Date(ultimoCobro.fecha)) / (1000*60*60*24)) : '?';
-        const mascs = (c.mascotas||[]).map(m => m.nombre||m).slice(0,2).join(', ');
-        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="avatar" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:var(--blue-mid)">${c.nombre.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:13px">${c.nombre}</div>
-            <div style="font-size:11px;color:var(--gray-400)">🐕 ${mascs||'—'} · ${typeof diasInactivo === 'number' ? `${diasInactivo} días sin visita` : 'Sin historial'}</div>
-          </div>
-          ${c.whatsapp ? `<a href="https://wa.me/52${c.whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(c.nombre.split(' ')[0])}%2C%20te%20extrañamos%20en%20PetGround%21%20%C2%BFTu%20mascota%20ya%20necesita%20un%20descanso%20con%20nosotros%3F%20%F0%9F%90%BE" target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Reactivar</a>` : ''}
-        </div>`;
-      }).join('');
-
-  // --- Cumpleaños mascotas este mes ---
-  const cumplesMes = [];
-  clientes.forEach(c => {
-    (c.mascotas||[]).forEach(m => {
-      const fechaNac = m.fechaNacimiento || m.fecha_nacimiento || '';
-      if (!fechaNac) return;
-      const mes = parseInt((fechaNac||'').slice(5,7)) - 1;
-      if (mes === mesActual) {
-        const dia = parseInt((fechaNac||'').slice(8,10));
-        cumplesMes.push({ clienteNombre: c.nombre, mascotaNombre: m.nombre||m, dia, whatsapp: c.whatsapp });
+  try {
+    const cols = 'id,cliente_id,mascotas,habitacion,fecha_entrada,descuento,desc_tipo,desc_valor,desc_monto,subtotal,importe';
+    const porId = {};
+    for (const filtro of ['descuento=not.is.null', 'desc_monto=gt.0']) {
+      let page = 0;
+      const pageSize = 1000;
+      while (true) {
+        const lote = await sb('GET', 'entradas', null,
+          `?${filtro}&select=${cols}&order=fecha_entrada.desc&limit=${pageSize}&offset=${page*pageSize}`);
+        lote.forEach(e => { porId[e.id] = e; });
+        if (lote.length < pageSize) break;
+        page++;
       }
-    });
-  });
-  cumplesMes.sort((a,b) => a.dia - b.dia);
-  document.getElementById('rec-cumple-badge').textContent = cumplesMes.length;
-  document.getElementById('rec-cumple-lista').innerHTML = cumplesMes.length === 0
-    ? '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px">Sin cumpleaños este mes registrados</div>'
-    : cumplesMes.map(({clienteNombre, mascotaNombre, dia, whatsapp}) =>
-        `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--yellow-light);border:2px solid var(--yellow);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎂</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:13px">🐕 ${mascotaNombre}</div>
-            <div style="font-size:11px;color:var(--gray-400)">Dueño: ${clienteNombre} · Día ${dia}</div>
-          </div>
-          ${whatsapp ? `<a href="https://wa.me/52${whatsapp.replace(/\D/g,'')}?text=Hola%20${encodeURIComponent(clienteNombre.split(' ')[0])}%2C%20%C2%A1feliz%20cumplea%C3%B1os%20para%20${encodeURIComponent(mascotaNombre)}%21%20%F0%9F%8E%82%F0%9F%90%BE%20Desde%20PetGround%20les%20mandamos%20muchos%20abrazos." target="_blank" class="btn btn-sm" style="background:#25D366;color:white;flex-shrink:0">💬 Felicitar</a>` : ''}
-        </div>`
-      ).join('');
+    }
+
+    const filas = Object.values(porId).map(e => {
+      const d = resolverDescuento(e);
+      if (!d) return null;
+      return { e, d };
+    }).filter(Boolean).sort((a,b) => new Date(b.e.fecha_entrada) - new Date(a.e.fecha_entrada));
+
+    loading.style.display = 'none';
+    if (!filas.length) { vacio.style.display = 'block'; if (countBadge) countBadge.textContent = '0'; return; }
+    table.style.display = 'table';
+    if (countBadge) countBadge.textContent = filas.length;
+
+    tbody.innerHTML = filas.map(({e, d}) => {
+      const cl = clientes.find(c => c.id === e.cliente_id);
+      const fecha = (e.fecha_entrada||'').slice(0,10);
+      const nombreCliente = cl?.nombre || (e.cliente_id ? `Cliente #${e.cliente_id}` : 'Sin vincular');
+      const mascotasTxt = (e.mascotas||[]).join(', ') || '—';
+      return `<tr>
+        <td>${fecha}</td>
+        <td onclick="verPerfilCliente(${e.cliente_id})" style="cursor:pointer;color:var(--blue);font-weight:600">${nombreCliente}</td>
+        <td style="font-size:12px">${mascotasTxt}<br><span style="color:var(--gray-400);font-size:10px">Hab. ${e.habitacion||'—'} (#${e.id})</span></td>
+        <td><span style="font-weight:700;color:#dc2626">-${formatoMoneda(d.monto)}</span><br><span style="font-size:10px;color:var(--gray-400)">${d.detalle}</span></td>
+        <td style="font-size:11px;color:var(--gray-400);font-style:italic">No registrado</td>
+        <td style="font-size:11px;color:var(--gray-400);font-style:italic">No registrado</td>
+      </tr>`;
+    }).join('');
+  } catch(err) {
+    loading.style.display = 'none';
+    vacio.style.display = 'block';
+    console.error('Error cargando historial de descuentos:', err);
+  }
 }
 
 // ===================== REPORTES: SECCIONES ADICIONALES =====================

@@ -4165,7 +4165,11 @@ function mdh_toggleDescTipo(btn) {
   mdh_calcResumen();
 }
 
-function mdh_getImporteConDescuento() {
+// Subtotal recalculado desde servicio+noches por mascota, ya neto de
+// descuentos por mascota (formato viejo). No incluye el descuento global.
+// Devuelve null cuando no hay datos suficientes para recalcular (fallback
+// a mdh-importe en ese caso).
+function mdh_getSubtotalMascotas() {
   const sels = document.querySelectorAll('#mdh-mascotas select');
   const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
   const servicios = getServicios();
@@ -4186,7 +4190,25 @@ function mdh_getImporteConDescuento() {
     });
     return Math.round(total * 100) / 100;
   }
-  return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
+  return null;
+}
+
+function mdh_getImporteConDescuento() {
+  const subtotal = mdh_getSubtotalMascotas();
+  if (subtotal === null) {
+    return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
+  }
+  // Corrección CRÍTICO #1 (auditoría final): preservar el descuento global
+  // guardado por guardarEntrada() en desc_tipo/desc_valor. Sin esto, abrir y
+  // guardar el modal sin cambios recalculaba desde cero e ignoraba ese
+  // descuento, subiendo el importe al valor sin descontar.
+  const e = entradas.find(en => en.id === detalleHospedajeId);
+  const descGlobalTipo = e?.desc_tipo || 'pct';
+  const descGlobalVal  = parseFloat(e?.desc_valor) || 0;
+  const descGlobalMonto = descGlobalVal > 0
+    ? (descGlobalTipo === 'pct' ? subtotal * descGlobalVal / 100 : Math.min(subtotal, descGlobalVal))
+    : 0;
+  return Math.round((subtotal - descGlobalMonto) * 100) / 100;
 }
 
 function mdh_getDescuentoObj() {
@@ -4707,6 +4729,14 @@ async function guardarCambiosHospedaje() {
     });
   });
 
+  // Corrección CRÍTICO #1: mantener subtotal/desc_monto en sincronía con el
+  // importe recalculado, sin tocar desc_tipo/desc_valor (la tasa del
+  // descuento global no se edita desde este modal, solo se preserva).
+  const subtotalMascotas = mdh_getSubtotalMascotas();
+  const descuentoGlobalUpdate = subtotalMascotas !== null
+    ? { subtotal: subtotalMascotas, desc_monto: Math.round((subtotalMascotas - importe) * 100) / 100 }
+    : {};
+
   const btn = document.querySelector('#modal-detalle-hospedaje .btn-primary[onclick="guardarCambiosHospedaje()"]');
   setBtnLoading(btn, true);
   setLoading(true);
@@ -4717,7 +4747,8 @@ async function guardarCambiosHospedaje() {
       habitacion: hab, importe,
       descuento: descuentoObj ? JSON.stringify(descuentoObj) : null,
       notas,
-      conceptos_json: JSON.stringify(conceptosModalGuardar)
+      conceptos_json: JSON.stringify(conceptosModalGuardar),
+      ...descuentoGlobalUpdate
     });
     await cargarTodo();
     closeModal('modal-detalle-hospedaje');

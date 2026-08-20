@@ -7189,7 +7189,7 @@ function hacerSalida(nombre, id) {
 
   const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
   const atrasado = new Date(e.salidaPrevista) < new Date();
-  const adelantosPrevios = cobros.filter(co => co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
+  const adelantosPrevios = cobros.filter(co => co.entradaId===e.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
   const pendienteActual = Math.max(0, e.importe - adelantosPrevios);
 
   // Detectar flags en mascotas
@@ -7336,7 +7336,7 @@ function selMetodoPago(metodo, btn) {
 function actualizarResumenSalida() {
   const e = entradas.find(en=>en.id===salidaActual);
   if (!e) return;
-  const adelantosPrevios = cobros.filter(co=>co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
+  const adelantosPrevios = cobros.filter(co=>co.entradaId===e.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
   const cobrado = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
   const pendiente = Math.max(0, e.importe - adelantosPrevios - cobrado);
   const el1 = document.getElementById('rs-cobrado');
@@ -7354,15 +7354,30 @@ async function confirmarSalida() {
   _confirmandoSalida = true;
   const e = entradas.find(en=>en.id===salidaActual);
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
-  const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id).reduce((s,co)=>s+co.monto,0);
+  // Solo cuenta dinero realmente recibido (pagado/adelanto) — nunca una deuda pendiente
+  // que por cualquier motivo ya estuviera vinculada a esta entrada.
+  const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
   const cobrado = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
   const metodo = document.getElementById('salida-metodo')?.value||'Efectivo';
+
+  // No permitir cobrar más de lo que realmente se debe.
+  const maximoAPagar = e ? Math.max(0, e.importe - adelantosPrevios) : 0;
+  if (cobrado > maximoAPagar) {
+    notify(`⚠️ El monto a cobrar ($${cobrado.toLocaleString('es-MX')}) es mayor al saldo real pendiente ($${maximoAPagar.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
+    _confirmandoSalida = false;
+    return;
+  }
+
   const totalCobrado = adelantosPrevios + cobrado;
   const pendiente = e ? Math.max(0, e.importe - totalCobrado) : 0;
 
   setLoading(true);
+  // Rastrea qué se alcanzó a guardar antes de una posible falla, para nunca dejar
+  // al usuario adivinando qué quedó a medias.
+  let entradaMarcada = false, cobroRegistrado = false, pendienteRegistrado = false;
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
+    entradaMarcada = true;
     if (cobrado > 0 && c) {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
@@ -7373,6 +7388,7 @@ async function confirmarSalida() {
         notas: pendiente > 0 ? `Pendiente: $${pendiente}` : 'Pago completo',
         status: 'pagado'
       });
+      cobroRegistrado = true;
     }
     if (pendiente > 0 && c) {
       await sb('POST', 'cobros', {
@@ -7383,15 +7399,17 @@ async function confirmarSalida() {
         notas: 'Generado al hacer salida',
         status: 'pendiente'
       });
+      pendienteRegistrado = true;
     }
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
     // Si pagó en efectivo → abrir cajón + imprimir ticket
-    let cajaOk = true;
+    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
       cajaOk = await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
+      hardwareOk = Printer.huboExitoHardware();
     }
 
     if (c?.whatsapp && cobrado > 0) {
@@ -7403,13 +7421,25 @@ async function confirmarSalida() {
     }
     if (pendiente > 0) {
       notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
-    } else if (cajaOk) {
-      notify('✅ Salida registrada y cobro completo', 'success');
-    } else {
+    } else if (!cajaOk) {
       notify('✅ Salida registrada — ⚠️ el cobro se guardó pero no se registró en caja', 'error');
+    } else if (!hardwareOk) {
+      notify('✅ Salida registrada y cobro completo — ⚠️ el cajón no se abrió / el ticket no se imprimió', 'error');
+    } else {
+      notify('✅ Salida registrada y cobro completo', 'success');
     }
   } catch(err) {
-    notify('❌ Error al registrar salida: ' + err.message, 'error');
+    // Estado parcial real: parte de la secuencia ya se guardó en Supabase antes de la falla.
+    if (entradaMarcada) {
+      const detalle = cobroRegistrado
+        ? (pendiente > 0 && !pendienteRegistrado
+            ? `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados, pero el saldo pendiente de $${pendiente.toLocaleString('es-MX')} NO se registró.`
+            : `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados.`)
+        : `La salida ya quedó marcada como completada, pero el cobro de $${cobrado.toLocaleString('es-MX')} NO se registró.`;
+      notify(`⚠️ Error a mitad del proceso: ${detalle} Verifica esta entrada antes de continuar. (${err.message})`, 'error');
+    } else {
+      notify('❌ Error al registrar salida: ' + err.message, 'error');
+    }
   }
   setLoading(false);
   _confirmandoSalida = false;

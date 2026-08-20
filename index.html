@@ -8073,8 +8073,9 @@ async function renderDeudasPendientes() {
 const Printer = (() => {
 
   // ── Estado privado ────────────────────────────────────────
-  let _cola = [];           // jobs pendientes {tipo, lineas}
+  let _cola = [];           // jobs pendientes {tipo, lineas} — SOLO tickets, nunca apertura de cajón
   let _ocupado = false;     // mutex: evita impresiones simultáneas
+  let _ultimoHardwareOk = null; // resultado del último intento de cajón+ticket (true/false/null)
 
   // ── A: Hardware / QZ Tray (privado) ──────────────────────
 
@@ -8104,11 +8105,17 @@ const Printer = (() => {
     }
   }
 
-  // Imprime cajón ESC/POS + ticket en dos llamadas QZ separadas.
+  // Imprime cajón ESC/POS + ticket en una sola llamada QZ (una sola autorización).
   // Cajón en hex (bytes exactos), ticket en base64 Latin-1 (sin encodeURIComponent).
+  // Si el hardware falla por cualquier motivo, NUNCA se reintenta la apertura del
+  // cajón automáticamente — solo el ticket queda disponible para reimpresión manual
+  // explícita (botón "Reconectar"). El resultado se guarda en _ultimoHardwareOk para
+  // que el caller (ej. cobrarRapido) pueda avisar con precisión qué sí y qué no ocurrió,
+  // sin que esta función tenga que saber nada de caja_movimientos.
   async function _enviarCajonYTicket(lineas) {
     if (_ocupado) {
       console.warn('Printer: impresión ya en curso, ignorando llamada duplicada');
+      _ultimoHardwareOk = false;
       return;
     }
     _ocupado = true;
@@ -8116,13 +8123,12 @@ const Printer = (() => {
       const ok = await _conectar();
       _bannerQZ(ok);
       if (!ok) {
-        _cola.push({ tipo: 'cajon_ticket', lineas });
-        _bannerCola();
-        notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
+        if (lineas) { _cola.push({ tipo: 'ticket', lineas }); _bannerCola(); }
+        notify('⚠️ Impresora desconectada — el cajón no se abrió y el ticket no se imprimió. El ticket queda guardado para reimprimir manualmente.', 'error');
+        _ultimoHardwareOk = false;
         return;
       }
       const config = qz.configs.create(_getNombreImpresora());
-      // Cajón + ticket en un solo job = una sola autorización de QZ Tray.
       // QZ Tray 2.2.6 soporta arrays mixtos (hex + base64) en una sola llamada.
       // El printer recibe ambos como stream continuo y los secuencia internamente.
       const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
@@ -8132,13 +8138,18 @@ const Printer = (() => {
         dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
       }
       await qz.print(config, dataArr);
+      _ultimoHardwareOk = true;
     } catch(e) {
-      notify('Error al imprimir: ' + e.message, 'error');
+      if (lineas) { _cola.push({ tipo: 'ticket', lineas }); _bannerCola(); }
+      notify('Error al imprimir: ' + e.message + ' — el ticket queda guardado para reimprimir manualmente.', 'error');
+      _ultimoHardwareOk = false;
     } finally {
       _ocupado = false;
     }
   }
 
+  // Reimpresión manual — SOLO tickets, jamás vuelve a abrir el cajón automáticamente.
+  // Se ejecuta únicamente cuando el usuario hace clic en "Reconectar" (acción explícita).
   async function _vaciarCola() {
     if (!_cola.length) return;
     if (_ocupado) {
@@ -8154,17 +8165,14 @@ const Printer = (() => {
     _bannerCola();
     for (const job of pendientes) {
       try {
-        if (job.tipo === 'cajon_ticket') {
+        if (job.tipo === 'ticket' && job.lineas) {
           const config = qz.configs.create(_getNombreImpresora());
-          const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
-          if (job.lineas) {
-            const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
-            dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
-          }
+          const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
+          const dataArr = [{ type: 'raw', format: 'base64', data: btoa(lineasLatin1) }];
           await qz.print(config, dataArr);
         }
       } catch(e) {
-        console.warn('Printer: error imprimiendo trabajo pendiente:', e);
+        console.warn('Printer: error imprimiendo ticket pendiente:', e);
       }
     }
     _ocupado = false;
@@ -8402,7 +8410,8 @@ const Printer = (() => {
     });
   }
 
-  return { verificarEstado, reconectar, cobro, apertura, corte, ticketEntrada, imprimirDesdeDetalle };
+  return { verificarEstado, reconectar, cobro, apertura, corte, ticketEntrada, imprimirDesdeDetalle,
+    huboExitoHardware: () => _ultimoHardwareOk };
 
 })();
 
@@ -10712,11 +10721,14 @@ async function cobrarRapido() {
     });
     // Abrir cajón + ticket
     const cajaOk = await Printer.cobro('Cobro rápido', concepto, monto, null);
+    const hardwareOk = Printer.huboExitoHardware();
     closeModal('modal-cobro-rapido');
-    if (cajaOk) {
-      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
+    if (!cajaOk) {
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ cobrado — ⚠️ no se pudo guardar en caja`, 'error');
+    } else if (!hardwareOk) {
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
     } else {
-      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ registrado — ⚠️ no se pudo guardar en caja`, 'error');
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
     }
   } catch(err) {
     notify('Error: ' + err.message, 'error');

@@ -5457,7 +5457,16 @@ async function confirmarAplicarPago() {
     .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const totalPendiente = pendientes.reduce((s,co)=>s+co.monto,0);
 
+  // El monto aplicado a la deuda debe coincidir exactamente con lo que se registra
+  // como ingreso en caja — no se permite "aplicar" más de lo que realmente se debe.
+  if (monto > totalPendiente) {
+    notify(`⚠️ El monto ($${monto.toLocaleString('es-MX')}) es mayor a la deuda total ($${totalPendiente.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
+    _aplicandoPago = false;
+    return;
+  }
+
   setLoading(true);
+  let aplicadoHastaAhora = 0;
   try {
     let restante = monto;
     for (const co of pendientes) {
@@ -5465,24 +5474,28 @@ async function confirmarAplicarPago() {
       if (restante >= co.monto) {
         // Paga completo este cobro
         await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}`, fecha_pago: new Date().toISOString() });
+        aplicadoHastaAhora += co.monto;
         restante -= co.monto;
       } else {
         // Pago parcial — actualizar monto pendiente
         await sb('PATCH', `cobros?id=eq.${co.id}`, { monto: co.monto - restante, notas: `Pago parcial $${restante.toLocaleString('es-MX')} el ${new Date().toISOString().split('T')[0]}` });
-        // Registrar el pago aplicado
+        // Registrar el pago aplicado — conserva el mismo entrada_id de la deuda original
+        // para no perder el vínculo con el hospedaje.
         await sb('POST', 'cobros', {
-          cliente_id: id, fecha: new Date().toISOString().split('T')[0],
+          cliente_id: id, entrada_id: co.entradaId || null,
+          fecha: new Date().toISOString().split('T')[0],
           fecha_pago: new Date().toISOString(),
           metodo, monto: restante, concepto: 'Abono a cuenta pendiente',
           notas: `Abono parcial`, status: 'pagado'
         });
+        aplicadoHastaAhora += restante;
         restante = 0;
       }
     }
     await cargarTodo();
     closeModal('modal-aplicar-pago');
     // Cajón + ticket + caja_movimientos si el pago es en efectivo
-    let cajaOk = true;
+    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo' && monto > 0) {
       cajaOk = await Printer.cobro(
         c?.nombre || 'Cliente',
@@ -5490,10 +5503,13 @@ async function confirmarAplicarPago() {
         monto,
         null
       );
+      hardwareOk = Printer.huboExitoHardware();
     }
     const restanteTotal = Math.max(0, totalPendiente - monto);
     if (!cajaOk) {
       notify(`✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — ⚠️ no se pudo registrar en caja`, 'error');
+    } else if (!hardwareOk) {
+      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} aplicado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
     } else {
       notify(restanteTotal > 0
         ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
@@ -5504,7 +5520,15 @@ async function confirmarAplicarPago() {
     // Refrescar perfil si está abierto
     const screen = document.getElementById('screen-perfil-cliente');
     if (screen?.classList.contains('active')) verPerfilCliente(id);
-  } catch(e) { notify('Error: '+e.message, 'error'); }
+  } catch(e) {
+    // Estado parcial real: parte del bucle ya se aplicó en Supabase antes de la falla.
+    // El usuario debe saber exactamente cuánto, no solo que "hubo un error".
+    if (aplicadoHastaAhora > 0) {
+      notify(`⚠️ Error a mitad del proceso: se alcanzaron a aplicar $${aplicadoHastaAhora.toLocaleString('es-MX')} de $${monto.toLocaleString('es-MX')} antes de la falla (${e.message}). Verifica las deudas de este cliente antes de reintentar.`, 'error');
+    } else {
+      notify('Error: '+e.message, 'error');
+    }
+  }
   setLoading(false);
   _aplicandoPago = false;
 }

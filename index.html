@@ -8764,8 +8764,13 @@ async function hacerCorteCaja() {
   }
   modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:400px">${resumen}</div>`;
 }
+let _generandoCorte = false;
 async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, movIds) {
+  if (_generandoCorte) return;
+  _generandoCorte = true;
+
   await Printer.corte(cobrosEfectivo, fondoInicial, salidas, totalCaja);
+  const hardwareOk = Printer.huboExitoHardware();
 
   // 1. Crear registro en cortes_caja
   let corteId = null;
@@ -8788,8 +8793,15 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, m
     console.error('Error guardando corte_caja:', e);
   }
 
+  if (!corteId) {
+    notify('❌ No se pudo guardar el corte. Intenta de nuevo — la caja no se reinició.', 'error');
+    _generandoCorte = false;
+    return;
+  }
+
   // 2. Asociar movimientos al corte usando sus IDs explícitos
-  if (corteId && Array.isArray(movIds) && movIds.length > 0) {
+  let movimientosMarcados = true;
+  if (Array.isArray(movIds) && movIds.length > 0) {
     try {
       await sb('PATCH', 'caja_movimientos',
         { corte_id: corteId },
@@ -8797,12 +8809,20 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, m
       );
     } catch(e) {
       console.error('Error asociando movimientos al corte:', e);
+      movimientosMarcados = false;
     }
   }
 
   cerrarModalComprobante();
-  notify('✅ Corte impreso y caja reiniciada en $0', 'success');
+  if (!movimientosMarcados) {
+    notify('⚠️ El corte se guardó pero no se pudieron marcar los movimientos incluidos. Revísalo antes de hacer el siguiente corte para evitar duplicar montos.', 'error');
+  } else if (!hardwareOk) {
+    notify('✅ Corte guardado — ⚠️ el cajón no se abrió / el ticket no se imprimió', 'error');
+  } else {
+    notify('✅ Corte impreso y caja reiniciada en $0', 'success');
+  }
   renderMovimientosCaja();
+  _generandoCorte = false;
 }
 
 

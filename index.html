@@ -3634,17 +3634,20 @@ function nr_toggleAdelanto() {
   document.getElementById('nr-adelanto-form').style.display = cb.checked ? 'block' : 'none';
 }
 
+let _guardandoReservacion = false;
 async function guardarReservacion() {
-  if (!nr_clienteSeleccionado) { notify('⚠️ Selecciona un cliente', 'error'); return; }
+  if (_guardandoReservacion) return;
+  _guardandoReservacion = true;
+  if (!nr_clienteSeleccionado) { notify('⚠️ Selecciona un cliente', 'error'); _guardandoReservacion = false; return; }
   const mascotas = [...document.querySelectorAll('#nr-mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota', 'error'); return; }
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota', 'error'); _guardandoReservacion = false; return; }
   const fe = document.getElementById('nr-fecha-entrada').value;
   const fs = document.getElementById('nr-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la entrada', 'error'); return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); _guardandoReservacion = false; return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); _guardandoReservacion = false; return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la entrada', 'error'); _guardandoReservacion = false; return; }
   const hab = document.getElementById('nr-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); _guardandoReservacion = false; return; }
 
   // Calcular total
   let totalFinal = 0;
@@ -3659,6 +3662,7 @@ async function guardarReservacion() {
   // Corrección C: bloquear reservación con total $0
   if (totalFinal <= 0) {
     notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar la reservación.', 'error');
+    _guardandoReservacion = false;
     return;
   }
 
@@ -3667,7 +3671,7 @@ async function guardarReservacion() {
   const montoAdelanto = tieneAdelanto ? parseFloat(document.getElementById('nr-adelanto-monto').value) : 0;
   const metodoAdelanto = document.getElementById('nr-adelanto-metodo').value;
   if (tieneAdelanto && (!montoAdelanto || montoAdelanto <= 0)) {
-    notify('⚠️ Ingresa el monto del anticipo', 'error'); return;
+    notify('⚠️ Ingresa el monto del anticipo', 'error'); _guardandoReservacion = false; return;
   }
 
   const he = document.getElementById('nr-hora-entrada').value;
@@ -3758,6 +3762,7 @@ async function guardarReservacion() {
     showScreen('reservaciones-admin');
   } catch(e) { notify('Error: ' + e.message, 'error'); }
   setLoading(false);
+  _guardandoReservacion = false;
 }
 
 async function convertirEnEntrada(reservaId) {
@@ -6987,17 +6992,20 @@ function editarEntrada(id) {
     notify(`✏️ Editando hospedaje de ${c.nombre}`, 'success');
   }, 200);
 }
+let _guardandoEntrada = false;
 async function guardarEntrada() {
-  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); return; }
+  if (_guardandoEntrada) return;
+  _guardandoEntrada = true;
+  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); _guardandoEntrada = false; return; }
   const mascotas = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); return; }
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); _guardandoEntrada = false; return; }
   const fe = document.getElementById('ne-fecha-entrada').value;
   const fs = document.getElementById('ne-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); _guardandoEntrada = false; return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); _guardandoEntrada = false; return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); _guardandoEntrada = false; return; }
   const hab = document.getElementById('ne-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); _guardandoEntrada = false; return; }
 
   // CORRECCIÓN 4 — Validar que ninguna mascota tenga ya un hospedaje activo
   // Compara nombre + clienteId: mismo nombre en cliente distinto no es el mismo perro
@@ -7012,6 +7020,7 @@ async function guardarEntrada() {
   });
   if (mascotasConHospedajeActivo.length > 0) {
     notify(`⚠️ Ya existe un hospedaje activo para: ${mascotasConHospedajeActivo.join(', ')}. Registra la salida primero.`, 'error');
+    _guardandoEntrada = false;
     return;
   }
 
@@ -7021,6 +7030,7 @@ async function guardarEntrada() {
       || document.getElementById('ne-responsiva')?.checked === true;
     if (!respFirmada) {
       notify('⚠️ El cliente debe firmar la responsiva antes de registrar el hospedaje.', 'error');
+      _guardandoEntrada = false;
       return;
     }
   }
@@ -7054,12 +7064,13 @@ async function guardarEntrada() {
     const eOrig = entradas.find(en=>en.id===entradaEditandoId);
     totalFinal = eOrig?.importe || 0;
   } else if (hayPrecioVacio && filas.length) {
-    if (!confirm('Hay conceptos con precio $0. ¿Deseas continuar?')) return;
+    if (!confirm('Hay conceptos con precio $0. ¿Deseas continuar?')) { _guardandoEntrada = false; return; }
   }
 
   // Corrección A: bloquear entrada con total $0
   if (totalFinal <= 0 && !entradaEditandoId) {
     notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar.', 'error');
+    _guardandoEntrada = false;
     return;
   }
 
@@ -7203,6 +7214,7 @@ async function guardarEntrada() {
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
+  _guardandoEntrada = false;
 }
 
 // ===================== SALIDA =====================

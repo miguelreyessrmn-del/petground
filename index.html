@@ -3715,6 +3715,7 @@ async function guardarReservacion() {
       const nuevaEntrada = await sb('POST', 'entradas', datos);
       const entradaId = nuevaEntrada?.[0]?.id;
       // Registrar adelanto si aplica
+      let cajaOkAdelanto = true, hardwareOkAdelanto = true;
       if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
         await sb('POST', 'cobros', {
           cliente_id: nr_clienteSeleccionado.id,
@@ -3729,10 +3730,17 @@ async function guardarReservacion() {
         });
         // Abrir cajón si es efectivo
         if (metodoAdelanto === 'Efectivo') {
-          await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+          cajaOkAdelanto = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+          hardwareOkAdelanto = Printer.huboExitoHardware();
         }
       }
-      notify('✅ Reservación guardada', 'success');
+      if (!cajaOkAdelanto) {
+        notify('✅ Reservación guardada — ⚠️ el anticipo se registró pero no se pudo guardar en caja', 'error');
+      } else if (!hardwareOkAdelanto) {
+        notify('✅ Reservación guardada — ⚠️ el anticipo se registró pero el cajón no se abrió / el ticket no se imprimió', 'error');
+      } else {
+        notify('✅ Reservación guardada', 'success');
+      }
     }
     await cargarTodo();
     // Limpiar form
@@ -4345,12 +4353,15 @@ function mdh_abrirFormAdelanto() {
   }
 }
 
+let _guardandoAdelantoDetalle = false;
 async function mdh_guardarAdelanto() {
+  if (_guardandoAdelantoDetalle) return;
+  _guardandoAdelantoDetalle = true;
   const monto  = parseFloat(document.getElementById('mdh-adel-monto').value);
   const metodo = document.getElementById('mdh-adel-metodo').value;
-  if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); return; }
+  if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); _guardandoAdelantoDetalle = false; return; }
   const e = entradas.find(en => en.id === detalleHospedajeId);
-  if (!e) return;
+  if (!e) { _guardandoAdelantoDetalle = false; return; }
   setLoading(true);
   try {
     await sb('POST', 'cobros', {
@@ -4365,11 +4376,19 @@ async function mdh_guardarAdelanto() {
     await cargarTodo();
     document.getElementById('mdh-form-adelanto').style.display = 'none';
     mdh_renderAdelantos();
-    notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
     // Cajón + ticket si es efectivo
     const c = clientes.find(cl => cl.id === e.clienteId);
+    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo') {
-      await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
+      cajaOk = await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
+      hardwareOk = Printer.huboExitoHardware();
+    }
+    if (!cajaOk) {
+      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} registrado — ⚠️ no se pudo registrar en caja`, 'error');
+    } else if (!hardwareOk) {
+      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
+    } else {
+      notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
     }
     // Ofrecer WA
     if (c?.whatsapp) {
@@ -4389,6 +4408,7 @@ async function mdh_guardarAdelanto() {
     }
   } catch(err) { notify('Error: ' + err.message, 'error'); }
   setLoading(false);
+  _guardandoAdelantoDetalle = false;
 }
 
 // ===================== COMPROBANTE IMPRIMIBLE =====================
@@ -7112,12 +7132,17 @@ async function guardarEntrada() {
       });
       // Si el adelanto es en efectivo: abrir cajón + registrar en caja_movimientos
       if (metodoAdelantoNE === 'Efectivo') {
-        await Printer.cobro(
+        const cajaOkAdelantoNE = await Printer.cobro(
           clienteEntradaSeleccionado.nombre,
           mascotas.join(', '),
           montoAdelantoNE,
           entradaIdFinal
         );
+        if (!cajaOkAdelantoNE) {
+          notify('⚠️ El anticipo se registró pero no se pudo guardar en caja', 'error');
+        } else if (!Printer.huboExitoHardware()) {
+          notify('⚠️ El anticipo se registró pero el cajón no se abrió / el ticket no se imprimió', 'error');
+        }
       }
     }
     // Guardar datos para el ticket ANTES de limpiar el formulario
@@ -9249,12 +9274,19 @@ function openModalAdelanto() {
   document.getElementById('modal-adelanto').classList.add('open');
 }
 
+let _guardandoAdelantoFacturacion = false;
 async function guardarAdelanto() {
+  if (_guardandoAdelantoFacturacion) return;
+  _guardandoAdelantoFacturacion = true;
   const cid = parseInt(document.getElementById('adel-cliente').value);
   const monto = parseFloat(document.getElementById('adel-monto').value);
-  if (!cid) { notify('Selecciona un cliente','error'); return; }
-  if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); return; }
-  const entActiva = entradas.find(e=>e.clienteId===cid);
+  if (!cid) { notify('Selecciona un cliente','error'); _guardandoAdelantoFacturacion = false; return; }
+  if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); _guardandoAdelantoFacturacion = false; return; }
+  // Solo se vincula automáticamente si hay UNA sola estancia activa sin ambigüedad —
+  // con 2+ estancias activas del mismo cliente no se puede adivinar cuál es, y
+  // vincularlo a la incorrecta sería peor que dejarlo "Sin vincular".
+  const entradasActivasCliente = entradas.filter(e=>e.clienteId===cid);
+  const entActiva = entradasActivasCliente.length === 1 ? entradasActivasCliente[0] : null;
   const metodo = document.getElementById('adel-metodo').value;
   setLoading(true);
   try {
@@ -9270,11 +9302,19 @@ async function guardarAdelanto() {
     });
     await cargarTodo();
     closeModal('modal-adelanto');
-    notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     // Cajón + ticket + caja_movimientos si el adelanto es en efectivo
+    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo' && monto > 0) {
       const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
-      await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
+      cajaOk = await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
+      hardwareOk = Printer.huboExitoHardware();
+    }
+    if (!cajaOk) {
+      notify(`🔖 Adelanto de $${monto.toLocaleString('es-MX')} registrado — ⚠️ no se pudo registrar en caja`, 'error');
+    } else if (!hardwareOk) {
+      notify(`🔖 Adelanto de $${monto.toLocaleString('es-MX')} registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
+    } else {
+      notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     }
     initFacturacion();
     // Ofrecer envío de confirmación por WhatsApp
@@ -9295,6 +9335,7 @@ async function guardarAdelanto() {
     notify('Error: '+e.message,'error');
   }
   setLoading(false);
+  _guardandoAdelantoFacturacion = false;
 }
 
 // ===================== RAZAS =====================

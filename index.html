@@ -613,7 +613,7 @@
           <div class="stat-info">
             <div class="stat-num" id="stat-salidas">1</div>
             <div class="stat-label">Salidas hoy</div>
-            <div class="stat-action" onclick="actualizarPanelesHoy(new Date().toISOString().split('T')[0])" style="cursor:pointer">Ver salidas</div>
+            <div class="stat-action" onclick="renderSalidasHoy(new Date().toISOString().split('T')[0])" style="cursor:pointer">Ver salidas</div>
           </div>
         </div>
         <div class="stat-card" onclick="showScreen('entradas')">
@@ -634,80 +634,69 @@
         </div>
       </div>
 
-      <div class="occ-card">
-        <div>
-          <div class="occ-pct" id="occ-pct">0%</div>
-          <div class="occ-label">Ocupación actual</div>
+      <!-- LLEGADAS DE HOY -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="card-title" style="font-size:13px">🐾 Llegadas de hoy</div>
+          <span class="badge badge-orange" id="badge-llegadas-hoy">0 de 0</span>
         </div>
-        <div class="occ-divider"></div>
-        <div class="occ-stat">
-          <div class="num" id="occ-libres">0</div>
-          <div class="lbl">Espacios libres</div>
+        <div id="llegadas-hoy-body"></div>
+      </div>
+
+      <!-- SALIDAS DE HOY -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
+          <span class="badge badge-red" id="badge-salidas-hoy">0</span>
         </div>
-        <div class="occ-divider"></div>
-        <div class="occ-stat">
-          <div class="num" id="occ-ocupados">0</div>
-          <div class="lbl">Espacios ocupados</div>
+        <div id="salidas-hoy-body"></div>
+      </div>
+
+      <!-- AVISOS IMPORTANTES -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="card-title" style="font-size:13px">⚠️ Avisos importantes</div>
+          <span class="badge badge-red" id="badge-avisos">0</span>
         </div>
-        <div class="occ-bar-wrap">
-          <div class="occ-bar-label">Capacidad: <span id="cap-total">52</span> espacios totales</div>
-          <div class="occ-bar">
-            <div class="occ-bar-fill" id="occ-bar-fill" style="width:0%"></div>
-          </div>
+        <div id="avisos-importantes-body"></div>
+      </div>
+
+      <!-- NOTAS OPERATIVAS -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="card-title" style="font-size:13px">📝 Notas operativas</div>
+          <span id="notas-estado" style="font-size:11px;color:var(--gray-400)"></span>
+        </div>
+        <div style="padding:12px 14px">
+          <textarea id="notas-operativas-textarea" placeholder="Bañar a Mateo. Ulises toma pastillas a las 4. Llamar al dueño de Rocky..."
+            style="width:100%;min-height:90px;border:1.5px solid var(--gray-200);border-radius:8px;padding:10px;font-family:'Poppins',sans-serif;font-size:13px;line-height:1.5;resize:vertical;outline:none;box-sizing:border-box"
+            oninput="onNotasOperativasInput()"></textarea>
         </div>
       </div>
 
-
-      <!-- CALENDARIO COMPACTO + EVENTOS + ENTRADAS/SALIDAS EN UNA FILA -->
-      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:16px;margin-bottom:20px;align-items:start">
-
-        <!-- Calendario compacto -->
-        <div class="card" style="min-width:280px">
-          <div class="card-header" style="padding:10px 14px">
-            <div class="card-title" style="font-size:13px" id="cal-titulo">📅 Abril 2026</div>
-            <div style="display:flex;gap:4px">
-              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(-1)">◀</button>
-              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(0)">Hoy</button>
-              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(1)">▶</button>
-            </div>
-          </div>
-          <div style="padding:10px 12px">
-            <div class="cal-header">
-              <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
-              <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
-              <div class="cal-dow">D</div>
-            </div>
-            <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
-            <div style="display:flex;gap:10px;margin-top:8px;font-size:10px;color:var(--gray-400)">
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
-              <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
-            </div>
+      <!-- CALENDARIO (+ ocupación como dato secundario) -->
+      <div class="card" style="margin-bottom:16px;max-width:340px">
+        <div class="card-header" style="padding:10px 14px">
+          <div class="card-title" style="font-size:13px" id="cal-titulo">📅 Abril 2026</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(-1)">◀</button>
+            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(0)">Hoy</button>
+            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(1)">▶</button>
           </div>
         </div>
-
-        <!-- Entradas de hoy -->
-        <div class="card">
-          <div class="card-header" style="padding:10px 14px">
-            <div class="card-title" style="font-size:13px">📥 Entradas de hoy</div>
-            <span class="badge badge-orange" id="badge-ent-hoy">0</span>
+        <div style="padding:10px 12px">
+          <div class="cal-header">
+            <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
+            <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
+            <div class="cal-dow">D</div>
           </div>
-          <div id="entradas-hoy-list">
-            <div class="empty-state" style="padding:20px">
-              <div class="es-icon" style="font-size:24px">📭</div>
-              <div class="es-text">Sin entradas hoy</div>
-              <button onclick="showScreen('nueva-entrada')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Registrar entrada</button>
-            </div>
+          <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
+          <div style="display:flex;gap:10px;margin-top:8px;font-size:10px;color:var(--gray-400)">
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
           </div>
-        </div>
-
-        <!-- Salidas de hoy -->
-        <div class="card">
-          <div class="card-header" style="padding:10px 14px">
-            <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
-            <span class="badge badge-red" id="badge-sal-hoy">0</span>
-          </div>
-          <div id="salidas-hoy-list"></div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-100);font-size:11px;color:var(--gray-400)">📊 Ocupación: <span id="occ-compact">0/0 · 0%</span></div>
         </div>
       </div>
 
@@ -5873,8 +5862,9 @@ function renderCalendario() {
 function seleccionarDiaCal(fecha) {
   calDiaSeleccionado=fecha;
   renderCalendario();
+  // Los bloques de Llegadas/Salidas de Inicio son siempre de HOY por diseño;
+  // el detalle del día seleccionado en el calendario vive en su propio panel.
   mostrarEventosDia(fecha);
-  actualizarPanelesHoy(fecha);
   const wrapper = document.getElementById('cal-eventos-wrapper');
   if (wrapper) wrapper.style.display='block';
 }
@@ -5943,48 +5933,202 @@ function mostrarEventosDia(fecha) {
   if(body) body.innerHTML=html;
 }
 
-function actualizarPanelesHoy(fecha) {
-  const hoyStr = new Date().toISOString().split('T')[0];
-  const esHoy = fecha === hoyStr;
-  const labelFecha = esHoy ? 'hoy' : new Date(fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
-  const listEnt = document.getElementById('entradas-hoy-list');
-  const listSal = document.getElementById('salidas-hoy-list');
-  const entsDelDia = entradas.filter(e => (e.entrada||'').startsWith(fecha));
+// "Llegadas de hoy": responde "¿a quién esperamos hoy y quién ya llegó?".
+// No se refuerza el concepto de habitación aquí a propósito (espacios dinámicos).
+function renderLlegadasHoy(fecha) {
+  const body = document.getElementById('llegadas-hoy-body');
+  const badge = document.getElementById('badge-llegadas-hoy');
+  if (!body) return;
+  const yaLlegaron = entradas.filter(e => (e.entrada||'').startsWith(fecha));
   // Solo reservaciones que AÚN no han llegado (no están en entradas activas)
-  const resDia = reservaciones.filter(e => {
+  const porLlegar = reservaciones.filter(e => {
     if (!(e.entrada||'').startsWith(fecha)) return false;
-    // Verificar que no haya ya una entrada activa para el mismo cliente y mascotas
     return !entradas.some(a => a.clienteId === e.clienteId &&
       (e.mascotas||[]).every(m => (a.mascotas||[]).includes(m)));
   });
-  if (listEnt) {
-    if (!entsDelDia.length && !resDia.length) {
-      listEnt.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon" style="font-size:24px">📭</div><div class="es-text">Sin entradas ${labelFecha}</div></div>`;
-    } else {
-      listEnt.innerHTML = [...entsDelDia, ...resDia].map(e => {
-        const c = clientes.find(cl => cl.id === e.clienteId);
-        const ini = (c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('');
-        const esRes = e.status === 'reservacion';
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
-          <div style="width:32px;height:32px;border-radius:50%;background:${esRes?'var(--blue)':'var(--orange)'};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
-          <div style="flex:1"><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion||'—'}</div></div>
-          ${esRes?'<span class="badge badge-blue" style="font-size:10px">Reservación</span>':''}
-        </div>`;
-      }).join('');
+  if (badge) badge.textContent = `${yaLlegaron.length} de ${yaLlegaron.length + porLlegar.length}`;
+
+  if (!yaLlegaron.length && !porLlegar.length) {
+    body.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon" style="font-size:24px">📭</div><div class="es-text">Sin llegadas programadas hoy</div><button onclick="showScreen('nueva-entrada')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Registrar entrada</button></div>`;
+    return;
+  }
+
+  const fila = (e, llegado) => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const masc = (e.mascotas||[]).join(', ');
+    const clickable = llegado ? `cursor:pointer` : '';
+    const onclickAttr = llegado ? `onclick="verDetalleHospedaje(${e.id})"` : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--gray-100);${clickable}" ${onclickAttr}>
+      <span style="font-size:13px;flex-shrink:0">${llegado?'✅':'⏳'}</span>
+      <div style="flex:1;min-width:0"><span style="font-weight:600;font-size:12.5px">🐕 ${masc}</span> <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}</span></div>
+    </div>`;
+  };
+
+  let html = '';
+  if (porLlegar.length) {
+    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">⏳ POR LLEGAR (${porLlegar.length})</div>`;
+    html += porLlegar.map(e=>fila(e,false)).join('');
+  }
+  if (yaLlegaron.length) {
+    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">✅ YA LLEGARON (${yaLlegaron.length})</div>`;
+    html += yaLlegaron.map(e=>fila(e,true)).join('');
+  }
+  body.innerHTML = html;
+}
+
+// "Salidas de hoy": responde "¿a quién tengo que preparar para salir hoy?".
+// "Ya salieron" se define, sin tocar checkout, como hospedajes ya completados
+// cuya salida prevista era hoy (fecha_salida_real no se registra hoy en
+// confirmarSalida(), así que no es una fuente confiable para esto).
+async function renderSalidasHoy(fecha) {
+  const body = document.getElementById('salidas-hoy-body');
+  const badge = document.getElementById('badge-salidas-hoy');
+  if (!body) return;
+  const programadas = entradas.filter(e => (e.salidaPrevista||'').startsWith(fecha));
+  if (badge) badge.textContent = String(programadas.length);
+
+  let completadas = [];
+  try {
+    const rows = await sb('GET', 'entradas', null,
+      '?status=eq.completado&select=id,cliente_id,mascotas,fecha_salida_prevista&order=fecha_salida_prevista.desc&limit=50');
+    completadas = (rows||[])
+      .filter(r => (r.fecha_salida_prevista||'').startsWith(fecha))
+      .map(r => ({ id: r.id, clienteId: r.cliente_id, mascotas: r.mascotas||[] }));
+  } catch(e) { /* si falla, se muestran solo las programadas; no es información crítica */ }
+
+  if (!programadas.length && !completadas.length) {
+    body.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon">✅</div><div class="es-text">Sin salidas programadas hoy</div></div>`;
+    return;
+  }
+
+  let html = '';
+  if (programadas.length) {
+    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">🟠 PROGRAMADAS PARA HOY (${programadas.length})</div>`;
+    html += programadas.map(e => {
+      const c = clientes.find(cl => cl.id === e.clienteId);
+      const atrasado = new Date(e.salidaPrevista) < new Date();
+      const hora = (e.salidaPrevista||'').split(' ')[1] || '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--gray-100)">
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
+          <span style="font-weight:600;font-size:12.5px">🐕 ${(e.mascotas||[]).join(', ')}</span>
+          <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}${hora?' · '+hora:''}</span>
+          ${atrasado?' <span class="badge badge-red" style="font-size:10px">⚠️ Atrasado</span>':''}
+        </div>
+        ${c?.whatsapp?`<button onclick="event.stopPropagation();abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 8px;font-size:11px;flex-shrink:0">💬</button>`:''}
+        <button class="btn btn-sm btn-green" style="flex-shrink:0" onclick="event.stopPropagation();hacerSalida('${(c?.nombre||'').replace(/'/g,"\\'")}',${e.id})">📤 Salida</button>
+      </div>`;
+    }).join('');
+  }
+  if (completadas.length) {
+    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">✅ YA SALIERON (${completadas.length})</div>`;
+    html += completadas.map(e => {
+      const c = clientes.find(cl => cl.id === e.clienteId);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--gray-100);opacity:0.7">
+        <span style="font-weight:600;font-size:12.5px">🐕 ${(e.mascotas||[]).join(', ')}</span>
+        <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}</span>
+      </div>`;
+    }).join('');
+  }
+  body.innerHTML = html;
+}
+
+// "Avisos importantes": se generan solo a partir de mascotas.flags/notas/celo
+// para mascotas con entrada activa — sin guardar un segundo estado. En cuanto
+// la entrada deja de estar activa (checkout), el aviso desaparece solo.
+function renderAvisosImportantes() {
+  const body = document.getElementById('avisos-importantes-body');
+  const badge = document.getElementById('badge-avisos');
+  if (!body) return;
+
+  const avisos = [];
+  entradas.forEach(e => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    if (!c) return;
+    (e.mascotas||[]).forEach(nombreMascota => {
+      const m = (c.mascotas||[]).find(mo => mo.nombre === nombreMascota);
+      if (!m) return;
+      const flags = m.flags || [];
+      const notasLower = (m.notas||'').toLowerCase();
+      const esAgresivo = flags.includes('agresivo') || notasLower.includes('agresiv') || notasLower.includes('peligros');
+      const enCelo = calcularEstadoCelo(m).estado === 'en_celo';
+      const esMedicamento = flags.includes('medicamento') || notasLower.includes('medic');
+      const esAlergia = flags.includes('alergia');
+      const esEspecial = flags.includes('especial');
+      const etiquetas = [];
+      if (esAgresivo) etiquetas.push('Agresivo');
+      if (enCelo) etiquetas.push('En celo');
+      if (esMedicamento) etiquetas.push('Medicado');
+      if (esAlergia) etiquetas.push('Alergia');
+      if (esEspecial) etiquetas.push('Cuidado especial');
+      if (!etiquetas.length) return;
+      let nota = (m.notas||'').trim();
+      if (nota.length > 90) nota = nota.slice(0,90) + '…';
+      avisos.push({ nombre: nombreMascota, cliente: c.nombre, fuerte: esAgresivo || enCelo, etiquetas, nota });
+    });
+  });
+
+  avisos.sort((a,b) => (b.fuerte?1:0) - (a.fuerte?1:0));
+  if (badge) badge.textContent = String(avisos.length);
+
+  if (!avisos.length) {
+    body.innerHTML = `<div class="empty-state" style="padding:16px"><div class="es-icon" style="font-size:22px">✅</div><div class="es-text">Sin avisos por ahora</div></div>`;
+    return;
+  }
+  body.innerHTML = `<div style="padding:8px 10px 10px">` + avisos.map(a => {
+    const color = a.fuerte ? '#dc2626' : '#b45309';
+    const bg = a.fuerte ? '#fef2f2' : '#fffbeb';
+    const icon = a.fuerte ? '🔴' : '🟡';
+    return `<div style="padding:9px 12px;border-left:3px solid ${color};background:${bg};margin-bottom:6px;border-radius:6px">
+      <div style="font-weight:700;font-size:12.5px;color:${color}">${icon} ${a.nombre.toUpperCase()} — ${a.etiquetas.join(', ')}</div>
+      <div style="font-size:11px;color:var(--gray-400)">${a.cliente}</div>
+      ${a.nota?`<div style="font-size:11.5px;color:${color};margin-top:3px">"${a.nota}"</div>`:''}
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+// Notas operativas: bloc de texto libre persistido en la tabla config
+// existente (clave pg_notas_operativas). Sin tabla nueva, sin checklist.
+let _notasOperativasTimer = null;
+async function guardarNotasOperativas(texto) {
+  // No reutiliza setConfig() a propósito: esa función absorbe cualquier
+  // fallo de Supabase en silencio y de todos modos actualiza el caché local
+  // como si hubiera funcionado. Aquí sí debe saberse con certeza si se guardó.
+  try {
+    await sb('POST', 'config', { clave: 'pg_notas_operativas', valor: texto }, '');
+  } catch (e1) {
+    try {
+      await sb('PATCH', 'config?clave=eq.pg_notas_operativas', { valor: texto });
+    } catch (e2) {
+      return false;
     }
   }
-  if (listSal) {
-    const sals = entradas.filter(e => (e.salidaPrevista||'').startsWith(fecha));
-    if (!sals.length) {
-      listSal.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin salidas ${labelFecha}</div></div>`;
-    } else {
-      listSal.innerHTML = `<table><tbody>${sals.map(e => {
-        const c = clientes.find(cl => cl.id === e.clienteId);
-        const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
-        return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).map(m=>{const raza=c?.mascotas?.find(mo=>mo.nombre===m)?.raza||'';return raza?`${m} (${raza})`:m;}).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
-      }).join('')}</tbody></table>`;
-    }
-  }
+  if (_configCache) _configCache['pg_notas_operativas'] = texto;
+  return true;
+}
+
+function onNotasOperativasInput() {
+  const estado = document.getElementById('notas-estado');
+  if (estado) { estado.textContent = ''; }
+  clearTimeout(_notasOperativasTimer);
+  _notasOperativasTimer = setTimeout(async () => {
+    const ta = document.getElementById('notas-operativas-textarea');
+    if (!ta) return;
+    if (estado) { estado.textContent = 'Guardando...'; estado.style.color = 'var(--gray-400)'; }
+    const ok = await guardarNotasOperativas(ta.value);
+    if (!estado) return;
+    if (ok) { estado.textContent = 'Guardado ✓'; estado.style.color = 'var(--green)'; }
+    else { estado.textContent = '⚠️ Error al guardar — reintenta'; estado.style.color = 'var(--red)'; }
+  }, 1000);
+}
+
+function initNotasOperativas() {
+  const ta = document.getElementById('notas-operativas-textarea');
+  if (!ta) return;
+  // No pisar lo que el operador está escribiendo si el textarea tiene foco
+  // (actualizarDashboard() se llama tras cualquier cargarTodo() del sistema,
+  // no solo al abrir Inicio).
+  if (document.activeElement === ta) return;
+  ta.value = getConfig('pg_notas_operativas', '');
 }
 
 function actualizarDashboard() {
@@ -5997,22 +6141,16 @@ function actualizarDashboard() {
   document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
-  document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';
-  document.getElementById('badge-sal-hoy').textContent = salidasHoy+' salidas';
   const capTotal = parseInt(getConfig('hab_total','52'));
-  document.querySelectorAll('#cap-total,#cap-total2').forEach(el => { if(el) el.textContent = capTotal; });
+  document.querySelectorAll('#cap-total2').forEach(el => { if(el) el.textContent = capTotal; });
   const ocupados = entradas.length;
-  const libres = Math.max(0, capTotal - ocupados);
   const pct = Math.round(ocupados / capTotal * 100);
-  const occPct = document.getElementById('occ-pct');
-  const occLib = document.getElementById('occ-libres');
-  const occOcu = document.getElementById('occ-ocupados');
-  const occBar = document.getElementById('occ-bar-fill');
-  if (occPct) occPct.textContent = pct + '%';
-  if (occLib) occLib.textContent = libres;
-  if (occOcu) occOcu.textContent = ocupados;
-  if (occBar) occBar.style.width = pct + '%';
-  actualizarPanelesHoy(hoy);
+  const occCompact = document.getElementById('occ-compact');
+  if (occCompact) occCompact.textContent = `${ocupados}/${capTotal} · ${pct}%`;
+  renderLlegadasHoy(hoy);
+  renderSalidasHoy(hoy);
+  renderAvisosImportantes();
+  initNotasOperativas();
 }
 
 function usarDatosDemo() {
@@ -6564,16 +6702,90 @@ async function seleccionarClienteEntrada(id) {
 
   lista.innerHTML = clienteEntradaSeleccionado.mascotas.map(m => {
     const esAgresivo = (m.notas||'').toLowerCase().includes('agresiv') || (m.flags||[]).includes('agresivo');
+    const flags = m.flags || [];
+    const esHembra = (m.sexo||'') === 'Hembra';
+    const mid = m.id;
     return `
-    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${esAgresivo?'#fff3cd':'var(--gray-50)'};border-radius:var(--radius-sm);cursor:pointer;margin-bottom:5px;border:1.5px solid ${esAgresivo?'#f59e0b':'var(--gray-200)'};transition:all 0.15s"
-      onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='${esAgresivo?'#f59e0b':'var(--gray-200)'}'">
-      <input type="checkbox" value="${m.nombre}" checked style="accent-color:var(--orange);width:15px;height:15px" onchange="sincronizarConceptos()">
-      <span style="font-weight:600;font-size:13px">${esAgresivo?'⚠️':'🐕'} ${m.nombre}</span>
-      <span style="font-size:11px;color:var(--gray-400)">${m.raza||''} · ${m.sexo||''}</span>
-      ${esAgresivo?'<span style="font-size:10px;background:#f59e0b;color:white;border-radius:4px;padding:1px 6px;margin-left:auto">AGRESIVO</span>':''}
-    </label>`;
+    <div style="margin-bottom:6px">
+      <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${esAgresivo?'#fff3cd':'var(--gray-50)'};border-radius:var(--radius-sm);cursor:pointer;border:1.5px solid ${esAgresivo?'#f59e0b':'var(--gray-200)'};transition:all 0.15s"
+        onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='${esAgresivo?'#f59e0b':'var(--gray-200)'}'">
+        <input type="checkbox" class="ne-masc-check" value="${m.nombre}" checked style="accent-color:var(--orange);width:15px;height:15px" onchange="sincronizarConceptos()">
+        <span style="font-weight:600;font-size:13px">${esAgresivo?'⚠️':'🐕'} ${m.nombre}</span>
+        <span style="font-size:11px;color:var(--gray-400)">${m.raza||''} · ${m.sexo||''}</span>
+        ${esAgresivo?'<span style="font-size:10px;background:#f59e0b;color:white;border-radius:4px;padding:1px 6px;margin-left:8px">AGRESIVO</span>':''}
+        <span onclick="event.preventDefault();event.stopPropagation();ne_toggleInfoMascota(${mid})" style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap;padding:2px 4px">ℹ️ Info</span>
+      </label>
+      <div id="ne-info-panel-${mid}" style="display:none;padding:10px 12px;background:white;border:1.5px solid var(--gray-200);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm)">
+        <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px;margin-bottom:7px">INFORMACIÓN IMPORTANTE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:9px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-agresivo-${mid}" ${flags.includes('agresivo')?'checked':''} style="accent-color:#dc2626">Agresivo</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-medicado-${mid}" ${flags.includes('medicamento')?'checked':''} style="accent-color:#f59e0b">Medicado</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-alergia-${mid}" ${flags.includes('alergia')?'checked':''} style="accent-color:#f59e0b">Alergia</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-especial-${mid}" ${flags.includes('especial')?'checked':''} style="accent-color:#f59e0b">Cuidado especial</label>
+        </div>
+        ${esHembra?`<div style="margin-bottom:9px">
+          <label style="font-size:11px;color:var(--gray-400);display:block;margin-bottom:3px">Inicio del último celo</label>
+          <input type="date" id="ne-info-celo-${mid}" value="${m.ultimo_celo||''}" onchange="ne_actualizarPreviewCelo(${mid})" style="padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;outline:none">
+          <div id="ne-info-celo-preview-${mid}" style="font-size:11px;color:var(--gray-400);margin-top:3px"></div>
+        </div>`:''}
+        <div style="margin-bottom:9px">
+          <label style="font-size:11px;color:var(--gray-400);display:block;margin-bottom:3px">Observaciones</label>
+          <textarea id="ne-info-notas-${mid}" style="width:100%;min-height:50px;padding:6px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;box-sizing:border-box">${m.notas||''}</textarea>
+        </div>
+        <button id="ne-info-guardar-${mid}" class="btn btn-sm btn-primary" onclick="ne_guardarInfoMascota(${mid})">💾 Guardar</button>
+      </div>
+    </div>`;
   }).join('');
   sincronizarConceptos();
+}
+
+// Panel "Información importante" en Nueva Entrada: edita directamente
+// mascotas.flags / mascotas.notas / mascotas.ultimo_celo — misma tabla,
+// misma fuente de verdad que el perfil de mascota. Nada se duplica en
+// entradas.
+function ne_toggleInfoMascota(mascotaId) {
+  const panel = document.getElementById(`ne-info-panel-${mascotaId}`);
+  if (!panel) return;
+  const abierto = panel.style.display !== 'none';
+  panel.style.display = abierto ? 'none' : 'block';
+  if (!abierto) ne_actualizarPreviewCelo(mascotaId);
+}
+
+function ne_actualizarPreviewCelo(mascotaId) {
+  const input = document.getElementById(`ne-info-celo-${mascotaId}`);
+  const preview = document.getElementById(`ne-info-celo-preview-${mascotaId}`);
+  if (!input || !preview) return;
+  if (!input.value) { preview.textContent = ''; return; }
+  const m = clienteEntradaSeleccionado?.mascotas?.find(x=>x.id===mascotaId);
+  const r = calcularEstadoCelo({ sexo:'Hembra', ultimo_celo: input.value, intervalo_celo: m?.intervalo_celo });
+  if (r.estado==='en_celo') preview.textContent = `🔴 En celo ahora · termina ~${r.finCelo}`;
+  else if (r.estado==='proximo') preview.textContent = `🟡 Próximo celo en ${r.diasRestantes} días`;
+  else if (r.estado==='vencido') preview.textContent = `⚪ Fecha vencida — actualízala si ya pasó`;
+  else preview.textContent = `🟢 Próximo celo estimado: ${r.proximoCelo}`;
+}
+
+async function ne_guardarInfoMascota(mascotaId) {
+  const flags = [];
+  if (document.getElementById(`ne-info-agresivo-${mascotaId}`)?.checked) flags.push('agresivo');
+  if (document.getElementById(`ne-info-medicado-${mascotaId}`)?.checked) flags.push('medicamento');
+  if (document.getElementById(`ne-info-alergia-${mascotaId}`)?.checked) flags.push('alergia');
+  if (document.getElementById(`ne-info-especial-${mascotaId}`)?.checked) flags.push('especial');
+  const notas = document.getElementById(`ne-info-notas-${mascotaId}`)?.value.trim() || '';
+  const datos = { flags, notas };
+  const celoInput = document.getElementById(`ne-info-celo-${mascotaId}`);
+  if (celoInput) datos.ultimo_celo = celoInput.value || null;
+
+  const btn = document.getElementById(`ne-info-guardar-${mascotaId}`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  try {
+    await sb('PATCH', `mascotas?id=eq.${mascotaId}`, datos);
+    await cargarTodo();
+    notify('✅ Información de la mascota actualizada', 'success');
+    if (clienteEntradaSeleccionado) seleccionarClienteEntrada(clienteEntradaSeleccionado.id);
+  } catch(e) {
+    notify('⚠️ No se pudo actualizar la información: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar'; }
+  }
 }
 
 function clearClienteSeleccionado() {
@@ -6591,7 +6803,7 @@ function clearClienteSeleccionado() {
 
 // Sincroniza filas de conceptos con mascotas seleccionadas
 function sincronizarConceptos() {
-  const checks = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')];
+  const checks = [...document.querySelectorAll('#mascotas-checklist input.ne-masc-check:checked')];
   const mascotasActivas = checks.map(c=>c.value);
   const tbody = document.getElementById('conceptos-tbody');
   const noches = calcNoches();
@@ -7081,7 +7293,7 @@ async function guardarEntrada() {
   if (_guardandoEntrada) return;
   _guardandoEntrada = true;
   if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); _guardandoEntrada = false; return; }
-  const mascotas = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
+  const mascotas = [...document.querySelectorAll('#mascotas-checklist input.ne-masc-check:checked')].map(i=>i.value);
   if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); _guardandoEntrada = false; return; }
   const fe = document.getElementById('ne-fecha-entrada').value;
   const fs = document.getElementById('ne-fecha-salida').value;

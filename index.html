@@ -5376,12 +5376,10 @@ async function guardarEdicionCliente() {
     verPerfilCliente(id);
     notify('✅ Cliente actualizado', 'success');
   } catch(e) {
-    // Actualizar localmente si falla Supabase
-    const c = clientes.find(cl=>cl.id===id);
-    if (c) { Object.assign(c, { nombre: datos.nombre, whatsapp: datos.whatsapp, telefono: datos.telefono, email: datos.email, direccion: datos.direccion, notas: datos.notas, infoImportante: datos.info_importante }); }
-    closeModal('modal-editar-cliente');
-    verPerfilCliente(id);
-    notify('✅ Cliente actualizado', 'success');
+    // Corrección CRÍTICO (auditoría final): antes se aplicaba el cambio solo
+    // en memoria y se mostraba éxito aunque el PATCH real hubiera fallado.
+    // No se muta el estado local — solo se refleja lo que Supabase confirmó.
+    notify('⚠️ No se pudo actualizar el cliente: ' + e.message, 'error');
   }
   setLoading(false);
 }
@@ -5755,11 +5753,11 @@ async function eliminarMascota(id, nombre, clienteId) {
     verPerfilCliente(clienteId);
     notify(`🗑️ ${nombre} eliminado`, 'success');
   } catch(e) {
-    // Si falla en Supabase, eliminar localmente
-    const c = clientes.find(cl=>cl.id===clienteId);
-    if (c) c.mascotas = c.mascotas.filter(m=>m.id!==id);
-    verPerfilCliente(clienteId);
-    notify(`🗑️ ${nombre} eliminado`, 'success');
+    // Corrección CRÍTICO (auditoría final): antes se quitaba la mascota del
+    // estado local y se mostraba éxito aunque el DELETE real hubiera
+    // fallado. Si Supabase no confirma, la mascota sigue existiendo — no se
+    // toca el estado local ni se muestra "eliminado".
+    notify(`⚠️ No se pudo eliminar a ${nombre}: ` + e.message, 'error');
   }
   setLoading(false);
 }
@@ -7677,10 +7675,14 @@ async function eliminarEntrada() {
 
 // ===================== NUEVO CLIENTE =====================
 // ===================== WHATSAPP =====================
+let _guardandoNuevoCliente = false;
 async function guardarNuevoCliente() {
+  if (_guardandoNuevoCliente) return;
+  _guardandoNuevoCliente = true;
+
   const nombre = document.getElementById('nc-nombre').value.trim();
   const whatsapp = document.getElementById('nc-whatsapp').value.trim();
-  if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
+  if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); _guardandoNuevoCliente = false; return; }
   const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
   setLoading(true);
   try {
@@ -7709,6 +7711,7 @@ async function guardarNuevoCliente() {
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
+  _guardandoNuevoCliente = false;
 }
 
 // ===================== WHATSAPP =====================
@@ -9709,9 +9712,13 @@ function seleccionarRazaExtra(idx, raza) {
   if (dd) dd.style.display='none';
 }
 
+let _guardandoMascotaExtra = false;
 async function guardarMascotaExtra(clienteId) {
+  if (_guardandoMascotaExtra) return;
+  _guardandoMascotaExtra = true;
+
   const validas = mascotasNuevas.filter(m=>m&&m.nombre.trim());
-  if (!validas.length) { notify('Ponle nombre a la mascota','error'); return; }
+  if (!validas.length) { notify('Ponle nombre a la mascota','error'); _guardandoMascotaExtra = false; return; }
   setLoading(true);
   try {
     for (const m of validas) {
@@ -9732,6 +9739,7 @@ async function guardarMascotaExtra(clienteId) {
     }
   } catch(e) { notify('Error: '+e.message,'error'); }
   setLoading(false);
+  _guardandoMascotaExtra = false;
 }
 
 function agregarMascotaDesdeEntrada() {

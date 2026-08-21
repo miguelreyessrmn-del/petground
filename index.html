@@ -337,6 +337,8 @@
     .stats-row { grid-template-columns:1fr 1fr; gap:10px; }
     .grid-2 { grid-template-columns:1fr; }
     .grid-3 { grid-template-columns:1fr; }
+    #dash-grid { grid-template-columns:1fr !important; }
+    #dash-grid > div[style*="grid-row:span 2"] { grid-row:auto !important; }
     .occ-card { flex-direction:column; gap:12px; padding:16px; }
     .occ-divider { width:100%; height:1px; }
     .link-btns { flex-direction:column; }
@@ -599,109 +601,115 @@
 
     <!-- =================== DASHBOARD =================== -->
     <div class="screen active fade-in" id="screen-dashboard">
-      <div class="stats-row">
-        <div class="stat-card" onclick="showScreen('nueva-entrada')">
-          <div class="stat-icon orange">📥</div>
+      <div class="stats-row" style="gap:10px;margin-bottom:12px">
+        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('nueva-entrada')">
+          <div class="stat-icon orange" style="width:28px;height:28px;font-size:13px;border-radius:8px">📥</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-entradas">0</div>
-            <div class="stat-label">Entradas hoy</div>
-            <div class="stat-action">+ Nueva entrada</div>
+            <div class="stat-num" id="stat-entradas" style="font-size:17px">0</div>
+            <div class="stat-label" style="font-size:10px">Entradas hoy</div>
           </div>
         </div>
-        <div class="stat-card" onclick="filterSalidas()">
-          <div class="stat-icon red">📤</div>
+        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="filterSalidas()">
+          <div class="stat-icon red" style="width:28px;height:28px;font-size:13px;border-radius:8px">📤</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-salidas">1</div>
-            <div class="stat-label">Salidas hoy</div>
-            <div class="stat-action" onclick="renderSalidasHoy(new Date().toISOString().split('T')[0])" style="cursor:pointer">Ver salidas</div>
+            <div class="stat-num" id="stat-salidas" style="font-size:17px">1</div>
+            <div class="stat-label" style="font-size:10px">Salidas hoy</div>
           </div>
         </div>
-        <div class="stat-card" onclick="showScreen('entradas')">
-          <div class="stat-icon blue">🏠</div>
+        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('entradas')">
+          <div class="stat-icon blue" style="width:28px;height:28px;font-size:13px;border-radius:8px">🏠</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-alojamientos">0</div>
-            <div class="stat-label">Alojamientos</div>
-            <div class="stat-action" onclick="showScreen('entradas')" style="cursor:pointer">Ver todos</div>
+            <div class="stat-num" id="stat-alojamientos" style="font-size:17px">0</div>
+            <div class="stat-label" style="font-size:10px">Alojamientos</div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon green">🐕</div>
+        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('entradas')">
+          <div class="stat-icon green" style="width:28px;height:28px;font-size:13px;border-radius:8px">🐕</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-animales">19</div>
-            <div class="stat-label">Animales hospedados</div>
-            <div class="stat-action" onclick="showScreen('entradas')" style="cursor:pointer">Ver hospedados</div>
+            <div class="stat-num" id="stat-animales" style="font-size:17px">19</div>
+            <div class="stat-label" style="font-size:10px">Animales hospedados</div>
           </div>
         </div>
       </div>
 
-      <!-- LLEGADAS DE HOY -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header" style="padding:10px 14px">
-          <div class="card-title" style="font-size:13px">🐾 Llegadas de hoy</div>
-          <span class="badge badge-orange" id="badge-llegadas-hoy">0 de 0</span>
-        </div>
-        <div id="llegadas-hoy-body"></div>
-      </div>
+      <!-- GRID PRINCIPAL: Llegadas | Salidas | Calendario+Ocupación (col. lateral) -->
+      <!--                  Avisos   | Notas   | (misma columna, spans 2 filas)     -->
+      <div id="dash-grid" style="display:grid;grid-template-columns:1fr 1fr 300px;gap:12px;align-items:start">
 
-      <!-- SALIDAS DE HOY -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header" style="padding:10px 14px">
-          <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
-          <span class="badge badge-red" id="badge-salidas-hoy">0</span>
-        </div>
-        <div id="salidas-hoy-body"></div>
-      </div>
-
-      <!-- AVISOS IMPORTANTES -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header" style="padding:10px 14px">
-          <div class="card-title" style="font-size:13px">⚠️ Avisos importantes</div>
-          <span class="badge badge-red" id="badge-avisos">0</span>
-        </div>
-        <div id="avisos-importantes-body"></div>
-      </div>
-
-      <!-- NOTAS OPERATIVAS -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header" style="padding:10px 14px">
-          <div class="card-title" style="font-size:13px">📝 Notas operativas</div>
-          <span id="notas-estado" style="font-size:11px;color:var(--gray-400)"></span>
-        </div>
-        <div style="padding:12px 14px">
-          <textarea id="notas-operativas-textarea" placeholder="Bañar a Mateo. Ulises toma pastillas a las 4. Llamar al dueño de Rocky..."
-            style="width:100%;min-height:90px;border:1.5px solid var(--gray-200);border-radius:8px;padding:10px;font-family:'Poppins',sans-serif;font-size:13px;line-height:1.5;resize:vertical;outline:none;box-sizing:border-box"
-            oninput="onNotasOperativasInput()"></textarea>
-        </div>
-      </div>
-
-      <!-- CALENDARIO (+ ocupación como dato secundario) -->
-      <div class="card" style="margin-bottom:16px;max-width:340px">
-        <div class="card-header" style="padding:10px 14px">
-          <div class="card-title" style="font-size:13px" id="cal-titulo">📅 Abril 2026</div>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(-1)">◀</button>
-            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(0)">Hoy</button>
-            <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(1)">▶</button>
+        <!-- LLEGADAS DE HOY -->
+        <div class="card">
+          <div class="card-header" style="padding:8px 12px">
+            <div class="card-title" style="font-size:12.5px">🐾 Llegadas de hoy</div>
+            <span class="badge badge-orange" id="badge-llegadas-hoy">0 de 0</span>
           </div>
+          <div id="llegadas-hoy-body"></div>
         </div>
-        <div style="padding:10px 12px">
-          <div class="cal-header">
-            <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
-            <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
-            <div class="cal-dow">D</div>
+
+        <!-- SALIDAS DE HOY -->
+        <div class="card">
+          <div class="card-header" style="padding:8px 12px">
+            <div class="card-title" style="font-size:12.5px">📤 Salidas de hoy</div>
+            <span class="badge badge-red" id="badge-salidas-hoy">0</span>
           </div>
-          <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
-          <div style="display:flex;gap:10px;margin-top:8px;font-size:10px;color:var(--gray-400)">
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
-            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
+          <div id="salidas-hoy-body"></div>
+        </div>
+
+        <!-- Columna lateral: Calendario + Ocupación (evita dejar espacio en blanco a la derecha del calendario) -->
+        <div style="grid-row:span 2;display:flex;flex-direction:column;gap:12px">
+          <div class="card">
+            <div class="card-header" style="padding:8px 12px">
+              <div class="card-title" style="font-size:12.5px" id="cal-titulo">📅 Abril 2026</div>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(-1)">◀</button>
+                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(0)">Hoy</button>
+                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(1)">▶</button>
+              </div>
+            </div>
+            <div style="padding:8px 10px">
+              <div class="cal-header">
+                <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
+                <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
+                <div class="cal-dow">D</div>
+              </div>
+              <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
+              <div style="display:flex;gap:8px;margin-top:6px;font-size:9.5px;color:var(--gray-400)">
+                <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
+                <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
+                <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
+              </div>
+            </div>
           </div>
-          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-100);font-size:11px;color:var(--gray-400)">📊 Ocupación: <span id="occ-compact">0/0 · 0%</span></div>
+          <div class="card" style="padding:9px 12px;font-size:11.5px;color:var(--gray-400)">📊 Ocupación: <span id="occ-compact" style="color:var(--blue);font-weight:700">0/0 · 0%</span></div>
+        </div>
+
+        <!-- AVISOS IMPORTANTES -->
+        <div class="card">
+          <div class="card-header" style="padding:8px 12px">
+            <div class="card-title" style="font-size:12.5px">⚠️ Avisos importantes</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="badge badge-red" id="badge-avisos">0</span>
+              <button onclick="abrirModalAvisoManual()" title="Agregar aviso manual" style="width:20px;height:20px;border-radius:6px;border:none;background:var(--gray-100);color:var(--blue);font-weight:800;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
+            </div>
+          </div>
+          <div id="avisos-importantes-body"></div>
+        </div>
+
+        <!-- NOTAS OPERATIVAS -->
+        <div class="card">
+          <div class="card-header" style="padding:8px 12px">
+            <div class="card-title" style="font-size:12.5px">📝 Notas operativas</div>
+            <span id="notas-estado" style="font-size:10.5px;color:var(--gray-400)"></span>
+          </div>
+          <div style="padding:8px 10px">
+            <textarea id="notas-operativas-textarea" placeholder="Bañar a Mateo. Llamar al dueño de Rocky..."
+              style="width:100%;min-height:44px;max-height:160px;border:1.5px solid var(--gray-200);border-radius:8px;padding:7px 9px;font-family:'Poppins',sans-serif;font-size:12.5px;line-height:1.45;resize:vertical;outline:none;box-sizing:border-box"
+              oninput="onNotasOperativasInput()"></textarea>
+          </div>
         </div>
       </div>
 
       <!-- Eventos del día seleccionado (oculto hasta que se seleccione un día) -->
-      <div id="cal-eventos-wrapper" style="display:none;margin-bottom:20px">
+      <div id="cal-eventos-wrapper" style="display:none;margin-top:12px">
         <div class="card">
           <div class="card-header">
             <div class="card-title" id="cal-eventos-titulo">📋 Selecciona un día</div>
@@ -711,6 +719,32 @@
             </div>
           </div>
           <div id="cal-eventos-body" style="max-height:220px;overflow-y:auto;padding:0 4px"></div>
+        </div>
+      </div>
+
+      <!-- Modal: nuevo aviso manual -->
+      <div class="modal-overlay" id="modal-aviso-manual">
+        <div class="modal" style="width:400px">
+          <div class="modal-header" style="padding:18px 20px 14px">
+            <div class="modal-title" style="font-size:15px">⚠️ Nuevo aviso</div>
+            <button class="modal-close" onclick="closeModal('modal-aviso-manual')">✕</button>
+          </div>
+          <div class="modal-body" style="padding:16px 20px">
+            <div class="form-group">
+              <label class="form-label">Aviso</label>
+              <textarea id="aviso-manual-texto" placeholder="Ej. Rocky no debe convivir con Max" style="width:100%;min-height:60px;border:1.5px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-family:'Poppins',sans-serif;font-size:13px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+            </div>
+            <div class="form-group" style="margin-top:12px">
+              <label class="form-label">Mascota relacionada (opcional)</label>
+              <select id="aviso-manual-mascota" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none">
+                <option value="">— Ninguna —</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-aviso-manual')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarAvisoManual()">Agregar aviso</button>
+          </div>
         </div>
       </div>
     </div>
@@ -5935,6 +5969,7 @@ function mostrarEventosDia(fecha) {
 
 // "Llegadas de hoy": responde "¿a quién esperamos hoy y quién ya llegó?".
 // No se refuerza el concepto de habitación aquí a propósito (espacios dinámicos).
+// Misma lógica que antes — solo cambia la densidad visual.
 function renderLlegadasHoy(fecha) {
   const body = document.getElementById('llegadas-hoy-body');
   const badge = document.getElementById('badge-llegadas-hoy');
@@ -5949,7 +5984,10 @@ function renderLlegadasHoy(fecha) {
   if (badge) badge.textContent = `${yaLlegaron.length} de ${yaLlegaron.length + porLlegar.length}`;
 
   if (!yaLlegaron.length && !porLlegar.length) {
-    body.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon" style="font-size:24px">📭</div><div class="es-text">Sin llegadas programadas hoy</div><button onclick="showScreen('nueva-entrada')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Registrar entrada</button></div>`;
+    body.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;font-size:11.5px;color:var(--gray-400)">
+      <span>Sin llegadas programadas hoy</span>
+      <button onclick="showScreen('nueva-entrada')" style="background:var(--orange);color:white;border:none;border-radius:6px;padding:4px 9px;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">+ Registrar entrada</button>
+    </div>`;
     return;
   }
 
@@ -5958,34 +5996,43 @@ function renderLlegadasHoy(fecha) {
     const masc = (e.mascotas||[]).join(', ');
     const clickable = llegado ? `cursor:pointer` : '';
     const onclickAttr = llegado ? `onclick="verDetalleHospedaje(${e.id})"` : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--gray-100);${clickable}" ${onclickAttr}>
-      <span style="font-size:13px;flex-shrink:0">${llegado?'✅':'⏳'}</span>
-      <div style="flex:1;min-width:0"><span style="font-weight:600;font-size:12.5px">🐕 ${masc}</span> <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}</span></div>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--gray-100);${clickable}" ${onclickAttr}>
+      <span style="font-size:12px;flex-shrink:0">${llegado?'✅':'⏳'}</span>
+      <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:600;font-size:12px">🐕 ${masc}</span> <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}</span></div>
     </div>`;
   };
 
-  let html = '';
+  let html = '<div style="max-height:230px;overflow-y:auto">';
   if (porLlegar.length) {
-    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">⏳ POR LLEGAR (${porLlegar.length})</div>`;
+    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">⏳ POR LLEGAR (${porLlegar.length})</div>`;
     html += porLlegar.map(e=>fila(e,false)).join('');
   }
   if (yaLlegaron.length) {
-    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">✅ YA LLEGARON (${yaLlegaron.length})</div>`;
+    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">✅ YA LLEGARON (${yaLlegaron.length})</div>`;
     html += yaLlegaron.map(e=>fila(e,true)).join('');
   }
+  html += '</div>';
   body.innerHTML = html;
 }
 
 // "Salidas de hoy": responde "¿a quién tengo que preparar para salir hoy?".
-// "Ya salieron" se define, sin tocar checkout, como hospedajes ya completados
-// cuya salida prevista era hoy (fecha_salida_real no se registra hoy en
-// confirmarSalida(), así que no es una fuente confiable para esto).
+// Tres grupos, en orden de prioridad: Atrasadas (entrada activa cuya fecha de
+// salida programada ya pasó, sin importar la hora) > Hoy > Ya salieron.
+// "Atrasada" se deriva de datos que ya existen (entrada activa + fecha de
+// salida < hoy) — no se guarda ningún status nuevo.
+// "Ya salieron" sigue definido, sin tocar checkout, como hospedajes ya
+// completados cuya salida prevista era hoy (fecha_salida_real no se registra
+// en confirmarSalida(), así que no es fuente confiable).
 async function renderSalidasHoy(fecha) {
   const body = document.getElementById('salidas-hoy-body');
   const badge = document.getElementById('badge-salidas-hoy');
   if (!body) return;
+  const atrasadas = entradas.filter(e => {
+    const f = (e.salidaPrevista||'').split(' ')[0];
+    return f && f < fecha;
+  });
   const programadas = entradas.filter(e => (e.salidaPrevista||'').startsWith(fecha));
-  if (badge) badge.textContent = String(programadas.length);
+  if (badge) badge.textContent = String(atrasadas.length + programadas.length);
 
   let completadas = [];
   try {
@@ -5994,53 +6041,69 @@ async function renderSalidasHoy(fecha) {
     completadas = (rows||[])
       .filter(r => (r.fecha_salida_prevista||'').startsWith(fecha))
       .map(r => ({ id: r.id, clienteId: r.cliente_id, mascotas: r.mascotas||[] }));
-  } catch(e) { /* si falla, se muestran solo las programadas; no es información crítica */ }
+  } catch(e) { /* si falla, se muestran solo atrasadas/programadas; no es información crítica */ }
 
-  if (!programadas.length && !completadas.length) {
-    body.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon">✅</div><div class="es-text">Sin salidas programadas hoy</div></div>`;
+  if (!atrasadas.length && !programadas.length && !completadas.length) {
+    body.innerHTML = `<div style="padding:8px 12px;font-size:11.5px;color:var(--gray-400)">✅ Sin salidas programadas hoy</div>`;
     return;
   }
 
-  let html = '';
+  const filaSalida = (e, opts={}) => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    const hora = (e.salidaPrevista||'').split(' ')[1] || '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-bottom:1px solid var(--gray-100)">
+      <div style="flex:1;min-width:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="verDetalleHospedaje(${e.id})">
+        <span style="font-weight:600;font-size:12px">🐕 ${(e.mascotas||[]).join(', ')}</span>
+        <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}${opts.etiqueta?' · '+opts.etiqueta:(hora?' · '+hora:'')}</span>
+      </div>
+      ${c?.whatsapp?`<button onclick="event.stopPropagation();abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:3px 7px;font-size:10.5px;flex-shrink:0">💬</button>`:''}
+      <button class="btn btn-sm btn-green" style="flex-shrink:0;padding:3px 8px;font-size:11px" onclick="event.stopPropagation();hacerSalida('${(c?.nombre||'').replace(/'/g,"\\'")}',${e.id})">📤 Salida</button>
+    </div>`;
+  };
+
+  let html = '<div style="max-height:230px;overflow-y:auto">';
+  if (atrasadas.length) {
+    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:#dc2626;letter-spacing:0.4px">⚠️ ATRASADAS (${atrasadas.length})</div>`;
+    html += atrasadas.map(e => filaSalida(e, { etiqueta: 'Debía salir ' + _etiquetaFechaAtraso((e.salidaPrevista||'').split(' ')[0], fecha) + ((e.salidaPrevista||'').split(' ')[1]?' · '+(e.salidaPrevista||'').split(' ')[1]:'') })).join('');
+  }
   if (programadas.length) {
-    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">🟠 PROGRAMADAS PARA HOY (${programadas.length})</div>`;
-    html += programadas.map(e => {
-      const c = clientes.find(cl => cl.id === e.clienteId);
-      const atrasado = new Date(e.salidaPrevista) < new Date();
-      const hora = (e.salidaPrevista||'').split(' ')[1] || '';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--gray-100)">
-        <div style="flex:1;min-width:0;cursor:pointer" onclick="verDetalleHospedaje(${e.id})">
-          <span style="font-weight:600;font-size:12.5px">🐕 ${(e.mascotas||[]).join(', ')}</span>
-          <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}${hora?' · '+hora:''}</span>
-          ${atrasado?' <span class="badge badge-red" style="font-size:10px">⚠️ Atrasado</span>':''}
-        </div>
-        ${c?.whatsapp?`<button onclick="event.stopPropagation();abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:4px 8px;font-size:11px;flex-shrink:0">💬</button>`:''}
-        <button class="btn btn-sm btn-green" style="flex-shrink:0" onclick="event.stopPropagation();hacerSalida('${(c?.nombre||'').replace(/'/g,"\\'")}',${e.id})">📤 Salida</button>
-      </div>`;
-    }).join('');
+    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">🟠 HOY (${programadas.length})</div>`;
+    html += programadas.map(e => filaSalida(e)).join('');
   }
   if (completadas.length) {
-    html += `<div style="padding:8px 14px 3px;font-size:11px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px">✅ YA SALIERON (${completadas.length})</div>`;
+    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">✅ YA SALIERON (${completadas.length})</div>`;
     html += completadas.map(e => {
       const c = clientes.find(cl => cl.id === e.clienteId);
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--gray-100);opacity:0.7">
-        <span style="font-weight:600;font-size:12.5px">🐕 ${(e.mascotas||[]).join(', ')}</span>
-        <span style="font-size:11.5px;color:var(--gray-400)">— ${c?.nombre||'—'}</span>
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--gray-100);opacity:0.65">
+        <span style="font-weight:600;font-size:12px">🐕 ${(e.mascotas||[]).join(', ')}</span>
+        <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}</span>
       </div>`;
     }).join('');
   }
+  html += '</div>';
   body.innerHTML = html;
 }
 
-// "Avisos importantes": se generan solo a partir de mascotas.flags/notas/celo
-// para mascotas con entrada activa — sin guardar un segundo estado. En cuanto
-// la entrada deja de estar activa (checkout), el aviso desaparece solo.
+// "ayer" si es exactamente el día anterior; si no, fecha corta (ej. "15 ago").
+function _etiquetaFechaAtraso(fechaStr, hoyStr) {
+  const ayer = new Date(hoyStr+'T00:00:00');
+  ayer.setDate(ayer.getDate()-1);
+  if (fechaStr === ayer.toISOString().split('T')[0]) return 'ayer';
+  return new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+}
+
+// "Avisos importantes": automáticos (mascotas.flags/notas/celo, sin guardar
+// segundo estado — desaparecen solos al checkout) + manuales (persistidos en
+// config, clave pg_avisos_manual). Los manuales vinculados a una mascota se
+// podan solos (se dejan de mostrar y se borran del storage) en cuanto esa
+// mascota ya no tiene entrada activa; los que no están vinculados permanecen
+// hasta que alguien los elimine.
 function renderAvisosImportantes() {
   const body = document.getElementById('avisos-importantes-body');
   const badge = document.getElementById('badge-avisos');
   if (!body) return;
 
-  const avisos = [];
+  const items = [];
   entradas.forEach(e => {
     const c = clientes.find(cl => cl.id === e.clienteId);
     if (!c) return;
@@ -6063,27 +6126,123 @@ function renderAvisosImportantes() {
       if (!etiquetas.length) return;
       let nota = (m.notas||'').trim();
       if (nota.length > 90) nota = nota.slice(0,90) + '…';
-      avisos.push({ nombre: nombreMascota, cliente: c.nombre, fuerte: esAgresivo || enCelo, etiquetas, nota });
+      items.push({ manual:false, fuerte: esAgresivo || enCelo, titulo: nombreMascota.toUpperCase(), etiquetas, cliente: c.nombre, nota });
     });
   });
 
-  avisos.sort((a,b) => (b.fuerte?1:0) - (a.fuerte?1:0));
-  if (badge) badge.textContent = String(avisos.length);
+  const manuales = _leerAvisosManuales();
+  const podar = [];
+  manuales.forEach(a => {
+    if (a.mascotaNombre) {
+      const activa = entradas.some(e => e.clienteId === a.mascotaClienteId && (e.mascotas||[]).includes(a.mascotaNombre));
+      if (!activa) { podar.push(a.id); return; }
+    }
+    items.push({ manual:true, fuerte:true, id:a.id, titulo: a.mascotaNombre ? a.mascotaNombre.toUpperCase() : 'AVISO', texto: a.texto });
+  });
+  if (podar.length) {
+    _guardarAvisosManuales(manuales.filter(a => !podar.includes(a.id)));
+  }
 
-  if (!avisos.length) {
-    body.innerHTML = `<div class="empty-state" style="padding:16px"><div class="es-icon" style="font-size:22px">✅</div><div class="es-text">Sin avisos por ahora</div></div>`;
+  items.sort((a,b) => (b.fuerte?1:0) - (a.fuerte?1:0));
+  if (badge) badge.textContent = String(items.length);
+
+  if (!items.length) {
+    body.innerHTML = `<div style="padding:8px 12px;font-size:11.5px;color:var(--gray-400)">✅ Sin avisos importantes</div>`;
     return;
   }
-  body.innerHTML = `<div style="padding:8px 10px 10px">` + avisos.map(a => {
+  body.innerHTML = `<div style="max-height:230px;overflow-y:auto;padding:6px 8px 4px">` + items.map(a => {
     const color = a.fuerte ? '#dc2626' : '#b45309';
     const bg = a.fuerte ? '#fef2f2' : '#fffbeb';
     const icon = a.fuerte ? '🔴' : '🟡';
-    return `<div style="padding:9px 12px;border-left:3px solid ${color};background:${bg};margin-bottom:6px;border-radius:6px">
-      <div style="font-weight:700;font-size:12.5px;color:${color}">${icon} ${a.nombre.toUpperCase()} — ${a.etiquetas.join(', ')}</div>
-      <div style="font-size:11px;color:var(--gray-400)">${a.cliente}</div>
-      ${a.nota?`<div style="font-size:11.5px;color:${color};margin-top:3px">"${a.nota}"</div>`:''}
+    const cerrar = a.manual ? `<span onclick="eliminarAvisoManual(${a.id})" title="Eliminar aviso" style="cursor:pointer;color:${color};font-weight:800;padding:0 3px;flex-shrink:0">×</span>` : '';
+    const linea1 = a.manual ? `${icon} ${a.titulo}` : `${icon} ${a.titulo}${a.etiquetas.length?' — '+a.etiquetas.join(', '):''}`;
+    const linea2 = a.manual ? `Aviso manual · ${a.texto}` : a.cliente;
+    const linea3 = (!a.manual && a.nota) ? `"${a.nota}"` : '';
+    return `<div style="padding:5px 8px;border-left:3px solid ${color};background:${bg};margin-bottom:4px;border-radius:5px;font-size:11px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
+        <span style="font-weight:700;color:${color}">${linea1}</span>
+        ${cerrar}
+      </div>
+      <div style="color:${a.manual?color:'var(--gray-400)'};margin-top:1px">${linea2}</div>
+      ${linea3?`<div style="color:${color};margin-top:1px">${linea3}</div>`:''}
     </div>`;
   }).join('') + `</div>`;
+}
+
+// Avisos manuales — persistidos en la tabla config ya existente (mismo
+// mecanismo comprobado que usa pg_usuarios: JSON.stringify/parse en el campo
+// "valor" de texto). No usa setConfig() por la misma razón que las notas
+// operativas: esa función absorbe fallos de Supabase en silencio.
+function _leerAvisosManuales() {
+  try {
+    const parsed = JSON.parse(getConfig('pg_avisos_manual', '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+}
+
+async function _guardarAvisosManuales(lista) {
+  const valor = JSON.stringify(lista);
+  try {
+    await sb('POST', 'config', { clave: 'pg_avisos_manual', valor }, '');
+  } catch (e1) {
+    try {
+      await sb('PATCH', 'config?clave=eq.pg_avisos_manual', { valor });
+    } catch (e2) {
+      return false;
+    }
+  }
+  if (_configCache) _configCache['pg_avisos_manual'] = valor;
+  return true;
+}
+
+function abrirModalAvisoManual() {
+  const sel = document.getElementById('aviso-manual-mascota');
+  const opciones = [];
+  entradas.forEach(e => {
+    const c = clientes.find(cl => cl.id === e.clienteId);
+    (e.mascotas||[]).forEach(nombre => {
+      opciones.push({ clienteId: e.clienteId, nombre, etiqueta: `${nombre} — ${c?.nombre||'—'}` });
+    });
+  });
+  if (sel) sel.innerHTML = '<option value="">— Ninguna —</option>' +
+    opciones.map(o => `<option value="${o.clienteId}::${o.nombre}">${o.etiqueta}</option>`).join('');
+  const txt = document.getElementById('aviso-manual-texto');
+  if (txt) txt.value = '';
+  document.getElementById('modal-aviso-manual')?.classList.add('open');
+}
+
+async function guardarAvisoManual() {
+  const texto = document.getElementById('aviso-manual-texto')?.value.trim() || '';
+  if (!texto) { notify('⚠️ Escribe el aviso', 'error'); return; }
+  const selVal = document.getElementById('aviso-manual-mascota')?.value || '';
+  let mascotaClienteId = null, mascotaNombre = null;
+  if (selVal) {
+    const idx = selVal.indexOf('::');
+    mascotaClienteId = parseInt(selVal.slice(0, idx));
+    mascotaNombre = selVal.slice(idx + 2);
+  }
+  const lista = _leerAvisosManuales();
+  lista.push({ id: Date.now(), texto, mascotaClienteId, mascotaNombre });
+  const ok = await _guardarAvisosManuales(lista);
+  if (ok) {
+    closeModal('modal-aviso-manual');
+    notify('✅ Aviso agregado', 'success');
+    renderAvisosImportantes();
+  } else {
+    notify('⚠️ No se pudo guardar el aviso', 'error');
+  }
+}
+
+async function eliminarAvisoManual(id) {
+  const lista = _leerAvisosManuales();
+  const nueva = lista.filter(a => a.id !== id);
+  const ok = await _guardarAvisosManuales(nueva);
+  if (ok) {
+    notify('🗑️ Aviso eliminado', 'success');
+    renderAvisosImportantes();
+  } else {
+    notify('⚠️ No se pudo eliminar el aviso', 'error');
+  }
 }
 
 // Notas operativas: bloc de texto libre persistido en la tabla config

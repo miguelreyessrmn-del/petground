@@ -5669,25 +5669,80 @@ async function guardarEdicionMascota() {
     intervalo_celo: parseInt(document.getElementById('em-intervalo-celo')?.value || '180'),
     ...((_fotoMascotaTmp !== null) && { foto: _fotoMascotaTmp })
   };
+  // Corrección CRÍTICO (auditoría final): entradas.mascotas solo guarda el
+  // nombre en texto (no hay mascota_id). Si el nombre cambia, el historial y
+  // el bloqueo de doble hospedaje activo quedan buscando el nombre viejo.
+  // Se detecta el renombrado ANTES de escribir nada, usando el nombre que
+  // esta mascota tenía en memoria (misma identidad id+cliente_id de siempre).
+  const clienteRef = clientes.find(cl => cl.id === clienteId);
+  const mascotaRef = clienteRef?.mascotas?.find(p => p.id === id);
+  const nombreAnterior = mascotaRef?.nombre || '';
+  const seRenombro = nombreAnterior && nombreAnterior !== nombre;
+  // Ambigüedad: si otra mascota del MISMO cliente ya comparte ese nombre
+  // anterior, no hay forma segura de saber cuál "Firulais" es cuál dentro de
+  // entradas.mascotas — no se inventa la asociación, se avisa y no se toca.
+  const hayHomonimo = seRenombro && (clienteRef?.mascotas || []).some(p => p.id !== id && p.nombre === nombreAnterior);
+
   const btn = document.querySelector('#modal-editar-mascota .btn-primary');
   setBtnLoading(btn, true);
   setLoading(true);
   try {
     await sb('PATCH', `mascotas?id=eq.${id}`, datos);
+
+    let avisoHistorial = null;
+    if (seRenombro) {
+      if (hayHomonimo) {
+        avisoHistorial = `⚠️ "${nombreAnterior}" se actualizó, pero otra mascota de este cliente tenía el mismo nombre — su historial anterior no se pudo re-vincular automáticamente. Revísalo manualmente.`;
+      } else {
+        avisoHistorial = await propagarRenombreMascota(clienteId, nombreAnterior, nombre);
+      }
+    }
+
     await cargarTodo();
     closeModal('modal-editar-mascota');
     verPerfilCliente(clienteId);
-    notify('✅ Mascota actualizada', 'success');
+    if (avisoHistorial) {
+      notify(avisoHistorial, avisoHistorial.startsWith('✅') ? 'success' : 'error');
+    } else {
+      notify('✅ Mascota actualizada', 'success');
+    }
   } catch(e) {
-    const c = clientes.find(cl=>cl.id===clienteId);
-    const m = c?.mascotas?.find(p=>p.id===id);
-    if (m) Object.assign(m, datos);
-    closeModal('modal-editar-mascota');
-    verPerfilCliente(clienteId);
-    notify('✅ Mascota actualizada', 'success');
+    notify('⚠️ No se pudo actualizar la mascota: ' + e.message, 'error');
   }
   setBtnLoading(btn, false);
   setLoading(false);
+}
+
+// Mantiene entradas.mascotas en sincronía cuando una mascota cambia de
+// nombre: reemplaza el nombre anterior por el nuevo únicamente dentro de las
+// entradas de ESE cliente que lo contengan, sin tocar otras mascotas ni
+// otros clientes. Devuelve un mensaje si algo quedó sin actualizar (nunca
+// muestra éxito si no se pudo completar), o null si no había nada que hacer.
+async function propagarRenombreMascota(clienteId, nombreAnterior, nombreNuevo) {
+  let entradasCliente;
+  try {
+    entradasCliente = await sb('GET', 'entradas', null,
+      `?cliente_id=eq.${clienteId}&select=id,mascotas`);
+  } catch(e) {
+    return `⚠️ "${nombreAnterior}" se renombró a "${nombreNuevo}", pero no se pudo revisar su historial para actualizarlo. Revísalo manualmente.`;
+  }
+
+  const afectadas = (entradasCliente || []).filter(en => Array.isArray(en.mascotas) && en.mascotas.includes(nombreAnterior));
+  if (!afectadas.length) return null;
+
+  let actualizadas = 0;
+  for (const en of afectadas) {
+    const nuevasMascotas = en.mascotas.map(m => m === nombreAnterior ? nombreNuevo : m);
+    try {
+      await sb('PATCH', `entradas?id=eq.${en.id}`, { mascotas: nuevasMascotas });
+      actualizadas++;
+    } catch(e) { /* se reporta el conteo final, se sigue con las demás */ }
+  }
+
+  if (actualizadas < afectadas.length) {
+    return `⚠️ "${nombreAnterior}" se renombró a "${nombreNuevo}", pero solo se actualizó el historial de ${actualizadas} de ${afectadas.length} hospedajes. Revisa manualmente los que falten.`;
+  }
+  return `✅ Mascota actualizada — historial de ${actualizadas} hospedaje${actualizadas!==1?'s':''} movido a "${nombreNuevo}"`;
 }
 
 // ===================== ELIMINAR MASCOTA =====================

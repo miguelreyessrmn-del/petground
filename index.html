@@ -8632,23 +8632,39 @@ function toggleCajaRetiro() {
   }
 }
 
+let _guardandoCaja = false;
 async function confirmarAperturaCaja() {
-  const motivo  = document.getElementById('caja-motivo').value;
-  const monto   = parseFloat(document.getElementById('caja-monto').value) || 0;
-  const nota    = document.getElementById('caja-nota').value.trim();
-  const mascota = document.getElementById('caja-mascota')?.value.trim() || '';
+  if (_guardandoCaja) return;
+  _guardandoCaja = true;
 
-  if (!motivo) { notify('Selecciona un concepto', 'error'); return; }
+  const motivo   = document.getElementById('caja-motivo').value;
+  const montoRaw = document.getElementById('caja-monto').value.trim();
+  const monto    = montoRaw === '' ? 0 : parseFloat(montoRaw);
+  const nota     = document.getElementById('caja-nota').value.trim();
+  const mascota  = document.getElementById('caja-mascota')?.value.trim() || '';
+
+  if (!motivo) { notify('Selecciona un concepto', 'error'); _guardandoCaja = false; return; }
   // Si el motivo es "Otro", la nota es obligatoria
   if ((motivo === 'Otro' || motivo === 'Otro ingreso') && !nota.trim()) {
     notify('⚠️ Escribe una nota para el concepto "Otro"', 'error');
     document.getElementById('caja-nota')?.focus();
+    _guardandoCaja = false;
+    return;
+  }
+  // Corrección CRÍTICO (auditoría final): rechazar montos negativos o inválidos.
+  // Antes solo se descartaban valores "falsy" (0/NaN), así que un negativo
+  // como -500 pasaba intacto y se sumaba como si fuera dinero real.
+  if (montoRaw !== '' && (isNaN(monto) || monto < 0)) {
+    notify('⚠️ Ingresa un monto válido — no puede ser negativo', 'error');
+    _guardandoCaja = false;
     return;
   }
   // Solo requerir monto si no es conteo o cambio de billetes
   const motivosSinMonto = ['Conteo de caja', 'Cambio de billetes'];
   if (!monto && !motivosSinMonto.includes(motivo)) {
-    notify('Ingresa el monto', 'error'); return;
+    notify('Ingresa el monto', 'error');
+    _guardandoCaja = false;
+    return;
   }
 
   cerrarModalCaja();
@@ -8665,6 +8681,7 @@ async function confirmarAperturaCaja() {
   }
 
   renderMovimientosCaja();
+  _guardandoCaja = false;
 }
 
 // abrirCajonPorCobro() → movida a Printer.cobro()

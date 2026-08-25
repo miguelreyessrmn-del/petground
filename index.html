@@ -702,7 +702,7 @@
           </div>
           <div style="padding:8px 10px">
             <textarea id="notas-operativas-textarea" placeholder="Bañar a Mateo. Llamar al dueño de Rocky..."
-              style="width:100%;min-height:44px;max-height:160px;border:1.5px solid var(--gray-200);border-radius:8px;padding:7px 9px;font-family:'Poppins',sans-serif;font-size:12.5px;line-height:1.45;resize:vertical;outline:none;box-sizing:border-box"
+              style="width:100%;min-height:44px;border:1.5px solid var(--gray-200);border-radius:8px;padding:7px 9px;font-family:'Poppins',sans-serif;font-size:12.5px;line-height:1.45;resize:none;outline:none;box-sizing:border-box;overflow-y:hidden"
               oninput="onNotasOperativasInput()"></textarea>
           </div>
         </div>
@@ -6409,7 +6409,15 @@ async function guardarNotasOperativas(texto) {
   return true;
 }
 
+// Autoexpande el textarea al contenido en vez de mostrar scroll interno.
+function _autoResizeNotasOperativas(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
 function onNotasOperativasInput() {
+  _autoResizeNotasOperativas(document.getElementById('notas-operativas-textarea'));
   const estado = document.getElementById('notas-estado');
   if (estado) { estado.textContent = ''; }
   clearTimeout(_notasOperativasTimer);
@@ -6432,6 +6440,7 @@ function initNotasOperativas() {
   // no solo al abrir Inicio).
   if (document.activeElement === ta) return;
   ta.value = getConfig('pg_notas_operativas', '');
+  _autoResizeNotasOperativas(ta);
 }
 
 function actualizarDashboard() {

@@ -2185,6 +2185,49 @@
   </div>
 </div>
 
+<!-- MODAL CLIENTE DUPLICADO (mismo teléfono) -->
+<div class="modal-overlay" id="modal-dup-telefono">
+  <div class="modal" style="width:400px">
+    <div class="modal-header" style="padding:18px 20px 14px">
+      <div class="modal-title" style="font-size:15px">⚠️ Cliente ya registrado</div>
+      <button class="modal-close" onclick="_dupTelefonoElegir('cancelar')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px;font-size:13px;color:var(--gray-600)">
+      Ya existe un cliente con este teléfono:
+      <div style="margin-top:10px;padding:10px 12px;background:var(--gray-50);border-radius:8px">
+        <div style="font-weight:700;color:var(--blue)" id="dup-tel-nombre-existente"></div>
+        <div style="font-size:12px;color:var(--gray-400)" id="dup-tel-telefono-existente"></div>
+      </div>
+      <div style="margin-top:12px">¿Qué deseas hacer?</div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn btn-primary" style="width:100%" onclick="_dupTelefonoElegir('ver')">Ver cliente existente</button>
+      <button class="btn btn-ghost" style="width:100%" onclick="_dupTelefonoElegir('crear')">Crear de todas formas</button>
+      <button class="btn btn-ghost" style="width:100%;color:var(--gray-400)" onclick="_dupTelefonoElegir('cancelar')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANCELAR RESERVACIÓN CON ADELANTO -->
+<div class="modal-overlay" id="modal-cancelar-reserva-adelanto">
+  <div class="modal" style="width:420px">
+    <div class="modal-header" style="padding:18px 20px 14px">
+      <div class="modal-title" style="font-size:15px">⚠️ Esta reservación tiene un adelanto</div>
+      <button class="modal-close" id="cra-btn-cerrar" onclick="crAdelanto_cancelarOperacion()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px;font-size:13px;color:var(--gray-600)">
+      <div style="margin-bottom:6px">Reservación de <strong id="cra-nombre"></strong></div>
+      <div id="cra-detalle" style="padding:10px 12px;background:var(--gray-50);border-radius:8px"></div>
+      <div style="margin-top:12px">¿Qué quieres hacer con el adelanto antes de cancelar?</div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn btn-primary" id="cra-btn-sin-vincular" style="width:100%" onclick="crAdelanto_mantenerSinVincular()">Mantener como saldo sin vincular</button>
+      <button class="btn btn-ghost" id="cra-btn-anular" style="width:100%;color:var(--red)" onclick="crAdelanto_anular()">Anular el adelanto</button>
+      <button class="btn btn-ghost" id="cra-btn-cancelar" style="width:100%;color:var(--gray-400)" onclick="crAdelanto_cancelarOperacion()">No cancelar la reservación</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HACER SALIDA -->
 <div class="modal-overlay" id="modal-salida">
   <div class="modal" style="width:520px">
@@ -3818,14 +3861,113 @@ async function convertirEnEntrada(reservaId) {
   setLoading(false);
 }
 
+// Guarda la reservación/nombre/adelantos en curso mientras el operador decide
+// qué hacer con el adelanto en el modal — nunca se cancela la reservación
+// hasta que esa decisión quede resuelta (o el operador elija conservarlo
+// explícitamente sin vincular).
+let _resolviendoCancelacionReserva = false;
+let _reservaCancelarPendiente = null; // { id, nombre, adelantos }
+
 async function eliminarReservacion(id, nombre) {
-  if (!confirm(`¿Eliminar la reservación de ${nombre}?`)) return;
+  // Adelantos activos (status='adelanto') vinculados a esta reservación —
+  // mismo vínculo que usa toda la pantalla de Adelantos: cobros.entradaId.
+  const adelantos = cobros.filter(c => c.entradaId === id && c.status === 'adelanto');
+
+  if (!adelantos.length) {
+    if (!confirm(`¿Eliminar la reservación de ${nombre}?`)) return;
+    try {
+      await sb('PATCH',`entradas?id=eq.${id}`,{status:'eliminado'});
+      await cargarTodo();
+      cargarReservaciones();
+      notify('Reservación eliminada','success');
+    } catch(e) { notify(mensajeErrorUsuario(e, 'cancelar reservación'), 'error'); }
+    return;
+  }
+
+  // Hay adelanto(s) activo(s): no se cancela nada todavía — se le pide al
+  // operador una decisión explícita en el modal.
+  _reservaCancelarPendiente = { id, nombre, adelantos };
+  const total = adelantos.reduce((s,c)=>s+c.monto,0);
+  document.getElementById('cra-nombre').textContent = nombre;
+  const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
+  const detalle = adelantos.length > 1
+    ? adelantos.map(c=>`${metIcon[c.metodo]||''} $${c.monto.toLocaleString('es-MX')} PM$ (${c.metodo}, ${c.fecha})`).join('<br>')
+    : '';
+  document.getElementById('cra-detalle').innerHTML = adelantos.length > 1
+    ? `<strong>${adelantos.length} adelantos por un total de $${total.toLocaleString('es-MX')} PM$:</strong><br>${detalle}`
+    : `<strong>Un adelanto de $${total.toLocaleString('es-MX')} PM$</strong> (${adelantos[0].metodo}, ${adelantos[0].fecha})`;
+  document.getElementById('modal-cancelar-reserva-adelanto').classList.add('open');
+}
+
+function crAdelanto_cancelarOperacion() {
+  document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
+  _reservaCancelarPendiente = null;
+}
+
+async function crAdelanto_mantenerSinVincular() { await _resolverCancelacionConAdelanto('sinVincular'); }
+async function crAdelanto_anular() { await _resolverCancelacionConAdelanto('anular'); }
+
+// Aplica la decisión del operador a TODOS los adelantos vinculados (si hay
+// varios, se tratan de forma coherente como un solo conjunto) y solo cancela
+// la reservación después de que quedaron resueltos. Nunca hace DELETE físico
+// ni genera movimiento de caja — "anular" reutiliza exactamente el mismo
+// PATCH lógico que ya usa mdh_eliminarAdelanto().
+async function _resolverCancelacionConAdelanto(modo) {
+  if (_resolviendoCancelacionReserva) return;
+  _resolviendoCancelacionReserva = true;
+  const pend = _reservaCancelarPendiente;
+  const btnIds = ['cra-btn-sin-vincular','cra-btn-anular','cra-btn-cancelar','cra-btn-cerrar'];
+  btnIds.forEach(bid => { const b = document.getElementById(bid); if (b) b.disabled = true; });
   try {
-    await sb('PATCH',`entradas?id=eq.${id}`,{status:'eliminado'});
-    await cargarTodo();
-    cargarReservaciones();
-    notify('Reservación eliminada','success');
-  } catch(e) { notify('Error: '+e.message,'error'); }
+    if (!pend) return;
+    let ok = 0;
+    for (const c of pend.adelantos) {
+      try {
+        if (modo === 'sinVincular') {
+          await sb('PATCH', `cobros?id=eq.${c.id}`, { entrada_id: null });
+        } else {
+          await sb('PATCH', `cobros?id=eq.${c.id}`, {
+            estado: 'anulado',
+            estado_motivo: 'Reservación cancelada — adelanto anulado desde Reservaciones',
+            estado_por: usuarioActual?.nombre || 'Sistema',
+            estado_fecha: new Date().toISOString()
+          });
+        }
+        ok++;
+      } catch(e) { console.error('Error resolviendo adelanto', c.id, e); }
+    }
+    const total = pend.adelantos.length;
+    const singular = total === 1;
+    const sujeto = singular ? 'El adelanto' : `Los ${total} adelantos`;
+    const participio = modo === 'sinVincular'
+      ? (singular ? 'quedó sin vincular' : 'quedaron sin vincular')
+      : (singular ? 'fue anulado' : 'fueron anulados');
+    const verboAccionOk = modo === 'sinVincular'
+      ? (singular ? 'se dejó sin vincular' : 'se dejaron sin vincular')
+      : (singular ? 'se anuló' : 'se anularon');
+    const verboAccionParcial = modo === 'sinVincular' ? 'dejaron sin vincular' : 'anularon';
+
+    if (ok < total) {
+      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
+      notify(`⚠️ Se ${verboAccionParcial} ${ok} de ${total} adelanto${total!==1?'s':''}. La reservación de ${pend.nombre} NO se canceló — resuelve los adelantos restantes e inténtalo de nuevo.`, 'error');
+      return;
+    }
+
+    try {
+      await sb('PATCH', `entradas?id=eq.${pend.id}`, { status: 'eliminado' });
+      await cargarTodo();
+      cargarReservaciones();
+      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
+      notify(`✅ Reservación de ${pend.nombre} cancelada. ${sujeto} ${participio}.`, 'success');
+    } catch(e) {
+      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
+      notify(`⚠️ ${sujeto} ${verboAccionOk} correctamente, pero no se pudo cancelar la reservación de ${pend.nombre}: ${mensajeErrorUsuario(e, 'cancelar reservación')} Vuelve a intentar cancelarla — el adelanto ya no aparecerá pendiente de resolver.`, 'error');
+    }
+  } finally {
+    btnIds.forEach(bid => { const b = document.getElementById(bid); if (b) b.disabled = false; });
+    _reservaCancelarPendiente = null;
+    _resolviendoCancelacionReserva = false;
+  }
 }
 
 async function confirmarReservacion(entradaId, clienteId, wa, nombre, fe, fs, mascotas) {
@@ -5402,7 +5544,7 @@ async function guardarEdicionCliente() {
     // Corrección CRÍTICO (auditoría final): antes se aplicaba el cambio solo
     // en memoria y se mostraba éxito aunque el PATCH real hubiera fallado.
     // No se muta el estado local — solo se refleja lo que Supabase confirmó.
-    notify('⚠️ No se pudo actualizar el cliente: ' + e.message, 'error');
+    notify('⚠️ No se pudo actualizar el cliente: ' + mensajeErrorUsuario(e, 'editar cliente'), 'error');
   }
   setLoading(false);
 }
@@ -5728,7 +5870,7 @@ async function guardarEdicionMascota() {
       notify('✅ Mascota actualizada', 'success');
     }
   } catch(e) {
-    notify('⚠️ No se pudo actualizar la mascota: ' + e.message, 'error');
+    notify('⚠️ No se pudo actualizar la mascota: ' + mensajeErrorUsuario(e, 'editar mascota'), 'error');
   }
   setBtnLoading(btn, false);
   setLoading(false);
@@ -5780,7 +5922,7 @@ async function eliminarMascota(id, nombre, clienteId) {
     // estado local y se mostraba éxito aunque el DELETE real hubiera
     // fallado. Si Supabase no confirma, la mascota sigue existiendo — no se
     // toca el estado local ni se muestra "eliminado".
-    notify(`⚠️ No se pudo eliminar a ${nombre}: ` + e.message, 'error');
+    notify(`⚠️ No se pudo eliminar a ${nombre}: ` + mensajeErrorUsuario(e, 'eliminar mascota'), 'error');
   }
   setLoading(false);
 }
@@ -6188,6 +6330,7 @@ async function _guardarAvisosManuales(lista) {
     try {
       await sb('PATCH', 'config?clave=eq.pg_avisos_manual', { valor });
     } catch (e2) {
+      console.error('[avisos manuales]', e2);
       return false;
     }
   }
@@ -6258,6 +6401,7 @@ async function guardarNotasOperativas(texto) {
     try {
       await sb('PATCH', 'config?clave=eq.pg_notas_operativas', { valor: texto });
     } catch (e2) {
+      console.error('[notas operativas]', e2);
       return false;
     }
   }
@@ -6942,7 +7086,7 @@ async function ne_guardarInfoMascota(mascotaId) {
     notify('✅ Información de la mascota actualizada', 'success');
     if (clienteEntradaSeleccionado) seleccionarClienteEntrada(clienteEntradaSeleccionado.id);
   } catch(e) {
-    notify('⚠️ No se pudo actualizar la información: ' + e.message, 'error');
+    notify('⚠️ No se pudo actualizar la información: ' + mensajeErrorUsuario(e, 'guardar info. de mascota'), 'error');
     if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar'; }
   }
 }
@@ -8047,42 +8191,122 @@ async function eliminarEntrada() {
 // ===================== NUEVO CLIENTE =====================
 // ===================== WHATSAPP =====================
 let _guardandoNuevoCliente = false;
+// Cuando una alta queda a medias (cliente creado, alguna mascota falló), se
+// guarda aquí para que el siguiente clic en "Guardar" solo reintente las
+// mascotas que faltan — nunca vuelve a crear el cliente ni las ya creadas.
+let _clienteParcialPendiente = null; // { id, nombre, nombresCreados: [...] }
+
 async function guardarNuevoCliente() {
   if (_guardandoNuevoCliente) return;
   _guardandoNuevoCliente = true;
-
-  const nombre = document.getElementById('nc-nombre').value.trim();
-  const whatsapp = document.getElementById('nc-whatsapp').value.trim();
-  if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); _guardandoNuevoCliente = false; return; }
-  const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
-  setLoading(true);
   try {
-    const [nuevoCliente] = await sb('POST', 'clientes', {
-      nombre, whatsapp,
-      telefono: document.getElementById('nc-telefono').value,
-      email: document.getElementById('nc-email').value,
-      direccion: document.getElementById('nc-direccion').value,
-      curp: document.getElementById('nc-curp').value,
-      activo: new Date().toISOString().split('T')[0]
-    });
-    for (const m of mascotas) {
+    // Reintento de una alta parcial: el cliente ya existe, solo faltan mascotas.
+    if (_clienteParcialPendiente) {
+      const pend = _clienteParcialPendiente;
+      const mascotasFaltantes = mascotasNuevas.filter(m => m && m.nombre.trim() && !pend.nombresCreados.includes(m.nombre.trim()));
+      setLoading(true);
+      try { await _crearMascotasParaCliente(pend.id, pend.nombre, mascotasFaltantes); }
+      finally { setLoading(false); }
+      return;
+    }
+
+    const nombre = document.getElementById('nc-nombre').value.trim();
+    const whatsapp = document.getElementById('nc-whatsapp').value.trim();
+    if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
+
+    // Detección de cliente duplicado — ANTES de escribir nada.
+    const dup = _buscarClienteDuplicado(nombre, whatsapp);
+    if (dup.telefono) {
+      const decision = await _confirmarDuplicadoTelefono(dup.telefono);
+      if (decision === 'ver') { closeModal('modal-nuevo-cliente'); verPerfilCliente(dup.telefono.id); return; }
+      if (decision === 'cancelar') return;
+      // decision === 'crear' -> continúa
+    } else if (dup.nombre) {
+      if (!confirm(`Ya existe un cliente llamado "${dup.nombre.nombre}". ¿Deseas continuar y crear uno nuevo de todas formas?`)) return;
+    }
+
+    const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
+    let nuevoCliente;
+    setLoading(true);
+    try {
+      [nuevoCliente] = await sb('POST', 'clientes', {
+        nombre, whatsapp,
+        telefono: document.getElementById('nc-telefono').value,
+        email: document.getElementById('nc-email').value,
+        direccion: document.getElementById('nc-direccion').value,
+        curp: document.getElementById('nc-curp').value,
+        activo: new Date().toISOString().split('T')[0]
+      });
+    } catch(e) {
+      notify(mensajeErrorUsuario(e, 'crear cliente'), 'error');
+      return;
+    } finally {
+      setLoading(false);
+    }
+
+    setLoading(true);
+    try { await _crearMascotasParaCliente(nuevoCliente.id, nombre, mascotas); }
+    finally { setLoading(false); }
+  } finally {
+    _guardandoNuevoCliente = false;
+  }
+}
+
+// Crea las mascotas de un cliente ya existente, una por una, sin abortar el
+// resto si alguna falla. Si queda alguna pendiente, deja _clienteParcialPendiente
+// listo para que el siguiente "Guardar" reintente solo esas — nunca duplica
+// las que ya se crearon ni vuelve a crear el cliente.
+async function _crearMascotasParaCliente(clienteId, nombreCliente, mascotas) {
+  let nombresCreadosAhora = [];
+  const faltantes = [];
+  for (const m of mascotas) {
+    try {
       await sb('POST', 'mascotas', {
-        cliente_id: nuevoCliente.id,
+        cliente_id: clienteId,
         nombre: m.nombre.trim(), raza: m.raza,
         sexo: m.sexo, color: m.color,
         nacimiento: m.nacimiento || null
       });
+      nombresCreadosAhora.push(m.nombre.trim());
+    } catch(e) {
+      console.error('Error creando mascota', m.nombre, e);
+      faltantes.push(m);
     }
-    await cargarTodo();
-    closeModal('modal-nuevo-cliente');
-    notify(`✅ Cliente "${nombre}" registrado con ${mascotas.length} mascota${mascotas.length!==1?'s':''}`, 'success');
-    ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>document.getElementById(id).value='');
-    mascotasNuevas = [];
-  } catch(e) {
-    notify('Error al guardar: '+e.message,'error');
   }
-  setLoading(false);
-  _guardandoNuevoCliente = false;
+  await cargarTodo();
+
+  const yaCreadasPrevio = _clienteParcialPendiente?.nombresCreados || [];
+  const totalCreadas = [...yaCreadasPrevio, ...nombresCreadosAhora];
+
+  if (faltantes.length) {
+    _clienteParcialPendiente = { id: clienteId, nombre: nombreCliente, nombresCreados: totalCreadas };
+    notify(`⚠️ Cliente "${nombreCliente}" creado correctamente, pero no se pudieron guardar ${faltantes.length} mascota${faltantes.length!==1?'s':''}. ${totalCreadas.length ? `Las ${totalCreadas.length} ya creadas se conservaron. ` : ''}Presiona "Guardar" de nuevo para reintentar solo las que faltan.`, 'error');
+    return;
+  }
+
+  _clienteParcialPendiente = null;
+  closeModal('modal-nuevo-cliente');
+  notify(`✅ Cliente "${nombreCliente}" registrado con ${totalCreadas.length} mascota${totalCreadas.length!==1?'s':''}`, 'success');
+  ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>{ const el = document.getElementById(id); if (el) el.value=''; });
+  mascotasNuevas = [];
+}
+
+// Modal de decisión ante teléfono duplicado — se resuelve con una Promise
+// para que guardarNuevoCliente() pueda esperar la elección del operador.
+let _resolverDupTelefono = null;
+function _confirmarDuplicadoTelefono(clienteExistente) {
+  return new Promise(resolve => {
+    _resolverDupTelefono = resolve;
+    const nombreEl = document.getElementById('dup-tel-nombre-existente');
+    const telEl = document.getElementById('dup-tel-telefono-existente');
+    if (nombreEl) nombreEl.textContent = clienteExistente.nombre;
+    if (telEl) telEl.textContent = clienteExistente.whatsapp || clienteExistente.telefono || '';
+    document.getElementById('modal-dup-telefono')?.classList.add('open');
+  });
+}
+function _dupTelefonoElegir(opcion) {
+  document.getElementById('modal-dup-telefono')?.classList.remove('open');
+  if (_resolverDupTelefono) { _resolverDupTelefono(opcion); _resolverDupTelefono = null; }
 }
 
 // ===================== WHATSAPP =====================
@@ -8217,6 +8441,45 @@ function notify(msg, type='') {
   n.className = 'notif show' + (type==='success' ? ' success' : '');
   clearTimeout(notifTimeout);
   notifTimeout = setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// Traduce errores técnicos (fetch fallido, timeout, errores de Supabase) a un
+// mensaje entendible para el operador. El detalle técnico completo siempre
+// queda en consola — nunca se oculta para debug, solo no se muestra en pantalla.
+function mensajeErrorUsuario(error, contexto) {
+  console.error(`[${contexto || 'operación'}]`, error);
+  const msg = (error && error.message ? String(error.message) : '').toLowerCase();
+  if (!msg) return 'Ocurrió un error inesperado. Los cambios no fueron confirmados.';
+  if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed') || msg.includes('load failed')) {
+    return 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
+  }
+  if (msg.includes('timeout') || msg.includes('sin respuesta del servidor')) {
+    return 'El servidor tardó demasiado en responder. Revisa antes de volver a intentar para evitar duplicados.';
+  }
+  return 'No se pudo guardar la información. Los cambios no fueron confirmados.';
+}
+
+// Mismo criterio de normalización ya usado en varios puntos del sistema
+// (whatsapp/telefono: replace(/\D/g,'').slice(-10)) — solo dígitos, últimos
+// 10, así se ignoran espacios/guiones/paréntesis y un prefijo +52.
+function normalizarTelefono(str) {
+  return (str || '').replace(/\D/g, '').slice(-10);
+}
+
+// Detección simple de cliente duplicado antes de crear uno nuevo. Prioridad:
+// mismo teléfono normalizado (señal fuerte) > mismo nombre exacto (señal débil).
+function _buscarClienteDuplicado(nombre, telefonoRaw) {
+  const telNorm = normalizarTelefono(telefonoRaw);
+  let porTelefono = null;
+  if (telNorm) {
+    porTelefono = clientes.find(c => normalizarTelefono(c.whatsapp || c.telefono || '') === telNorm) || null;
+  }
+  let porNombre = null;
+  if (!porTelefono) {
+    const nombreNorm = (nombre || '').trim().toLowerCase();
+    porNombre = clientes.find(c => (c.nombre || '').trim().toLowerCase() === nombreNorm) || null;
+  }
+  return { telefono: porTelefono, nombre: porNombre };
 }
 
 // ===================== FACTURACIÓN DATA =====================
@@ -9965,6 +10228,7 @@ function seleccionarRaza(idx, raza) {
 
 function openModalNuevoCliente() {
   mascotasNuevas = [];
+  _clienteParcialPendiente = null;
   document.getElementById('mascotas-container').innerHTML = '';
   agregarTarjetaMascota(); // siempre inicia con una mascota vacía
   document.getElementById('modal-nuevo-cliente').classList.add('open');
@@ -10108,7 +10372,7 @@ async function guardarMascotaExtra(clienteId) {
     } else {
       verPerfilCliente(clienteId);
     }
-  } catch(e) { notify('Error: '+e.message,'error'); }
+  } catch(e) { notify(mensajeErrorUsuario(e, 'agregar mascota'), 'error'); }
   setLoading(false);
   _guardandoMascotaExtra = false;
 }

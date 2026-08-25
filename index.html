@@ -337,8 +337,6 @@
     .stats-row { grid-template-columns:1fr 1fr; gap:10px; }
     .grid-2 { grid-template-columns:1fr; }
     .grid-3 { grid-template-columns:1fr; }
-    #dash-grid { grid-template-columns:1fr !important; }
-    #dash-grid > div[style*="grid-row:span 2"] { grid-row:auto !important; }
     .occ-card { flex-direction:column; gap:12px; padding:16px; }
     .occ-divider { width:100%; height:1px; }
     .link-btns { flex-direction:column; }
@@ -601,115 +599,120 @@
 
     <!-- =================== DASHBOARD =================== -->
     <div class="screen active fade-in" id="screen-dashboard">
-      <div class="stats-row" style="gap:10px;margin-bottom:12px">
-        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('nueva-entrada')">
-          <div class="stat-icon orange" style="width:28px;height:28px;font-size:13px;border-radius:8px">📥</div>
+      <div class="stats-row">
+        <div class="stat-card" onclick="showScreen('nueva-entrada')">
+          <div class="stat-icon orange">📥</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-entradas" style="font-size:17px">0</div>
-            <div class="stat-label" style="font-size:10px">Entradas hoy</div>
+            <div class="stat-num" id="stat-entradas">0</div>
+            <div class="stat-label">Entradas hoy</div>
+            <div class="stat-action">+ Nueva entrada</div>
           </div>
         </div>
-        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="filterSalidas()">
-          <div class="stat-icon red" style="width:28px;height:28px;font-size:13px;border-radius:8px">📤</div>
+        <div class="stat-card" onclick="filterSalidas()">
+          <div class="stat-icon red">📤</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-salidas" style="font-size:17px">1</div>
-            <div class="stat-label" style="font-size:10px">Salidas hoy</div>
+            <div class="stat-num" id="stat-salidas">1</div>
+            <div class="stat-label">Salidas hoy</div>
+            <div class="stat-action" onclick="actualizarPanelesHoy(new Date().toISOString().split('T')[0])" style="cursor:pointer">Ver salidas</div>
           </div>
         </div>
-        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('entradas')">
-          <div class="stat-icon blue" style="width:28px;height:28px;font-size:13px;border-radius:8px">🏠</div>
+        <div class="stat-card" onclick="showScreen('entradas')">
+          <div class="stat-icon blue">🏠</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-alojamientos" style="font-size:17px">0</div>
-            <div class="stat-label" style="font-size:10px">Alojamientos</div>
+            <div class="stat-num" id="stat-alojamientos">0</div>
+            <div class="stat-label">Alojamientos</div>
+            <div class="stat-action" onclick="showScreen('entradas')" style="cursor:pointer">Ver todos</div>
           </div>
         </div>
-        <div class="stat-card" style="padding:9px 12px;gap:9px" onclick="showScreen('entradas')">
-          <div class="stat-icon green" style="width:28px;height:28px;font-size:13px;border-radius:8px">🐕</div>
+        <div class="stat-card">
+          <div class="stat-icon green">🐕</div>
           <div class="stat-info">
-            <div class="stat-num" id="stat-animales" style="font-size:17px">19</div>
-            <div class="stat-label" style="font-size:10px">Animales hospedados</div>
+            <div class="stat-num" id="stat-animales">19</div>
+            <div class="stat-label">Animales hospedados</div>
+            <div class="stat-action" onclick="showScreen('entradas')" style="cursor:pointer">Ver hospedados</div>
           </div>
         </div>
       </div>
 
-      <!-- GRID PRINCIPAL: Llegadas | Salidas | Calendario+Ocupación (col. lateral) -->
-      <!--                  Avisos   | Notas   | (misma columna, spans 2 filas)     -->
-      <div id="dash-grid" style="display:grid;grid-template-columns:1fr 1fr 300px;gap:12px;align-items:start">
-
-        <!-- LLEGADAS DE HOY -->
-        <div class="card">
-          <div class="card-header" style="padding:8px 12px">
-            <div class="card-title" style="font-size:12.5px">🐾 Llegadas de hoy</div>
-            <span class="badge badge-orange" id="badge-llegadas-hoy">0 de 0</span>
-          </div>
-          <div id="llegadas-hoy-body"></div>
+      <div class="occ-card">
+        <div>
+          <div class="occ-pct" id="occ-pct">0%</div>
+          <div class="occ-label">Ocupación actual</div>
         </div>
-
-        <!-- SALIDAS DE HOY -->
-        <div class="card">
-          <div class="card-header" style="padding:8px 12px">
-            <div class="card-title" style="font-size:12.5px">📤 Salidas de hoy</div>
-            <span class="badge badge-red" id="badge-salidas-hoy">0</span>
-          </div>
-          <div id="salidas-hoy-body"></div>
+        <div class="occ-divider"></div>
+        <div class="occ-stat">
+          <div class="num" id="occ-libres">0</div>
+          <div class="lbl">Espacios libres</div>
         </div>
+        <div class="occ-divider"></div>
+        <div class="occ-stat">
+          <div class="num" id="occ-ocupados">0</div>
+          <div class="lbl">Espacios ocupados</div>
+        </div>
+        <div class="occ-bar-wrap">
+          <div class="occ-bar-label">Capacidad: <span id="cap-total">52</span> espacios totales</div>
+          <div class="occ-bar">
+            <div class="occ-bar-fill" id="occ-bar-fill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Columna lateral: Calendario + Ocupación (evita dejar espacio en blanco a la derecha del calendario) -->
-        <div style="grid-row:span 2;display:flex;flex-direction:column;gap:12px">
-          <div class="card">
-            <div class="card-header" style="padding:8px 12px">
-              <div class="card-title" style="font-size:12.5px" id="cal-titulo">📅 Abril 2026</div>
-              <div style="display:flex;gap:4px">
-                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(-1)">◀</button>
-                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(0)">Hoy</button>
-                <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10.5px" onclick="cambiarMesCal(1)">▶</button>
-              </div>
-            </div>
-            <div style="padding:8px 10px">
-              <div class="cal-header">
-                <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
-                <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
-                <div class="cal-dow">D</div>
-              </div>
-              <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
-              <div style="display:flex;gap:8px;margin-top:6px;font-size:9.5px;color:var(--gray-400)">
-                <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
-                <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
-                <div style="display:flex;align-items:center;gap:3px"><div style="width:10px;height:10px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
-              </div>
+
+      <!-- CALENDARIO COMPACTO + EVENTOS + ENTRADAS/SALIDAS EN UNA FILA -->
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:16px;margin-bottom:20px;align-items:start">
+
+        <!-- Calendario compacto -->
+        <div class="card" style="min-width:280px">
+          <div class="card-header" style="padding:10px 14px">
+            <div class="card-title" style="font-size:13px" id="cal-titulo">📅 Abril 2026</div>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(-1)">◀</button>
+              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(0)">Hoy</button>
+              <button class="btn btn-ghost btn-sm" style="padding:3px 7px;font-size:11px" onclick="cambiarMesCal(1)">▶</button>
             </div>
           </div>
-          <div class="card" style="padding:9px 12px;font-size:11.5px;color:var(--gray-400)">📊 Ocupación: <span id="occ-compact" style="color:var(--blue);font-weight:700">0/0 · 0%</span></div>
-        </div>
-
-        <!-- AVISOS IMPORTANTES -->
-        <div class="card">
-          <div class="card-header" style="padding:8px 12px">
-            <div class="card-title" style="font-size:12.5px">⚠️ Avisos importantes</div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span class="badge badge-red" id="badge-avisos">0</span>
-              <button onclick="abrirModalAvisoManual()" title="Agregar aviso manual" style="width:20px;height:20px;border-radius:6px;border:none;background:var(--gray-100);color:var(--blue);font-weight:800;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
+          <div style="padding:10px 12px">
+            <div class="cal-header">
+              <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">X</div>
+              <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div>
+              <div class="cal-dow">D</div>
+            </div>
+            <div class="cal-grid" id="cal-grid" style="gap:2px"></div>
+            <div style="display:flex;gap:10px;margin-top:8px;font-size:10px;color:var(--gray-400)">
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange)"></div>Eventos</div>
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--blue)"></div>Hoy</div>
+              <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;border-radius:3px;background:var(--orange)"></div>Sel.</div>
             </div>
           </div>
-          <div id="avisos-importantes-body"></div>
         </div>
 
-        <!-- NOTAS OPERATIVAS -->
+        <!-- Entradas de hoy -->
         <div class="card">
-          <div class="card-header" style="padding:8px 12px">
-            <div class="card-title" style="font-size:12.5px">📝 Notas operativas</div>
-            <span id="notas-estado" style="font-size:10.5px;color:var(--gray-400)"></span>
+          <div class="card-header" style="padding:10px 14px">
+            <div class="card-title" style="font-size:13px">📥 Entradas de hoy</div>
+            <span class="badge badge-orange" id="badge-ent-hoy">0</span>
           </div>
-          <div style="padding:8px 10px">
-            <textarea id="notas-operativas-textarea" placeholder="Bañar a Mateo. Llamar al dueño de Rocky..."
-              style="width:100%;min-height:44px;border:1.5px solid var(--gray-200);border-radius:8px;padding:7px 9px;font-family:'Poppins',sans-serif;font-size:12.5px;line-height:1.45;resize:none;outline:none;box-sizing:border-box;overflow-y:hidden"
-              oninput="onNotasOperativasInput()"></textarea>
+          <div id="entradas-hoy-list">
+            <div class="empty-state" style="padding:20px">
+              <div class="es-icon" style="font-size:24px">📭</div>
+              <div class="es-text">Sin entradas hoy</div>
+              <button onclick="showScreen('nueva-entrada')" style="margin-top:10px;background:var(--orange);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">➕ Registrar entrada</button>
+            </div>
           </div>
+        </div>
+
+        <!-- Salidas de hoy -->
+        <div class="card">
+          <div class="card-header" style="padding:10px 14px">
+            <div class="card-title" style="font-size:13px">📤 Salidas de hoy</div>
+            <span class="badge badge-red" id="badge-sal-hoy">0</span>
+          </div>
+          <div id="salidas-hoy-list"></div>
         </div>
       </div>
 
       <!-- Eventos del día seleccionado (oculto hasta que se seleccione un día) -->
-      <div id="cal-eventos-wrapper" style="display:none;margin-top:12px">
+      <div id="cal-eventos-wrapper" style="display:none;margin-bottom:20px">
         <div class="card">
           <div class="card-header">
             <div class="card-title" id="cal-eventos-titulo">📋 Selecciona un día</div>
@@ -719,32 +722,6 @@
             </div>
           </div>
           <div id="cal-eventos-body" style="max-height:220px;overflow-y:auto;padding:0 4px"></div>
-        </div>
-      </div>
-
-      <!-- Modal: nuevo aviso manual -->
-      <div class="modal-overlay" id="modal-aviso-manual">
-        <div class="modal" style="width:400px">
-          <div class="modal-header" style="padding:18px 20px 14px">
-            <div class="modal-title" style="font-size:15px">⚠️ Nuevo aviso</div>
-            <button class="modal-close" onclick="closeModal('modal-aviso-manual')">✕</button>
-          </div>
-          <div class="modal-body" style="padding:16px 20px">
-            <div class="form-group">
-              <label class="form-label">Aviso</label>
-              <textarea id="aviso-manual-texto" placeholder="Ej. Rocky no debe convivir con Max" style="width:100%;min-height:60px;border:1.5px solid var(--gray-200);border-radius:8px;padding:8px 10px;font-family:'Poppins',sans-serif;font-size:13px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
-            </div>
-            <div class="form-group" style="margin-top:12px">
-              <label class="form-label">Mascota relacionada (opcional)</label>
-              <select id="aviso-manual-mascota" style="width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;outline:none">
-                <option value="">— Ninguna —</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeModal('modal-aviso-manual')">Cancelar</button>
-            <button class="btn btn-primary" onclick="guardarAvisoManual()">Agregar aviso</button>
-          </div>
         </div>
       </div>
     </div>
@@ -2181,49 +2158,6 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-nuevo-cliente')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarNuevoCliente()">💾 Guardar cliente</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CLIENTE DUPLICADO (mismo teléfono) -->
-<div class="modal-overlay" id="modal-dup-telefono">
-  <div class="modal" style="width:400px">
-    <div class="modal-header" style="padding:18px 20px 14px">
-      <div class="modal-title" style="font-size:15px">⚠️ Cliente ya registrado</div>
-      <button class="modal-close" onclick="_dupTelefonoElegir('cancelar')">✕</button>
-    </div>
-    <div class="modal-body" style="padding:16px 20px;font-size:13px;color:var(--gray-600)">
-      Ya existe un cliente con este teléfono:
-      <div style="margin-top:10px;padding:10px 12px;background:var(--gray-50);border-radius:8px">
-        <div style="font-weight:700;color:var(--blue)" id="dup-tel-nombre-existente"></div>
-        <div style="font-size:12px;color:var(--gray-400)" id="dup-tel-telefono-existente"></div>
-      </div>
-      <div style="margin-top:12px">¿Qué deseas hacer?</div>
-    </div>
-    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
-      <button class="btn btn-primary" style="width:100%" onclick="_dupTelefonoElegir('ver')">Ver cliente existente</button>
-      <button class="btn btn-ghost" style="width:100%" onclick="_dupTelefonoElegir('crear')">Crear de todas formas</button>
-      <button class="btn btn-ghost" style="width:100%;color:var(--gray-400)" onclick="_dupTelefonoElegir('cancelar')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL CANCELAR RESERVACIÓN CON ADELANTO -->
-<div class="modal-overlay" id="modal-cancelar-reserva-adelanto">
-  <div class="modal" style="width:420px">
-    <div class="modal-header" style="padding:18px 20px 14px">
-      <div class="modal-title" style="font-size:15px">⚠️ Esta reservación tiene un adelanto</div>
-      <button class="modal-close" id="cra-btn-cerrar" onclick="crAdelanto_cancelarOperacion()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:16px 20px;font-size:13px;color:var(--gray-600)">
-      <div style="margin-bottom:6px">Reservación de <strong id="cra-nombre"></strong></div>
-      <div id="cra-detalle" style="padding:10px 12px;background:var(--gray-50);border-radius:8px"></div>
-      <div style="margin-top:12px">¿Qué quieres hacer con el adelanto antes de cancelar?</div>
-    </div>
-    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
-      <button class="btn btn-primary" id="cra-btn-sin-vincular" style="width:100%" onclick="crAdelanto_mantenerSinVincular()">Mantener como saldo sin vincular</button>
-      <button class="btn btn-ghost" id="cra-btn-anular" style="width:100%;color:var(--red)" onclick="crAdelanto_anular()">Anular el adelanto</button>
-      <button class="btn btn-ghost" id="cra-btn-cancelar" style="width:100%;color:var(--gray-400)" onclick="crAdelanto_cancelarOperacion()">No cancelar la reservación</button>
     </div>
   </div>
 </div>
@@ -3700,20 +3634,17 @@ function nr_toggleAdelanto() {
   document.getElementById('nr-adelanto-form').style.display = cb.checked ? 'block' : 'none';
 }
 
-let _guardandoReservacion = false;
 async function guardarReservacion() {
-  if (_guardandoReservacion) return;
-  _guardandoReservacion = true;
-  if (!nr_clienteSeleccionado) { notify('⚠️ Selecciona un cliente', 'error'); _guardandoReservacion = false; return; }
+  if (!nr_clienteSeleccionado) { notify('⚠️ Selecciona un cliente', 'error'); return; }
   const mascotas = [...document.querySelectorAll('#nr-mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota', 'error'); _guardandoReservacion = false; return; }
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota', 'error'); return; }
   const fe = document.getElementById('nr-fecha-entrada').value;
   const fs = document.getElementById('nr-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); _guardandoReservacion = false; return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); _guardandoReservacion = false; return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la entrada', 'error'); _guardandoReservacion = false; return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la entrada', 'error'); return; }
   const hab = document.getElementById('nr-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); _guardandoReservacion = false; return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
 
   // Calcular total
   let totalFinal = 0;
@@ -3728,7 +3659,6 @@ async function guardarReservacion() {
   // Corrección C: bloquear reservación con total $0
   if (totalFinal <= 0) {
     notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar la reservación.', 'error');
-    _guardandoReservacion = false;
     return;
   }
 
@@ -3737,7 +3667,7 @@ async function guardarReservacion() {
   const montoAdelanto = tieneAdelanto ? parseFloat(document.getElementById('nr-adelanto-monto').value) : 0;
   const metodoAdelanto = document.getElementById('nr-adelanto-metodo').value;
   if (tieneAdelanto && (!montoAdelanto || montoAdelanto <= 0)) {
-    notify('⚠️ Ingresa el monto del anticipo', 'error'); _guardandoReservacion = false; return;
+    notify('⚠️ Ingresa el monto del anticipo', 'error'); return;
   }
 
   const he = document.getElementById('nr-hora-entrada').value;
@@ -3785,7 +3715,6 @@ async function guardarReservacion() {
       const nuevaEntrada = await sb('POST', 'entradas', datos);
       const entradaId = nuevaEntrada?.[0]?.id;
       // Registrar adelanto si aplica
-      let cajaOkAdelanto = true, hardwareOkAdelanto = true;
       if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
         await sb('POST', 'cobros', {
           cliente_id: nr_clienteSeleccionado.id,
@@ -3800,17 +3729,10 @@ async function guardarReservacion() {
         });
         // Abrir cajón si es efectivo
         if (metodoAdelanto === 'Efectivo') {
-          cajaOkAdelanto = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
-          hardwareOkAdelanto = Printer.huboExitoHardware();
+          await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
         }
       }
-      if (!cajaOkAdelanto) {
-        notify('✅ Reservación guardada — ⚠️ el anticipo se registró pero no se pudo guardar en caja', 'error');
-      } else if (!hardwareOkAdelanto) {
-        notify('✅ Reservación guardada — ⚠️ el anticipo se registró pero el cajón no se abrió / el ticket no se imprimió', 'error');
-      } else {
-        notify('✅ Reservación guardada', 'success');
-      }
+      notify('✅ Reservación guardada', 'success');
     }
     await cargarTodo();
     // Limpiar form
@@ -3828,7 +3750,6 @@ async function guardarReservacion() {
     showScreen('reservaciones-admin');
   } catch(e) { notify('Error: ' + e.message, 'error'); }
   setLoading(false);
-  _guardandoReservacion = false;
 }
 
 async function convertirEnEntrada(reservaId) {
@@ -3861,113 +3782,14 @@ async function convertirEnEntrada(reservaId) {
   setLoading(false);
 }
 
-// Guarda la reservación/nombre/adelantos en curso mientras el operador decide
-// qué hacer con el adelanto en el modal — nunca se cancela la reservación
-// hasta que esa decisión quede resuelta (o el operador elija conservarlo
-// explícitamente sin vincular).
-let _resolviendoCancelacionReserva = false;
-let _reservaCancelarPendiente = null; // { id, nombre, adelantos }
-
 async function eliminarReservacion(id, nombre) {
-  // Adelantos activos (status='adelanto') vinculados a esta reservación —
-  // mismo vínculo que usa toda la pantalla de Adelantos: cobros.entradaId.
-  const adelantos = cobros.filter(c => c.entradaId === id && c.status === 'adelanto');
-
-  if (!adelantos.length) {
-    if (!confirm(`¿Eliminar la reservación de ${nombre}?`)) return;
-    try {
-      await sb('PATCH',`entradas?id=eq.${id}`,{status:'eliminado'});
-      await cargarTodo();
-      cargarReservaciones();
-      notify('Reservación eliminada','success');
-    } catch(e) { notify(mensajeErrorUsuario(e, 'cancelar reservación'), 'error'); }
-    return;
-  }
-
-  // Hay adelanto(s) activo(s): no se cancela nada todavía — se le pide al
-  // operador una decisión explícita en el modal.
-  _reservaCancelarPendiente = { id, nombre, adelantos };
-  const total = adelantos.reduce((s,c)=>s+c.monto,0);
-  document.getElementById('cra-nombre').textContent = nombre;
-  const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
-  const detalle = adelantos.length > 1
-    ? adelantos.map(c=>`${metIcon[c.metodo]||''} $${c.monto.toLocaleString('es-MX')} PM$ (${c.metodo}, ${c.fecha})`).join('<br>')
-    : '';
-  document.getElementById('cra-detalle').innerHTML = adelantos.length > 1
-    ? `<strong>${adelantos.length} adelantos por un total de $${total.toLocaleString('es-MX')} PM$:</strong><br>${detalle}`
-    : `<strong>Un adelanto de $${total.toLocaleString('es-MX')} PM$</strong> (${adelantos[0].metodo}, ${adelantos[0].fecha})`;
-  document.getElementById('modal-cancelar-reserva-adelanto').classList.add('open');
-}
-
-function crAdelanto_cancelarOperacion() {
-  document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
-  _reservaCancelarPendiente = null;
-}
-
-async function crAdelanto_mantenerSinVincular() { await _resolverCancelacionConAdelanto('sinVincular'); }
-async function crAdelanto_anular() { await _resolverCancelacionConAdelanto('anular'); }
-
-// Aplica la decisión del operador a TODOS los adelantos vinculados (si hay
-// varios, se tratan de forma coherente como un solo conjunto) y solo cancela
-// la reservación después de que quedaron resueltos. Nunca hace DELETE físico
-// ni genera movimiento de caja — "anular" reutiliza exactamente el mismo
-// PATCH lógico que ya usa mdh_eliminarAdelanto().
-async function _resolverCancelacionConAdelanto(modo) {
-  if (_resolviendoCancelacionReserva) return;
-  _resolviendoCancelacionReserva = true;
-  const pend = _reservaCancelarPendiente;
-  const btnIds = ['cra-btn-sin-vincular','cra-btn-anular','cra-btn-cancelar','cra-btn-cerrar'];
-  btnIds.forEach(bid => { const b = document.getElementById(bid); if (b) b.disabled = true; });
+  if (!confirm(`¿Eliminar la reservación de ${nombre}?`)) return;
   try {
-    if (!pend) return;
-    let ok = 0;
-    for (const c of pend.adelantos) {
-      try {
-        if (modo === 'sinVincular') {
-          await sb('PATCH', `cobros?id=eq.${c.id}`, { entrada_id: null });
-        } else {
-          await sb('PATCH', `cobros?id=eq.${c.id}`, {
-            estado: 'anulado',
-            estado_motivo: 'Reservación cancelada — adelanto anulado desde Reservaciones',
-            estado_por: usuarioActual?.nombre || 'Sistema',
-            estado_fecha: new Date().toISOString()
-          });
-        }
-        ok++;
-      } catch(e) { console.error('Error resolviendo adelanto', c.id, e); }
-    }
-    const total = pend.adelantos.length;
-    const singular = total === 1;
-    const sujeto = singular ? 'El adelanto' : `Los ${total} adelantos`;
-    const participio = modo === 'sinVincular'
-      ? (singular ? 'quedó sin vincular' : 'quedaron sin vincular')
-      : (singular ? 'fue anulado' : 'fueron anulados');
-    const verboAccionOk = modo === 'sinVincular'
-      ? (singular ? 'se dejó sin vincular' : 'se dejaron sin vincular')
-      : (singular ? 'se anuló' : 'se anularon');
-    const verboAccionParcial = modo === 'sinVincular' ? 'dejaron sin vincular' : 'anularon';
-
-    if (ok < total) {
-      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
-      notify(`⚠️ Se ${verboAccionParcial} ${ok} de ${total} adelanto${total!==1?'s':''}. La reservación de ${pend.nombre} NO se canceló — resuelve los adelantos restantes e inténtalo de nuevo.`, 'error');
-      return;
-    }
-
-    try {
-      await sb('PATCH', `entradas?id=eq.${pend.id}`, { status: 'eliminado' });
-      await cargarTodo();
-      cargarReservaciones();
-      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
-      notify(`✅ Reservación de ${pend.nombre} cancelada. ${sujeto} ${participio}.`, 'success');
-    } catch(e) {
-      document.getElementById('modal-cancelar-reserva-adelanto').classList.remove('open');
-      notify(`⚠️ ${sujeto} ${verboAccionOk} correctamente, pero no se pudo cancelar la reservación de ${pend.nombre}: ${mensajeErrorUsuario(e, 'cancelar reservación')} Vuelve a intentar cancelarla — el adelanto ya no aparecerá pendiente de resolver.`, 'error');
-    }
-  } finally {
-    btnIds.forEach(bid => { const b = document.getElementById(bid); if (b) b.disabled = false; });
-    _reservaCancelarPendiente = null;
-    _resolviendoCancelacionReserva = false;
-  }
+    await sb('PATCH',`entradas?id=eq.${id}`,{status:'eliminado'});
+    await cargarTodo();
+    cargarReservaciones();
+    notify('Reservación eliminada','success');
+  } catch(e) { notify('Error: '+e.message,'error'); }
 }
 
 async function confirmarReservacion(entradaId, clienteId, wa, nombre, fe, fs, mascotas) {
@@ -4330,11 +4152,7 @@ function mdh_toggleDescTipo(btn) {
   mdh_calcResumen();
 }
 
-// Subtotal recalculado desde servicio+noches por mascota, ya neto de
-// descuentos por mascota (formato viejo). No incluye el descuento global.
-// Devuelve null cuando no hay datos suficientes para recalcular (fallback
-// a mdh-importe en ese caso).
-function mdh_getSubtotalMascotas() {
+function mdh_getImporteConDescuento() {
   const sels = document.querySelectorAll('#mdh-mascotas select');
   const descs = document.querySelectorAll('#mdh-mascotas .mdh-desc-ind');
   const servicios = getServicios();
@@ -4355,25 +4173,7 @@ function mdh_getSubtotalMascotas() {
     });
     return Math.round(total * 100) / 100;
   }
-  return null;
-}
-
-function mdh_getImporteConDescuento() {
-  const subtotal = mdh_getSubtotalMascotas();
-  if (subtotal === null) {
-    return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
-  }
-  // Corrección CRÍTICO #1 (auditoría final): preservar el descuento global
-  // guardado por guardarEntrada() en desc_tipo/desc_valor. Sin esto, abrir y
-  // guardar el modal sin cambios recalculaba desde cero e ignoraba ese
-  // descuento, subiendo el importe al valor sin descontar.
-  const e = entradas.find(en => en.id === detalleHospedajeId);
-  const descGlobalTipo = e?.desc_tipo || 'pct';
-  const descGlobalVal  = parseFloat(e?.desc_valor) || 0;
-  const descGlobalMonto = descGlobalVal > 0
-    ? (descGlobalTipo === 'pct' ? subtotal * descGlobalVal / 100 : Math.min(subtotal, descGlobalVal))
-    : 0;
-  return Math.round((subtotal - descGlobalMonto) * 100) / 100;
+  return parseFloat(document.getElementById('mdh-importe')?.value) || 0;
 }
 
 function mdh_getDescuentoObj() {
@@ -4545,15 +4345,12 @@ function mdh_abrirFormAdelanto() {
   }
 }
 
-let _guardandoAdelantoDetalle = false;
 async function mdh_guardarAdelanto() {
-  if (_guardandoAdelantoDetalle) return;
-  _guardandoAdelantoDetalle = true;
   const monto  = parseFloat(document.getElementById('mdh-adel-monto').value);
   const metodo = document.getElementById('mdh-adel-metodo').value;
-  if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); _guardandoAdelantoDetalle = false; return; }
+  if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); return; }
   const e = entradas.find(en => en.id === detalleHospedajeId);
-  if (!e) { _guardandoAdelantoDetalle = false; return; }
+  if (!e) return;
   setLoading(true);
   try {
     await sb('POST', 'cobros', {
@@ -4568,19 +4365,11 @@ async function mdh_guardarAdelanto() {
     await cargarTodo();
     document.getElementById('mdh-form-adelanto').style.display = 'none';
     mdh_renderAdelantos();
+    notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
     // Cajón + ticket si es efectivo
     const c = clientes.find(cl => cl.id === e.clienteId);
-    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo') {
-      cajaOk = await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
-      hardwareOk = Printer.huboExitoHardware();
-    }
-    if (!cajaOk) {
-      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} registrado — ⚠️ no se pudo registrar en caja`, 'error');
-    } else if (!hardwareOk) {
-      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
-    } else {
-      notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
+      await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
     }
     // Ofrecer WA
     if (c?.whatsapp) {
@@ -4600,7 +4389,6 @@ async function mdh_guardarAdelanto() {
     }
   } catch(err) { notify('Error: ' + err.message, 'error'); }
   setLoading(false);
-  _guardandoAdelantoDetalle = false;
 }
 
 // ===================== COMPROBANTE IMPRIMIBLE =====================
@@ -4894,14 +4682,6 @@ async function guardarCambiosHospedaje() {
     });
   });
 
-  // Corrección CRÍTICO #1: mantener subtotal/desc_monto en sincronía con el
-  // importe recalculado, sin tocar desc_tipo/desc_valor (la tasa del
-  // descuento global no se edita desde este modal, solo se preserva).
-  const subtotalMascotas = mdh_getSubtotalMascotas();
-  const descuentoGlobalUpdate = subtotalMascotas !== null
-    ? { subtotal: subtotalMascotas, desc_monto: Math.round((subtotalMascotas - importe) * 100) / 100 }
-    : {};
-
   const btn = document.querySelector('#modal-detalle-hospedaje .btn-primary[onclick="guardarCambiosHospedaje()"]');
   setBtnLoading(btn, true);
   setLoading(true);
@@ -4912,8 +4692,7 @@ async function guardarCambiosHospedaje() {
       habitacion: hab, importe,
       descuento: descuentoObj ? JSON.stringify(descuentoObj) : null,
       notas,
-      conceptos_json: JSON.stringify(conceptosModalGuardar),
-      ...descuentoGlobalUpdate
+      conceptos_json: JSON.stringify(conceptosModalGuardar)
     });
     await cargarTodo();
     closeModal('modal-detalle-hospedaje');
@@ -5541,10 +5320,12 @@ async function guardarEdicionCliente() {
     verPerfilCliente(id);
     notify('✅ Cliente actualizado', 'success');
   } catch(e) {
-    // Corrección CRÍTICO (auditoría final): antes se aplicaba el cambio solo
-    // en memoria y se mostraba éxito aunque el PATCH real hubiera fallado.
-    // No se muta el estado local — solo se refleja lo que Supabase confirmó.
-    notify('⚠️ No se pudo actualizar el cliente: ' + mensajeErrorUsuario(e, 'editar cliente'), 'error');
+    // Actualizar localmente si falla Supabase
+    const c = clientes.find(cl=>cl.id===id);
+    if (c) { Object.assign(c, { nombre: datos.nombre, whatsapp: datos.whatsapp, telefono: datos.telefono, email: datos.email, direccion: datos.direccion, notas: datos.notas, infoImportante: datos.info_importante }); }
+    closeModal('modal-editar-cliente');
+    verPerfilCliente(id);
+    notify('✅ Cliente actualizado', 'success');
   }
   setLoading(false);
 }
@@ -5676,16 +5457,7 @@ async function confirmarAplicarPago() {
     .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const totalPendiente = pendientes.reduce((s,co)=>s+co.monto,0);
 
-  // El monto aplicado a la deuda debe coincidir exactamente con lo que se registra
-  // como ingreso en caja — no se permite "aplicar" más de lo que realmente se debe.
-  if (monto > totalPendiente) {
-    notify(`⚠️ El monto ($${monto.toLocaleString('es-MX')}) es mayor a la deuda total ($${totalPendiente.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
-    _aplicandoPago = false;
-    return;
-  }
-
   setLoading(true);
-  let aplicadoHastaAhora = 0;
   try {
     let restante = monto;
     for (const co of pendientes) {
@@ -5693,28 +5465,24 @@ async function confirmarAplicarPago() {
       if (restante >= co.monto) {
         // Paga completo este cobro
         await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}`, fecha_pago: new Date().toISOString() });
-        aplicadoHastaAhora += co.monto;
         restante -= co.monto;
       } else {
         // Pago parcial — actualizar monto pendiente
         await sb('PATCH', `cobros?id=eq.${co.id}`, { monto: co.monto - restante, notas: `Pago parcial $${restante.toLocaleString('es-MX')} el ${new Date().toISOString().split('T')[0]}` });
-        // Registrar el pago aplicado — conserva el mismo entrada_id de la deuda original
-        // para no perder el vínculo con el hospedaje.
+        // Registrar el pago aplicado
         await sb('POST', 'cobros', {
-          cliente_id: id, entrada_id: co.entradaId || null,
-          fecha: new Date().toISOString().split('T')[0],
+          cliente_id: id, fecha: new Date().toISOString().split('T')[0],
           fecha_pago: new Date().toISOString(),
           metodo, monto: restante, concepto: 'Abono a cuenta pendiente',
           notas: `Abono parcial`, status: 'pagado'
         });
-        aplicadoHastaAhora += restante;
         restante = 0;
       }
     }
     await cargarTodo();
     closeModal('modal-aplicar-pago');
     // Cajón + ticket + caja_movimientos si el pago es en efectivo
-    let cajaOk = true, hardwareOk = true;
+    let cajaOk = true;
     if (metodo === 'Efectivo' && monto > 0) {
       cajaOk = await Printer.cobro(
         c?.nombre || 'Cliente',
@@ -5722,13 +5490,10 @@ async function confirmarAplicarPago() {
         monto,
         null
       );
-      hardwareOk = Printer.huboExitoHardware();
     }
     const restanteTotal = Math.max(0, totalPendiente - monto);
     if (!cajaOk) {
       notify(`✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — ⚠️ no se pudo registrar en caja`, 'error');
-    } else if (!hardwareOk) {
-      notify(`✅ Pago de $${monto.toLocaleString('es-MX')} aplicado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
     } else {
       notify(restanteTotal > 0
         ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
@@ -5739,15 +5504,7 @@ async function confirmarAplicarPago() {
     // Refrescar perfil si está abierto
     const screen = document.getElementById('screen-perfil-cliente');
     if (screen?.classList.contains('active')) verPerfilCliente(id);
-  } catch(e) {
-    // Estado parcial real: parte del bucle ya se aplicó en Supabase antes de la falla.
-    // El usuario debe saber exactamente cuánto, no solo que "hubo un error".
-    if (aplicadoHastaAhora > 0) {
-      notify(`⚠️ Error a mitad del proceso: se alcanzaron a aplicar $${aplicadoHastaAhora.toLocaleString('es-MX')} de $${monto.toLocaleString('es-MX')} antes de la falla (${e.message}). Verifica las deudas de este cliente antes de reintentar.`, 'error');
-    } else {
-      notify('Error: '+e.message, 'error');
-    }
-  }
+  } catch(e) { notify('Error: '+e.message, 'error'); }
   setLoading(false);
   _aplicandoPago = false;
 }
@@ -5832,80 +5589,25 @@ async function guardarEdicionMascota() {
     intervalo_celo: parseInt(document.getElementById('em-intervalo-celo')?.value || '180'),
     ...((_fotoMascotaTmp !== null) && { foto: _fotoMascotaTmp })
   };
-  // Corrección CRÍTICO (auditoría final): entradas.mascotas solo guarda el
-  // nombre en texto (no hay mascota_id). Si el nombre cambia, el historial y
-  // el bloqueo de doble hospedaje activo quedan buscando el nombre viejo.
-  // Se detecta el renombrado ANTES de escribir nada, usando el nombre que
-  // esta mascota tenía en memoria (misma identidad id+cliente_id de siempre).
-  const clienteRef = clientes.find(cl => cl.id === clienteId);
-  const mascotaRef = clienteRef?.mascotas?.find(p => p.id === id);
-  const nombreAnterior = mascotaRef?.nombre || '';
-  const seRenombro = nombreAnterior && nombreAnterior !== nombre;
-  // Ambigüedad: si otra mascota del MISMO cliente ya comparte ese nombre
-  // anterior, no hay forma segura de saber cuál "Firulais" es cuál dentro de
-  // entradas.mascotas — no se inventa la asociación, se avisa y no se toca.
-  const hayHomonimo = seRenombro && (clienteRef?.mascotas || []).some(p => p.id !== id && p.nombre === nombreAnterior);
-
   const btn = document.querySelector('#modal-editar-mascota .btn-primary');
   setBtnLoading(btn, true);
   setLoading(true);
   try {
     await sb('PATCH', `mascotas?id=eq.${id}`, datos);
-
-    let avisoHistorial = null;
-    if (seRenombro) {
-      if (hayHomonimo) {
-        avisoHistorial = `⚠️ "${nombreAnterior}" se actualizó, pero otra mascota de este cliente tenía el mismo nombre — su historial anterior no se pudo re-vincular automáticamente. Revísalo manualmente.`;
-      } else {
-        avisoHistorial = await propagarRenombreMascota(clienteId, nombreAnterior, nombre);
-      }
-    }
-
     await cargarTodo();
     closeModal('modal-editar-mascota');
     verPerfilCliente(clienteId);
-    if (avisoHistorial) {
-      notify(avisoHistorial, avisoHistorial.startsWith('✅') ? 'success' : 'error');
-    } else {
-      notify('✅ Mascota actualizada', 'success');
-    }
+    notify('✅ Mascota actualizada', 'success');
   } catch(e) {
-    notify('⚠️ No se pudo actualizar la mascota: ' + mensajeErrorUsuario(e, 'editar mascota'), 'error');
+    const c = clientes.find(cl=>cl.id===clienteId);
+    const m = c?.mascotas?.find(p=>p.id===id);
+    if (m) Object.assign(m, datos);
+    closeModal('modal-editar-mascota');
+    verPerfilCliente(clienteId);
+    notify('✅ Mascota actualizada', 'success');
   }
   setBtnLoading(btn, false);
   setLoading(false);
-}
-
-// Mantiene entradas.mascotas en sincronía cuando una mascota cambia de
-// nombre: reemplaza el nombre anterior por el nuevo únicamente dentro de las
-// entradas de ESE cliente que lo contengan, sin tocar otras mascotas ni
-// otros clientes. Devuelve un mensaje si algo quedó sin actualizar (nunca
-// muestra éxito si no se pudo completar), o null si no había nada que hacer.
-async function propagarRenombreMascota(clienteId, nombreAnterior, nombreNuevo) {
-  let entradasCliente;
-  try {
-    entradasCliente = await sb('GET', 'entradas', null,
-      `?cliente_id=eq.${clienteId}&select=id,mascotas`);
-  } catch(e) {
-    return `⚠️ "${nombreAnterior}" se renombró a "${nombreNuevo}", pero no se pudo revisar su historial para actualizarlo. Revísalo manualmente.`;
-  }
-
-  const afectadas = (entradasCliente || []).filter(en => Array.isArray(en.mascotas) && en.mascotas.includes(nombreAnterior));
-  if (!afectadas.length) return null;
-
-  let actualizadas = 0;
-  for (const en of afectadas) {
-    const nuevasMascotas = en.mascotas.map(m => m === nombreAnterior ? nombreNuevo : m);
-    try {
-      await sb('PATCH', `entradas?id=eq.${en.id}`, { mascotas: nuevasMascotas });
-      actualizadas++;
-    } catch(e) { /* se reporta el conteo final, se sigue con las demás */ }
-  }
-
-  if (actualizadas < afectadas.length) {
-    return `⚠️ "${nombreAnterior}" se renombró a "${nombreNuevo}", pero solo se actualizó el historial de ${actualizadas} de ${afectadas.length} hospedajes. Revisa manualmente los que falten.`;
-  }
-  return `✅ Mascota actualizada — historial de ${actualizadas} hospedaje${actualizadas!==1?'s':''} movido a "${nombreNuevo}"`;
 }
 
 // ===================== ELIMINAR MASCOTA =====================
@@ -5918,11 +5620,11 @@ async function eliminarMascota(id, nombre, clienteId) {
     verPerfilCliente(clienteId);
     notify(`🗑️ ${nombre} eliminado`, 'success');
   } catch(e) {
-    // Corrección CRÍTICO (auditoría final): antes se quitaba la mascota del
-    // estado local y se mostraba éxito aunque el DELETE real hubiera
-    // fallado. Si Supabase no confirma, la mascota sigue existiendo — no se
-    // toca el estado local ni se muestra "eliminado".
-    notify(`⚠️ No se pudo eliminar a ${nombre}: ` + mensajeErrorUsuario(e, 'eliminar mascota'), 'error');
+    // Si falla en Supabase, eliminar localmente
+    const c = clientes.find(cl=>cl.id===clienteId);
+    if (c) c.mascotas = c.mascotas.filter(m=>m.id!==id);
+    verPerfilCliente(clienteId);
+    notify(`🗑️ ${nombre} eliminado`, 'success');
   }
   setLoading(false);
 }
@@ -6038,9 +5740,8 @@ function renderCalendario() {
 function seleccionarDiaCal(fecha) {
   calDiaSeleccionado=fecha;
   renderCalendario();
-  // Los bloques de Llegadas/Salidas de Inicio son siempre de HOY por diseño;
-  // el detalle del día seleccionado en el calendario vive en su propio panel.
   mostrarEventosDia(fecha);
+  actualizarPanelesHoy(fecha);
   const wrapper = document.getElementById('cal-eventos-wrapper');
   if (wrapper) wrapper.style.display='block';
 }
@@ -6109,338 +5810,48 @@ function mostrarEventosDia(fecha) {
   if(body) body.innerHTML=html;
 }
 
-// "Llegadas de hoy": responde "¿a quién esperamos hoy y quién ya llegó?".
-// No se refuerza el concepto de habitación aquí a propósito (espacios dinámicos).
-// Misma lógica que antes — solo cambia la densidad visual.
-function renderLlegadasHoy(fecha) {
-  const body = document.getElementById('llegadas-hoy-body');
-  const badge = document.getElementById('badge-llegadas-hoy');
-  if (!body) return;
-  const yaLlegaron = entradas.filter(e => (e.entrada||'').startsWith(fecha));
+function actualizarPanelesHoy(fecha) {
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const esHoy = fecha === hoyStr;
+  const labelFecha = esHoy ? 'hoy' : new Date(fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+  const listEnt = document.getElementById('entradas-hoy-list');
+  const listSal = document.getElementById('salidas-hoy-list');
+  const entsDelDia = entradas.filter(e => (e.entrada||'').startsWith(fecha));
   // Solo reservaciones que AÚN no han llegado (no están en entradas activas)
-  const porLlegar = reservaciones.filter(e => {
+  const resDia = reservaciones.filter(e => {
     if (!(e.entrada||'').startsWith(fecha)) return false;
+    // Verificar que no haya ya una entrada activa para el mismo cliente y mascotas
     return !entradas.some(a => a.clienteId === e.clienteId &&
       (e.mascotas||[]).every(m => (a.mascotas||[]).includes(m)));
   });
-  if (badge) badge.textContent = `${yaLlegaron.length} de ${yaLlegaron.length + porLlegar.length}`;
-
-  if (!yaLlegaron.length && !porLlegar.length) {
-    body.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;font-size:11.5px;color:var(--gray-400)">
-      <span>Sin llegadas programadas hoy</span>
-      <button onclick="showScreen('nueva-entrada')" style="background:var(--orange);color:white;border:none;border-radius:6px;padding:4px 9px;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">+ Registrar entrada</button>
-    </div>`;
-    return;
-  }
-
-  const fila = (e, llegado) => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    const masc = (e.mascotas||[]).join(', ');
-    const clickable = llegado ? `cursor:pointer` : '';
-    const onclickAttr = llegado ? `onclick="verDetalleHospedaje(${e.id})"` : '';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--gray-100);${clickable}" ${onclickAttr}>
-      <span style="font-size:12px;flex-shrink:0">${llegado?'✅':'⏳'}</span>
-      <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:600;font-size:12px">🐕 ${masc}</span> <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}</span></div>
-    </div>`;
-  };
-
-  let html = '<div style="max-height:230px;overflow-y:auto">';
-  if (porLlegar.length) {
-    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">⏳ POR LLEGAR (${porLlegar.length})</div>`;
-    html += porLlegar.map(e=>fila(e,false)).join('');
-  }
-  if (yaLlegaron.length) {
-    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">✅ YA LLEGARON (${yaLlegaron.length})</div>`;
-    html += yaLlegaron.map(e=>fila(e,true)).join('');
-  }
-  html += '</div>';
-  body.innerHTML = html;
-}
-
-// "Salidas de hoy": responde "¿a quién tengo que preparar para salir hoy?".
-// Tres grupos, en orden de prioridad: Atrasadas (entrada activa cuya fecha de
-// salida programada ya pasó, sin importar la hora) > Hoy > Ya salieron.
-// "Atrasada" se deriva de datos que ya existen (entrada activa + fecha de
-// salida < hoy) — no se guarda ningún status nuevo.
-// "Ya salieron" sigue definido, sin tocar checkout, como hospedajes ya
-// completados cuya salida prevista era hoy (fecha_salida_real no se registra
-// en confirmarSalida(), así que no es fuente confiable).
-async function renderSalidasHoy(fecha) {
-  const body = document.getElementById('salidas-hoy-body');
-  const badge = document.getElementById('badge-salidas-hoy');
-  if (!body) return;
-  const atrasadas = entradas.filter(e => {
-    const f = (e.salidaPrevista||'').split(' ')[0];
-    return f && f < fecha;
-  });
-  const programadas = entradas.filter(e => (e.salidaPrevista||'').startsWith(fecha));
-  if (badge) badge.textContent = String(atrasadas.length + programadas.length);
-
-  let completadas = [];
-  try {
-    const rows = await sb('GET', 'entradas', null,
-      '?status=eq.completado&select=id,cliente_id,mascotas,fecha_salida_prevista&order=fecha_salida_prevista.desc&limit=50');
-    completadas = (rows||[])
-      .filter(r => (r.fecha_salida_prevista||'').startsWith(fecha))
-      .map(r => ({ id: r.id, clienteId: r.cliente_id, mascotas: r.mascotas||[] }));
-  } catch(e) { /* si falla, se muestran solo atrasadas/programadas; no es información crítica */ }
-
-  if (!atrasadas.length && !programadas.length && !completadas.length) {
-    body.innerHTML = `<div style="padding:8px 12px;font-size:11.5px;color:var(--gray-400)">✅ Sin salidas programadas hoy</div>`;
-    return;
-  }
-
-  const filaSalida = (e, opts={}) => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    const hora = (e.salidaPrevista||'').split(' ')[1] || '';
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-bottom:1px solid var(--gray-100)">
-      <div style="flex:1;min-width:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="verDetalleHospedaje(${e.id})">
-        <span style="font-weight:600;font-size:12px">🐕 ${(e.mascotas||[]).join(', ')}</span>
-        <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}${opts.etiqueta?' · '+opts.etiqueta:(hora?' · '+hora:'')}</span>
-      </div>
-      ${c?.whatsapp?`<button onclick="event.stopPropagation();abrirWhatsApp('${c.whatsapp}')" class="wa-btn" style="padding:3px 7px;font-size:10.5px;flex-shrink:0">💬</button>`:''}
-      <button class="btn btn-sm btn-green" style="flex-shrink:0;padding:3px 8px;font-size:11px" onclick="event.stopPropagation();hacerSalida('${(c?.nombre||'').replace(/'/g,"\\'")}',${e.id})">📤 Salida</button>
-    </div>`;
-  };
-
-  let html = '<div style="max-height:230px;overflow-y:auto">';
-  if (atrasadas.length) {
-    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:#dc2626;letter-spacing:0.4px">⚠️ ATRASADAS (${atrasadas.length})</div>`;
-    html += atrasadas.map(e => filaSalida(e, { etiqueta: 'Debía salir ' + _etiquetaFechaAtraso((e.salidaPrevista||'').split(' ')[0], fecha) + ((e.salidaPrevista||'').split(' ')[1]?' · '+(e.salidaPrevista||'').split(' ')[1]:'') })).join('');
-  }
-  if (programadas.length) {
-    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">🟠 HOY (${programadas.length})</div>`;
-    html += programadas.map(e => filaSalida(e)).join('');
-  }
-  if (completadas.length) {
-    html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--gray-400);letter-spacing:0.4px">✅ YA SALIERON (${completadas.length})</div>`;
-    html += completadas.map(e => {
-      const c = clientes.find(cl => cl.id === e.clienteId);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--gray-100);opacity:0.65">
-        <span style="font-weight:600;font-size:12px">🐕 ${(e.mascotas||[]).join(', ')}</span>
-        <span style="font-size:11px;color:var(--gray-400)">— ${c?.nombre||'—'}</span>
-      </div>`;
-    }).join('');
-  }
-  html += '</div>';
-  body.innerHTML = html;
-}
-
-// "ayer" si es exactamente el día anterior; si no, fecha corta (ej. "15 ago").
-function _etiquetaFechaAtraso(fechaStr, hoyStr) {
-  const ayer = new Date(hoyStr+'T00:00:00');
-  ayer.setDate(ayer.getDate()-1);
-  if (fechaStr === ayer.toISOString().split('T')[0]) return 'ayer';
-  return new Date(fechaStr+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
-}
-
-// "Avisos importantes": automáticos (mascotas.flags/notas/celo, sin guardar
-// segundo estado — desaparecen solos al checkout) + manuales (persistidos en
-// config, clave pg_avisos_manual). Los manuales vinculados a una mascota se
-// podan solos (se dejan de mostrar y se borran del storage) en cuanto esa
-// mascota ya no tiene entrada activa; los que no están vinculados permanecen
-// hasta que alguien los elimine.
-function renderAvisosImportantes() {
-  const body = document.getElementById('avisos-importantes-body');
-  const badge = document.getElementById('badge-avisos');
-  if (!body) return;
-
-  const items = [];
-  entradas.forEach(e => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    if (!c) return;
-    (e.mascotas||[]).forEach(nombreMascota => {
-      const m = (c.mascotas||[]).find(mo => mo.nombre === nombreMascota);
-      if (!m) return;
-      const flags = m.flags || [];
-      const notasLower = (m.notas||'').toLowerCase();
-      const esAgresivo = flags.includes('agresivo') || notasLower.includes('agresiv') || notasLower.includes('peligros');
-      const enCelo = calcularEstadoCelo(m).estado === 'en_celo';
-      const esMedicamento = flags.includes('medicamento') || notasLower.includes('medic');
-      const esAlergia = flags.includes('alergia');
-      const esEspecial = flags.includes('especial');
-      const etiquetas = [];
-      if (esAgresivo) etiquetas.push('Agresivo');
-      if (enCelo) etiquetas.push('En celo');
-      if (esMedicamento) etiquetas.push('Medicado');
-      if (esAlergia) etiquetas.push('Alergia');
-      if (esEspecial) etiquetas.push('Cuidado especial');
-      if (!etiquetas.length) return;
-      let nota = (m.notas||'').trim();
-      if (nota.length > 90) nota = nota.slice(0,90) + '…';
-      items.push({ manual:false, fuerte: esAgresivo || enCelo, titulo: nombreMascota.toUpperCase(), etiquetas, cliente: c.nombre, nota });
-    });
-  });
-
-  const manuales = _leerAvisosManuales();
-  const podar = [];
-  manuales.forEach(a => {
-    if (a.mascotaNombre) {
-      const activa = entradas.some(e => e.clienteId === a.mascotaClienteId && (e.mascotas||[]).includes(a.mascotaNombre));
-      if (!activa) { podar.push(a.id); return; }
-    }
-    items.push({ manual:true, fuerte:true, id:a.id, titulo: a.mascotaNombre ? a.mascotaNombre.toUpperCase() : 'AVISO', texto: a.texto });
-  });
-  if (podar.length) {
-    _guardarAvisosManuales(manuales.filter(a => !podar.includes(a.id)));
-  }
-
-  items.sort((a,b) => (b.fuerte?1:0) - (a.fuerte?1:0));
-  if (badge) badge.textContent = String(items.length);
-
-  if (!items.length) {
-    body.innerHTML = `<div style="padding:8px 12px;font-size:11.5px;color:var(--gray-400)">✅ Sin avisos importantes</div>`;
-    return;
-  }
-  body.innerHTML = `<div style="max-height:230px;overflow-y:auto;padding:6px 8px 4px">` + items.map(a => {
-    const color = a.fuerte ? '#dc2626' : '#b45309';
-    const bg = a.fuerte ? '#fef2f2' : '#fffbeb';
-    const icon = a.fuerte ? '🔴' : '🟡';
-    const cerrar = a.manual ? `<span onclick="eliminarAvisoManual(${a.id})" title="Eliminar aviso" style="cursor:pointer;color:${color};font-weight:800;padding:0 3px;flex-shrink:0">×</span>` : '';
-    const linea1 = a.manual ? `${icon} ${a.titulo}` : `${icon} ${a.titulo}${a.etiquetas.length?' — '+a.etiquetas.join(', '):''}`;
-    const linea2 = a.manual ? `Aviso manual · ${a.texto}` : a.cliente;
-    const linea3 = (!a.manual && a.nota) ? `"${a.nota}"` : '';
-    return `<div style="padding:5px 8px;border-left:3px solid ${color};background:${bg};margin-bottom:4px;border-radius:5px;font-size:11px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
-        <span style="font-weight:700;color:${color}">${linea1}</span>
-        ${cerrar}
-      </div>
-      <div style="color:${a.manual?color:'var(--gray-400)'};margin-top:1px">${linea2}</div>
-      ${linea3?`<div style="color:${color};margin-top:1px">${linea3}</div>`:''}
-    </div>`;
-  }).join('') + `</div>`;
-}
-
-// Avisos manuales — persistidos en la tabla config ya existente (mismo
-// mecanismo comprobado que usa pg_usuarios: JSON.stringify/parse en el campo
-// "valor" de texto). No usa setConfig() por la misma razón que las notas
-// operativas: esa función absorbe fallos de Supabase en silencio.
-function _leerAvisosManuales() {
-  try {
-    const parsed = JSON.parse(getConfig('pg_avisos_manual', '[]'));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch(e) { return []; }
-}
-
-async function _guardarAvisosManuales(lista) {
-  const valor = JSON.stringify(lista);
-  try {
-    await sb('POST', 'config', { clave: 'pg_avisos_manual', valor }, '');
-  } catch (e1) {
-    try {
-      await sb('PATCH', 'config?clave=eq.pg_avisos_manual', { valor });
-    } catch (e2) {
-      console.error('[avisos manuales]', e2);
-      return false;
+  if (listEnt) {
+    if (!entsDelDia.length && !resDia.length) {
+      listEnt.innerHTML = `<div class="empty-state" style="padding:20px"><div class="es-icon" style="font-size:24px">📭</div><div class="es-text">Sin entradas ${labelFecha}</div></div>`;
+    } else {
+      listEnt.innerHTML = [...entsDelDia, ...resDia].map(e => {
+        const c = clientes.find(cl => cl.id === e.clienteId);
+        const ini = (c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('');
+        const esRes = e.status === 'reservacion';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-100)">
+          <div style="width:32px;height:32px;border-radius:50%;background:${esRes?'var(--blue)':'var(--orange)'};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;flex-shrink:0">${ini}</div>
+          <div style="flex:1"><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">🐕 ${(e.mascotas||[]).join(', ')} · Hab. ${e.habitacion||'—'}</div></div>
+          ${esRes?'<span class="badge badge-blue" style="font-size:10px">Reservación</span>':''}
+        </div>`;
+      }).join('');
     }
   }
-  if (_configCache) _configCache['pg_avisos_manual'] = valor;
-  return true;
-}
-
-function abrirModalAvisoManual() {
-  const sel = document.getElementById('aviso-manual-mascota');
-  const opciones = [];
-  entradas.forEach(e => {
-    const c = clientes.find(cl => cl.id === e.clienteId);
-    (e.mascotas||[]).forEach(nombre => {
-      opciones.push({ clienteId: e.clienteId, nombre, etiqueta: `${nombre} — ${c?.nombre||'—'}` });
-    });
-  });
-  if (sel) sel.innerHTML = '<option value="">— Ninguna —</option>' +
-    opciones.map(o => `<option value="${o.clienteId}::${o.nombre}">${o.etiqueta}</option>`).join('');
-  const txt = document.getElementById('aviso-manual-texto');
-  if (txt) txt.value = '';
-  document.getElementById('modal-aviso-manual')?.classList.add('open');
-}
-
-async function guardarAvisoManual() {
-  const texto = document.getElementById('aviso-manual-texto')?.value.trim() || '';
-  if (!texto) { notify('⚠️ Escribe el aviso', 'error'); return; }
-  const selVal = document.getElementById('aviso-manual-mascota')?.value || '';
-  let mascotaClienteId = null, mascotaNombre = null;
-  if (selVal) {
-    const idx = selVal.indexOf('::');
-    mascotaClienteId = parseInt(selVal.slice(0, idx));
-    mascotaNombre = selVal.slice(idx + 2);
-  }
-  const lista = _leerAvisosManuales();
-  lista.push({ id: Date.now(), texto, mascotaClienteId, mascotaNombre });
-  const ok = await _guardarAvisosManuales(lista);
-  if (ok) {
-    closeModal('modal-aviso-manual');
-    notify('✅ Aviso agregado', 'success');
-    renderAvisosImportantes();
-  } else {
-    notify('⚠️ No se pudo guardar el aviso', 'error');
-  }
-}
-
-async function eliminarAvisoManual(id) {
-  const lista = _leerAvisosManuales();
-  const nueva = lista.filter(a => a.id !== id);
-  const ok = await _guardarAvisosManuales(nueva);
-  if (ok) {
-    notify('🗑️ Aviso eliminado', 'success');
-    renderAvisosImportantes();
-  } else {
-    notify('⚠️ No se pudo eliminar el aviso', 'error');
-  }
-}
-
-// Notas operativas: bloc de texto libre persistido en la tabla config
-// existente (clave pg_notas_operativas). Sin tabla nueva, sin checklist.
-let _notasOperativasTimer = null;
-async function guardarNotasOperativas(texto) {
-  // No reutiliza setConfig() a propósito: esa función absorbe cualquier
-  // fallo de Supabase en silencio y de todos modos actualiza el caché local
-  // como si hubiera funcionado. Aquí sí debe saberse con certeza si se guardó.
-  try {
-    await sb('POST', 'config', { clave: 'pg_notas_operativas', valor: texto }, '');
-  } catch (e1) {
-    try {
-      await sb('PATCH', 'config?clave=eq.pg_notas_operativas', { valor: texto });
-    } catch (e2) {
-      console.error('[notas operativas]', e2);
-      return false;
+  if (listSal) {
+    const sals = entradas.filter(e => (e.salidaPrevista||'').startsWith(fecha));
+    if (!sals.length) {
+      listSal.innerHTML = `<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">Sin salidas ${labelFecha}</div></div>`;
+    } else {
+      listSal.innerHTML = `<table><tbody>${sals.map(e => {
+        const c = clientes.find(cl => cl.id === e.clienteId);
+        const atrasado = esHoy && new Date(e.salidaPrevista) < new Date();
+        return `<tr><td style="cursor:pointer" onclick="verDetalleHospedaje(${e.id})"><div class="client-cell"><div class="avatar" style="width:28px;height:28px;font-size:11px">${(c?.nombre||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div><div style="font-weight:600;font-size:12px">${c?.nombre||'—'}</div><div style="font-size:11px;color:var(--gray-400)">${(e.mascotas||[]).map(m=>{const raza=c?.mascotas?.find(mo=>mo.nombre===m)?.raza||'';return raza?`${m} (${raza})`:m;}).join(', ')} · Hab. ${e.habitacion}</div></div></div></td><td>${atrasado?'<span class="badge badge-red">⚠️ Atrasado</span>':''}</td><td><button class="btn btn-sm btn-green" onclick="hacerSalida('${c?.nombre}',${e.id})">📤 Hacer salida</button></td></tr>`;
+      }).join('')}</tbody></table>`;
     }
   }
-  if (_configCache) _configCache['pg_notas_operativas'] = texto;
-  return true;
-}
-
-// Autoexpande el textarea al contenido en vez de mostrar scroll interno.
-function _autoResizeNotasOperativas(ta) {
-  if (!ta) return;
-  ta.style.height = 'auto';
-  ta.style.height = ta.scrollHeight + 'px';
-}
-
-function onNotasOperativasInput() {
-  _autoResizeNotasOperativas(document.getElementById('notas-operativas-textarea'));
-  const estado = document.getElementById('notas-estado');
-  if (estado) { estado.textContent = ''; }
-  clearTimeout(_notasOperativasTimer);
-  _notasOperativasTimer = setTimeout(async () => {
-    const ta = document.getElementById('notas-operativas-textarea');
-    if (!ta) return;
-    if (estado) { estado.textContent = 'Guardando...'; estado.style.color = 'var(--gray-400)'; }
-    const ok = await guardarNotasOperativas(ta.value);
-    if (!estado) return;
-    if (ok) { estado.textContent = 'Guardado ✓'; estado.style.color = 'var(--green)'; }
-    else { estado.textContent = '⚠️ Error al guardar — reintenta'; estado.style.color = 'var(--red)'; }
-  }, 1000);
-}
-
-function initNotasOperativas() {
-  const ta = document.getElementById('notas-operativas-textarea');
-  if (!ta) return;
-  // No pisar lo que el operador está escribiendo si el textarea tiene foco
-  // (actualizarDashboard() se llama tras cualquier cargarTodo() del sistema,
-  // no solo al abrir Inicio).
-  if (document.activeElement === ta) return;
-  ta.value = getConfig('pg_notas_operativas', '');
-  _autoResizeNotasOperativas(ta);
 }
 
 function actualizarDashboard() {
@@ -6453,16 +5864,22 @@ function actualizarDashboard() {
   document.getElementById('badge-entradas').textContent = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   const totalAnimales = entradas.reduce((s,e)=>s+e.mascotas.length,0);
   document.getElementById('stat-animales').textContent = totalAnimales;
+  document.getElementById('badge-ent-hoy').textContent = entradasHoy+' entradas';
+  document.getElementById('badge-sal-hoy').textContent = salidasHoy+' salidas';
   const capTotal = parseInt(getConfig('hab_total','52'));
-  document.querySelectorAll('#cap-total2').forEach(el => { if(el) el.textContent = capTotal; });
+  document.querySelectorAll('#cap-total,#cap-total2').forEach(el => { if(el) el.textContent = capTotal; });
   const ocupados = entradas.length;
+  const libres = Math.max(0, capTotal - ocupados);
   const pct = Math.round(ocupados / capTotal * 100);
-  const occCompact = document.getElementById('occ-compact');
-  if (occCompact) occCompact.textContent = `${ocupados}/${capTotal} · ${pct}%`;
-  renderLlegadasHoy(hoy);
-  renderSalidasHoy(hoy);
-  renderAvisosImportantes();
-  initNotasOperativas();
+  const occPct = document.getElementById('occ-pct');
+  const occLib = document.getElementById('occ-libres');
+  const occOcu = document.getElementById('occ-ocupados');
+  const occBar = document.getElementById('occ-bar-fill');
+  if (occPct) occPct.textContent = pct + '%';
+  if (occLib) occLib.textContent = libres;
+  if (occOcu) occOcu.textContent = ocupados;
+  if (occBar) occBar.style.width = pct + '%';
+  actualizarPanelesHoy(hoy);
 }
 
 function usarDatosDemo() {
@@ -7014,90 +6431,16 @@ async function seleccionarClienteEntrada(id) {
 
   lista.innerHTML = clienteEntradaSeleccionado.mascotas.map(m => {
     const esAgresivo = (m.notas||'').toLowerCase().includes('agresiv') || (m.flags||[]).includes('agresivo');
-    const flags = m.flags || [];
-    const esHembra = (m.sexo||'') === 'Hembra';
-    const mid = m.id;
     return `
-    <div style="margin-bottom:6px">
-      <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${esAgresivo?'#fff3cd':'var(--gray-50)'};border-radius:var(--radius-sm);cursor:pointer;border:1.5px solid ${esAgresivo?'#f59e0b':'var(--gray-200)'};transition:all 0.15s"
-        onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='${esAgresivo?'#f59e0b':'var(--gray-200)'}'">
-        <input type="checkbox" class="ne-masc-check" value="${m.nombre}" checked style="accent-color:var(--orange);width:15px;height:15px" onchange="sincronizarConceptos()">
-        <span style="font-weight:600;font-size:13px">${esAgresivo?'⚠️':'🐕'} ${m.nombre}</span>
-        <span style="font-size:11px;color:var(--gray-400)">${m.raza||''} · ${m.sexo||''}</span>
-        ${esAgresivo?'<span style="font-size:10px;background:#f59e0b;color:white;border-radius:4px;padding:1px 6px;margin-left:8px">AGRESIVO</span>':''}
-        <span onclick="event.preventDefault();event.stopPropagation();ne_toggleInfoMascota(${mid})" style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer;white-space:nowrap;padding:2px 4px">ℹ️ Info</span>
-      </label>
-      <div id="ne-info-panel-${mid}" style="display:none;padding:10px 12px;background:white;border:1.5px solid var(--gray-200);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm)">
-        <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);letter-spacing:0.5px;margin-bottom:7px">INFORMACIÓN IMPORTANTE</div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:9px">
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-agresivo-${mid}" ${flags.includes('agresivo')?'checked':''} style="accent-color:#dc2626">Agresivo</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-medicado-${mid}" ${flags.includes('medicamento')?'checked':''} style="accent-color:#f59e0b">Medicado</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-alergia-${mid}" ${flags.includes('alergia')?'checked':''} style="accent-color:#f59e0b">Alergia</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ne-info-especial-${mid}" ${flags.includes('especial')?'checked':''} style="accent-color:#f59e0b">Cuidado especial</label>
-        </div>
-        ${esHembra?`<div style="margin-bottom:9px">
-          <label style="font-size:11px;color:var(--gray-400);display:block;margin-bottom:3px">Inicio del último celo</label>
-          <input type="date" id="ne-info-celo-${mid}" value="${m.ultimo_celo||''}" onchange="ne_actualizarPreviewCelo(${mid})" style="padding:5px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;outline:none">
-          <div id="ne-info-celo-preview-${mid}" style="font-size:11px;color:var(--gray-400);margin-top:3px"></div>
-        </div>`:''}
-        <div style="margin-bottom:9px">
-          <label style="font-size:11px;color:var(--gray-400);display:block;margin-bottom:3px">Observaciones</label>
-          <textarea id="ne-info-notas-${mid}" style="width:100%;min-height:50px;padding:6px 8px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:'Poppins',sans-serif;resize:vertical;outline:none;box-sizing:border-box">${m.notas||''}</textarea>
-        </div>
-        <button id="ne-info-guardar-${mid}" class="btn btn-sm btn-primary" onclick="ne_guardarInfoMascota(${mid})">💾 Guardar</button>
-      </div>
-    </div>`;
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:${esAgresivo?'#fff3cd':'var(--gray-50)'};border-radius:var(--radius-sm);cursor:pointer;margin-bottom:5px;border:1.5px solid ${esAgresivo?'#f59e0b':'var(--gray-200)'};transition:all 0.15s"
+      onmouseover="this.style.borderColor='var(--orange)'" onmouseout="this.style.borderColor='${esAgresivo?'#f59e0b':'var(--gray-200)'}'">
+      <input type="checkbox" value="${m.nombre}" checked style="accent-color:var(--orange);width:15px;height:15px" onchange="sincronizarConceptos()">
+      <span style="font-weight:600;font-size:13px">${esAgresivo?'⚠️':'🐕'} ${m.nombre}</span>
+      <span style="font-size:11px;color:var(--gray-400)">${m.raza||''} · ${m.sexo||''}</span>
+      ${esAgresivo?'<span style="font-size:10px;background:#f59e0b;color:white;border-radius:4px;padding:1px 6px;margin-left:auto">AGRESIVO</span>':''}
+    </label>`;
   }).join('');
   sincronizarConceptos();
-}
-
-// Panel "Información importante" en Nueva Entrada: edita directamente
-// mascotas.flags / mascotas.notas / mascotas.ultimo_celo — misma tabla,
-// misma fuente de verdad que el perfil de mascota. Nada se duplica en
-// entradas.
-function ne_toggleInfoMascota(mascotaId) {
-  const panel = document.getElementById(`ne-info-panel-${mascotaId}`);
-  if (!panel) return;
-  const abierto = panel.style.display !== 'none';
-  panel.style.display = abierto ? 'none' : 'block';
-  if (!abierto) ne_actualizarPreviewCelo(mascotaId);
-}
-
-function ne_actualizarPreviewCelo(mascotaId) {
-  const input = document.getElementById(`ne-info-celo-${mascotaId}`);
-  const preview = document.getElementById(`ne-info-celo-preview-${mascotaId}`);
-  if (!input || !preview) return;
-  if (!input.value) { preview.textContent = ''; return; }
-  const m = clienteEntradaSeleccionado?.mascotas?.find(x=>x.id===mascotaId);
-  const r = calcularEstadoCelo({ sexo:'Hembra', ultimo_celo: input.value, intervalo_celo: m?.intervalo_celo });
-  if (r.estado==='en_celo') preview.textContent = `🔴 En celo ahora · termina ~${r.finCelo}`;
-  else if (r.estado==='proximo') preview.textContent = `🟡 Próximo celo en ${r.diasRestantes} días`;
-  else if (r.estado==='vencido') preview.textContent = `⚪ Fecha vencida — actualízala si ya pasó`;
-  else preview.textContent = `🟢 Próximo celo estimado: ${r.proximoCelo}`;
-}
-
-async function ne_guardarInfoMascota(mascotaId) {
-  const flags = [];
-  if (document.getElementById(`ne-info-agresivo-${mascotaId}`)?.checked) flags.push('agresivo');
-  if (document.getElementById(`ne-info-medicado-${mascotaId}`)?.checked) flags.push('medicamento');
-  if (document.getElementById(`ne-info-alergia-${mascotaId}`)?.checked) flags.push('alergia');
-  if (document.getElementById(`ne-info-especial-${mascotaId}`)?.checked) flags.push('especial');
-  const notas = document.getElementById(`ne-info-notas-${mascotaId}`)?.value.trim() || '';
-  const datos = { flags, notas };
-  const celoInput = document.getElementById(`ne-info-celo-${mascotaId}`);
-  if (celoInput) datos.ultimo_celo = celoInput.value || null;
-
-  const btn = document.getElementById(`ne-info-guardar-${mascotaId}`);
-  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
-  try {
-    await sb('PATCH', `mascotas?id=eq.${mascotaId}`, datos);
-    await cargarTodo();
-    notify('✅ Información de la mascota actualizada', 'success');
-    if (clienteEntradaSeleccionado) seleccionarClienteEntrada(clienteEntradaSeleccionado.id);
-  } catch(e) {
-    notify('⚠️ No se pudo actualizar la información: ' + mensajeErrorUsuario(e, 'guardar info. de mascota'), 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar'; }
-  }
 }
 
 function clearClienteSeleccionado() {
@@ -7115,7 +6458,7 @@ function clearClienteSeleccionado() {
 
 // Sincroniza filas de conceptos con mascotas seleccionadas
 function sincronizarConceptos() {
-  const checks = [...document.querySelectorAll('#mascotas-checklist input.ne-masc-check:checked')];
+  const checks = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')];
   const mascotasActivas = checks.map(c=>c.value);
   const tbody = document.getElementById('conceptos-tbody');
   const noches = calcNoches();
@@ -7600,20 +6943,17 @@ function editarEntrada(id) {
     notify(`✏️ Editando hospedaje de ${c.nombre}`, 'success');
   }, 200);
 }
-let _guardandoEntrada = false;
 async function guardarEntrada() {
-  if (_guardandoEntrada) return;
-  _guardandoEntrada = true;
-  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); _guardandoEntrada = false; return; }
-  const mascotas = [...document.querySelectorAll('#mascotas-checklist input.ne-masc-check:checked')].map(i=>i.value);
-  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); _guardandoEntrada = false; return; }
+  if (!clienteEntradaSeleccionado) { notify('⚠️ Por favor selecciona un cliente', 'error'); return; }
+  const mascotas = [...document.querySelectorAll('#mascotas-checklist input[type=checkbox]:checked')].map(i=>i.value);
+  if (!mascotas.length) { notify('⚠️ Selecciona al menos una mascota que ingresa', 'error'); return; }
   const fe = document.getElementById('ne-fecha-entrada').value;
   const fs = document.getElementById('ne-fecha-salida').value;
-  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); _guardandoEntrada = false; return; }
-  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); _guardandoEntrada = false; return; }
-  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); _guardandoEntrada = false; return; }
+  if (!fe) { notify('⚠️ Ingresa la fecha de entrada', 'error'); return; }
+  if (!fs) { notify('⚠️ Ingresa la fecha de salida prevista', 'error'); return; }
+  if (new Date(fs) < new Date(fe)) { notify('⚠️ La fecha de salida no puede ser antes que la de entrada', 'error'); return; }
   const hab = document.getElementById('ne-habitacion').value;
-  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); _guardandoEntrada = false; return; }
+  if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); return; }
 
   // CORRECCIÓN 4 — Validar que ninguna mascota tenga ya un hospedaje activo
   // Compara nombre + clienteId: mismo nombre en cliente distinto no es el mismo perro
@@ -7628,7 +6968,6 @@ async function guardarEntrada() {
   });
   if (mascotasConHospedajeActivo.length > 0) {
     notify(`⚠️ Ya existe un hospedaje activo para: ${mascotasConHospedajeActivo.join(', ')}. Registra la salida primero.`, 'error');
-    _guardandoEntrada = false;
     return;
   }
 
@@ -7638,7 +6977,6 @@ async function guardarEntrada() {
       || document.getElementById('ne-responsiva')?.checked === true;
     if (!respFirmada) {
       notify('⚠️ El cliente debe firmar la responsiva antes de registrar el hospedaje.', 'error');
-      _guardandoEntrada = false;
       return;
     }
   }
@@ -7672,13 +7010,12 @@ async function guardarEntrada() {
     const eOrig = entradas.find(en=>en.id===entradaEditandoId);
     totalFinal = eOrig?.importe || 0;
   } else if (hayPrecioVacio && filas.length) {
-    if (!confirm('Hay conceptos con precio $0. ¿Deseas continuar?')) { _guardandoEntrada = false; return; }
+    if (!confirm('Hay conceptos con precio $0. ¿Deseas continuar?')) return;
   }
 
   // Corrección A: bloquear entrada con total $0
   if (totalFinal <= 0 && !entradaEditandoId) {
     notify('⚠️ El total es $0. Agrega al menos un servicio con precio antes de guardar.', 'error');
-    _guardandoEntrada = false;
     return;
   }
 
@@ -7751,17 +7088,12 @@ async function guardarEntrada() {
       });
       // Si el adelanto es en efectivo: abrir cajón + registrar en caja_movimientos
       if (metodoAdelantoNE === 'Efectivo') {
-        const cajaOkAdelantoNE = await Printer.cobro(
+        await Printer.cobro(
           clienteEntradaSeleccionado.nombre,
           mascotas.join(', '),
           montoAdelantoNE,
           entradaIdFinal
         );
-        if (!cajaOkAdelantoNE) {
-          notify('⚠️ El anticipo se registró pero no se pudo guardar en caja', 'error');
-        } else if (!Printer.huboExitoHardware()) {
-          notify('⚠️ El anticipo se registró pero el cajón no se abrió / el ticket no se imprimió', 'error');
-        }
       }
     }
     // Guardar datos para el ticket ANTES de limpiar el formulario
@@ -7822,7 +7154,6 @@ async function guardarEntrada() {
     notify('Error al guardar: '+e.message,'error');
   }
   setLoading(false);
-  _guardandoEntrada = false;
 }
 
 // ===================== SALIDA =====================
@@ -7834,7 +7165,7 @@ function hacerSalida(nombre, id) {
 
   const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
   const atrasado = new Date(e.salidaPrevista) < new Date();
-  const adelantosPrevios = cobros.filter(co => co.entradaId===e.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
+  const adelantosPrevios = cobros.filter(co => co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
   const pendienteActual = Math.max(0, e.importe - adelantosPrevios);
 
   // Detectar flags en mascotas
@@ -7981,7 +7312,7 @@ function selMetodoPago(metodo, btn) {
 function actualizarResumenSalida() {
   const e = entradas.find(en=>en.id===salidaActual);
   if (!e) return;
-  const adelantosPrevios = cobros.filter(co=>co.entradaId===e.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
+  const adelantosPrevios = cobros.filter(co=>co.entradaId===e.id).reduce((s,co)=>s+co.monto,0);
   const cobrado = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
   const pendiente = Math.max(0, e.importe - adelantosPrevios - cobrado);
   const el1 = document.getElementById('rs-cobrado');
@@ -7999,30 +7330,15 @@ async function confirmarSalida() {
   _confirmandoSalida = true;
   const e = entradas.find(en=>en.id===salidaActual);
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
-  // Solo cuenta dinero realmente recibido (pagado/adelanto) — nunca una deuda pendiente
-  // que por cualquier motivo ya estuviera vinculada a esta entrada.
-  const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
+  const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id).reduce((s,co)=>s+co.monto,0);
   const cobrado = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
   const metodo = document.getElementById('salida-metodo')?.value||'Efectivo';
-
-  // No permitir cobrar más de lo que realmente se debe.
-  const maximoAPagar = e ? Math.max(0, e.importe - adelantosPrevios) : 0;
-  if (cobrado > maximoAPagar) {
-    notify(`⚠️ El monto a cobrar ($${cobrado.toLocaleString('es-MX')}) es mayor al saldo real pendiente ($${maximoAPagar.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
-    _confirmandoSalida = false;
-    return;
-  }
-
   const totalCobrado = adelantosPrevios + cobrado;
   const pendiente = e ? Math.max(0, e.importe - totalCobrado) : 0;
 
   setLoading(true);
-  // Rastrea qué se alcanzó a guardar antes de una posible falla, para nunca dejar
-  // al usuario adivinando qué quedó a medias.
-  let entradaMarcada = false, cobroRegistrado = false, pendienteRegistrado = false;
   try {
     await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
-    entradaMarcada = true;
     if (cobrado > 0 && c) {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
@@ -8033,7 +7349,6 @@ async function confirmarSalida() {
         notas: pendiente > 0 ? `Pendiente: $${pendiente}` : 'Pago completo',
         status: 'pagado'
       });
-      cobroRegistrado = true;
     }
     if (pendiente > 0 && c) {
       await sb('POST', 'cobros', {
@@ -8044,17 +7359,15 @@ async function confirmarSalida() {
         notas: 'Generado al hacer salida',
         status: 'pendiente'
       });
-      pendienteRegistrado = true;
     }
     await cargarTodo();
     closeModal('modal-salida');
     // Ofrecer comprobante WA
     // Si pagó en efectivo → abrir cajón + imprimir ticket
-    let cajaOk = true, hardwareOk = true;
+    let cajaOk = true;
     if (metodo === 'Efectivo' && cobrado > 0 && c) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
       cajaOk = await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
-      hardwareOk = Printer.huboExitoHardware();
     }
 
     if (c?.whatsapp && cobrado > 0) {
@@ -8066,25 +7379,13 @@ async function confirmarSalida() {
     }
     if (pendiente > 0) {
       notify(`✅ Salida registrada — ⚠️ $${pendiente.toLocaleString('es-MX')} pendiente en Facturación`, 'success');
-    } else if (!cajaOk) {
-      notify('✅ Salida registrada — ⚠️ el cobro se guardó pero no se registró en caja', 'error');
-    } else if (!hardwareOk) {
-      notify('✅ Salida registrada y cobro completo — ⚠️ el cajón no se abrió / el ticket no se imprimió', 'error');
-    } else {
+    } else if (cajaOk) {
       notify('✅ Salida registrada y cobro completo', 'success');
+    } else {
+      notify('✅ Salida registrada — ⚠️ el cobro se guardó pero no se registró en caja', 'error');
     }
   } catch(err) {
-    // Estado parcial real: parte de la secuencia ya se guardó en Supabase antes de la falla.
-    if (entradaMarcada) {
-      const detalle = cobroRegistrado
-        ? (pendiente > 0 && !pendienteRegistrado
-            ? `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados, pero el saldo pendiente de $${pendiente.toLocaleString('es-MX')} NO se registró.`
-            : `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados.`)
-        : `La salida ya quedó marcada como completada, pero el cobro de $${cobrado.toLocaleString('es-MX')} NO se registró.`;
-      notify(`⚠️ Error a mitad del proceso: ${detalle} Verifica esta entrada antes de continuar. (${err.message})`, 'error');
-    } else {
-      notify('❌ Error al registrar salida: ' + err.message, 'error');
-    }
+    notify('❌ Error al registrar salida: ' + err.message, 'error');
   }
   setLoading(false);
   _confirmandoSalida = false;
@@ -8199,123 +7500,38 @@ async function eliminarEntrada() {
 
 // ===================== NUEVO CLIENTE =====================
 // ===================== WHATSAPP =====================
-let _guardandoNuevoCliente = false;
-// Cuando una alta queda a medias (cliente creado, alguna mascota falló), se
-// guarda aquí para que el siguiente clic en "Guardar" solo reintente las
-// mascotas que faltan — nunca vuelve a crear el cliente ni las ya creadas.
-let _clienteParcialPendiente = null; // { id, nombre, nombresCreados: [...] }
-
 async function guardarNuevoCliente() {
-  if (_guardandoNuevoCliente) return;
-  _guardandoNuevoCliente = true;
+  const nombre = document.getElementById('nc-nombre').value.trim();
+  const whatsapp = document.getElementById('nc-whatsapp').value.trim();
+  if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
+  const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
+  setLoading(true);
   try {
-    // Reintento de una alta parcial: el cliente ya existe, solo faltan mascotas.
-    if (_clienteParcialPendiente) {
-      const pend = _clienteParcialPendiente;
-      const mascotasFaltantes = mascotasNuevas.filter(m => m && m.nombre.trim() && !pend.nombresCreados.includes(m.nombre.trim()));
-      setLoading(true);
-      try { await _crearMascotasParaCliente(pend.id, pend.nombre, mascotasFaltantes); }
-      finally { setLoading(false); }
-      return;
-    }
-
-    const nombre = document.getElementById('nc-nombre').value.trim();
-    const whatsapp = document.getElementById('nc-whatsapp').value.trim();
-    if (!nombre || !whatsapp) { notify('Nombre y WhatsApp son obligatorios','error'); return; }
-
-    // Detección de cliente duplicado — ANTES de escribir nada.
-    const dup = _buscarClienteDuplicado(nombre, whatsapp);
-    if (dup.telefono) {
-      const decision = await _confirmarDuplicadoTelefono(dup.telefono);
-      if (decision === 'ver') { closeModal('modal-nuevo-cliente'); verPerfilCliente(dup.telefono.id); return; }
-      if (decision === 'cancelar') return;
-      // decision === 'crear' -> continúa
-    } else if (dup.nombre) {
-      if (!confirm(`Ya existe un cliente llamado "${dup.nombre.nombre}". ¿Deseas continuar y crear uno nuevo de todas formas?`)) return;
-    }
-
-    const mascotas = mascotasNuevas.filter(m => m && m.nombre.trim());
-    let nuevoCliente;
-    setLoading(true);
-    try {
-      [nuevoCliente] = await sb('POST', 'clientes', {
-        nombre, whatsapp,
-        telefono: document.getElementById('nc-telefono').value,
-        email: document.getElementById('nc-email').value,
-        direccion: document.getElementById('nc-direccion').value,
-        curp: document.getElementById('nc-curp').value,
-        activo: new Date().toISOString().split('T')[0]
-      });
-    } catch(e) {
-      notify(mensajeErrorUsuario(e, 'crear cliente'), 'error');
-      return;
-    } finally {
-      setLoading(false);
-    }
-
-    setLoading(true);
-    try { await _crearMascotasParaCliente(nuevoCliente.id, nombre, mascotas); }
-    finally { setLoading(false); }
-  } finally {
-    _guardandoNuevoCliente = false;
-  }
-}
-
-// Crea las mascotas de un cliente ya existente, una por una, sin abortar el
-// resto si alguna falla. Si queda alguna pendiente, deja _clienteParcialPendiente
-// listo para que el siguiente "Guardar" reintente solo esas — nunca duplica
-// las que ya se crearon ni vuelve a crear el cliente.
-async function _crearMascotasParaCliente(clienteId, nombreCliente, mascotas) {
-  let nombresCreadosAhora = [];
-  const faltantes = [];
-  for (const m of mascotas) {
-    try {
+    const [nuevoCliente] = await sb('POST', 'clientes', {
+      nombre, whatsapp,
+      telefono: document.getElementById('nc-telefono').value,
+      email: document.getElementById('nc-email').value,
+      direccion: document.getElementById('nc-direccion').value,
+      curp: document.getElementById('nc-curp').value,
+      activo: new Date().toISOString().split('T')[0]
+    });
+    for (const m of mascotas) {
       await sb('POST', 'mascotas', {
-        cliente_id: clienteId,
+        cliente_id: nuevoCliente.id,
         nombre: m.nombre.trim(), raza: m.raza,
         sexo: m.sexo, color: m.color,
         nacimiento: m.nacimiento || null
       });
-      nombresCreadosAhora.push(m.nombre.trim());
-    } catch(e) {
-      console.error('Error creando mascota', m.nombre, e);
-      faltantes.push(m);
     }
+    await cargarTodo();
+    closeModal('modal-nuevo-cliente');
+    notify(`✅ Cliente "${nombre}" registrado con ${mascotas.length} mascota${mascotas.length!==1?'s':''}`, 'success');
+    ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>document.getElementById(id).value='');
+    mascotasNuevas = [];
+  } catch(e) {
+    notify('Error al guardar: '+e.message,'error');
   }
-  await cargarTodo();
-
-  const yaCreadasPrevio = _clienteParcialPendiente?.nombresCreados || [];
-  const totalCreadas = [...yaCreadasPrevio, ...nombresCreadosAhora];
-
-  if (faltantes.length) {
-    _clienteParcialPendiente = { id: clienteId, nombre: nombreCliente, nombresCreados: totalCreadas };
-    notify(`⚠️ Cliente "${nombreCliente}" creado correctamente, pero no se pudieron guardar ${faltantes.length} mascota${faltantes.length!==1?'s':''}. ${totalCreadas.length ? `Las ${totalCreadas.length} ya creadas se conservaron. ` : ''}Presiona "Guardar" de nuevo para reintentar solo las que faltan.`, 'error');
-    return;
-  }
-
-  _clienteParcialPendiente = null;
-  closeModal('modal-nuevo-cliente');
-  notify(`✅ Cliente "${nombreCliente}" registrado con ${totalCreadas.length} mascota${totalCreadas.length!==1?'s':''}`, 'success');
-  ['nc-nombre','nc-whatsapp','nc-telefono','nc-email','nc-direccion','nc-curp'].forEach(id=>{ const el = document.getElementById(id); if (el) el.value=''; });
-  mascotasNuevas = [];
-}
-
-// Modal de decisión ante teléfono duplicado — se resuelve con una Promise
-// para que guardarNuevoCliente() pueda esperar la elección del operador.
-let _resolverDupTelefono = null;
-function _confirmarDuplicadoTelefono(clienteExistente) {
-  return new Promise(resolve => {
-    _resolverDupTelefono = resolve;
-    const nombreEl = document.getElementById('dup-tel-nombre-existente');
-    const telEl = document.getElementById('dup-tel-telefono-existente');
-    if (nombreEl) nombreEl.textContent = clienteExistente.nombre;
-    if (telEl) telEl.textContent = clienteExistente.whatsapp || clienteExistente.telefono || '';
-    document.getElementById('modal-dup-telefono')?.classList.add('open');
-  });
-}
-function _dupTelefonoElegir(opcion) {
-  document.getElementById('modal-dup-telefono')?.classList.remove('open');
-  if (_resolverDupTelefono) { _resolverDupTelefono(opcion); _resolverDupTelefono = null; }
+  setLoading(false);
 }
 
 // ===================== WHATSAPP =====================
@@ -8450,45 +7666,6 @@ function notify(msg, type='') {
   n.className = 'notif show' + (type==='success' ? ' success' : '');
   clearTimeout(notifTimeout);
   notifTimeout = setTimeout(() => n.classList.remove('show'), 3000);
-}
-
-// Traduce errores técnicos (fetch fallido, timeout, errores de Supabase) a un
-// mensaje entendible para el operador. El detalle técnico completo siempre
-// queda en consola — nunca se oculta para debug, solo no se muestra en pantalla.
-function mensajeErrorUsuario(error, contexto) {
-  console.error(`[${contexto || 'operación'}]`, error);
-  const msg = (error && error.message ? String(error.message) : '').toLowerCase();
-  if (!msg) return 'Ocurrió un error inesperado. Los cambios no fueron confirmados.';
-  if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('network request failed') || msg.includes('load failed')) {
-    return 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
-  }
-  if (msg.includes('timeout') || msg.includes('sin respuesta del servidor')) {
-    return 'El servidor tardó demasiado en responder. Revisa antes de volver a intentar para evitar duplicados.';
-  }
-  return 'No se pudo guardar la información. Los cambios no fueron confirmados.';
-}
-
-// Mismo criterio de normalización ya usado en varios puntos del sistema
-// (whatsapp/telefono: replace(/\D/g,'').slice(-10)) — solo dígitos, últimos
-// 10, así se ignoran espacios/guiones/paréntesis y un prefijo +52.
-function normalizarTelefono(str) {
-  return (str || '').replace(/\D/g, '').slice(-10);
-}
-
-// Detección simple de cliente duplicado antes de crear uno nuevo. Prioridad:
-// mismo teléfono normalizado (señal fuerte) > mismo nombre exacto (señal débil).
-function _buscarClienteDuplicado(nombre, telefonoRaw) {
-  const telNorm = normalizarTelefono(telefonoRaw);
-  let porTelefono = null;
-  if (telNorm) {
-    porTelefono = clientes.find(c => normalizarTelefono(c.whatsapp || c.telefono || '') === telNorm) || null;
-  }
-  let porNombre = null;
-  if (!porTelefono) {
-    const nombreNorm = (nombre || '').trim().toLowerCase();
-    porNombre = clientes.find(c => (c.nombre || '').trim().toLowerCase() === nombreNorm) || null;
-  }
-  return { telefono: porTelefono, nombre: porNombre };
 }
 
 // ===================== FACTURACIÓN DATA =====================
@@ -8896,9 +8073,8 @@ async function renderDeudasPendientes() {
 const Printer = (() => {
 
   // ── Estado privado ────────────────────────────────────────
-  let _cola = [];           // jobs pendientes {tipo, lineas} — SOLO tickets, nunca apertura de cajón
+  let _cola = [];           // jobs pendientes {tipo, lineas}
   let _ocupado = false;     // mutex: evita impresiones simultáneas
-  let _ultimoHardwareOk = null; // resultado del último intento de cajón+ticket (true/false/null)
 
   // ── A: Hardware / QZ Tray (privado) ──────────────────────
 
@@ -8928,17 +8104,11 @@ const Printer = (() => {
     }
   }
 
-  // Imprime cajón ESC/POS + ticket en una sola llamada QZ (una sola autorización).
+  // Imprime cajón ESC/POS + ticket en dos llamadas QZ separadas.
   // Cajón en hex (bytes exactos), ticket en base64 Latin-1 (sin encodeURIComponent).
-  // Si el hardware falla por cualquier motivo, NUNCA se reintenta la apertura del
-  // cajón automáticamente — solo el ticket queda disponible para reimpresión manual
-  // explícita (botón "Reconectar"). El resultado se guarda en _ultimoHardwareOk para
-  // que el caller (ej. cobrarRapido) pueda avisar con precisión qué sí y qué no ocurrió,
-  // sin que esta función tenga que saber nada de caja_movimientos.
   async function _enviarCajonYTicket(lineas) {
     if (_ocupado) {
       console.warn('Printer: impresión ya en curso, ignorando llamada duplicada');
-      _ultimoHardwareOk = false;
       return;
     }
     _ocupado = true;
@@ -8946,12 +8116,13 @@ const Printer = (() => {
       const ok = await _conectar();
       _bannerQZ(ok);
       if (!ok) {
-        if (lineas) { _cola.push({ tipo: 'ticket', lineas }); _bannerCola(); }
-        notify('⚠️ Impresora desconectada — el cajón no se abrió y el ticket no se imprimió. El ticket queda guardado para reimprimir manualmente.', 'error');
-        _ultimoHardwareOk = false;
+        _cola.push({ tipo: 'cajon_ticket', lineas });
+        _bannerCola();
+        notify('⏳ Ticket guardado — se imprimirá cuando abras QZ Tray', 'info');
         return;
       }
       const config = qz.configs.create(_getNombreImpresora());
+      // Cajón + ticket en un solo job = una sola autorización de QZ Tray.
       // QZ Tray 2.2.6 soporta arrays mixtos (hex + base64) en una sola llamada.
       // El printer recibe ambos como stream continuo y los secuencia internamente.
       const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
@@ -8961,18 +8132,13 @@ const Printer = (() => {
         dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
       }
       await qz.print(config, dataArr);
-      _ultimoHardwareOk = true;
     } catch(e) {
-      if (lineas) { _cola.push({ tipo: 'ticket', lineas }); _bannerCola(); }
-      notify('Error al imprimir: ' + e.message + ' — el ticket queda guardado para reimprimir manualmente.', 'error');
-      _ultimoHardwareOk = false;
+      notify('Error al imprimir: ' + e.message, 'error');
     } finally {
       _ocupado = false;
     }
   }
 
-  // Reimpresión manual — SOLO tickets, jamás vuelve a abrir el cajón automáticamente.
-  // Se ejecuta únicamente cuando el usuario hace clic en "Reconectar" (acción explícita).
   async function _vaciarCola() {
     if (!_cola.length) return;
     if (_ocupado) {
@@ -8988,14 +8154,17 @@ const Printer = (() => {
     _bannerCola();
     for (const job of pendientes) {
       try {
-        if (job.tipo === 'ticket' && job.lineas) {
+        if (job.tipo === 'cajon_ticket') {
           const config = qz.configs.create(_getNombreImpresora());
-          const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
-          const dataArr = [{ type: 'raw', format: 'base64', data: btoa(lineasLatin1) }];
+          const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
+          if (job.lineas) {
+            const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
+            dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
+          }
           await qz.print(config, dataArr);
         }
       } catch(e) {
-        console.warn('Printer: error imprimiendo ticket pendiente:', e);
+        console.warn('Printer: error imprimiendo trabajo pendiente:', e);
       }
     }
     _ocupado = false;
@@ -9233,8 +8402,7 @@ const Printer = (() => {
     });
   }
 
-  return { verificarEstado, reconectar, cobro, apertura, corte, ticketEntrada, imprimirDesdeDetalle,
-    huboExitoHardware: () => _ultimoHardwareOk };
+  return { verificarEstado, reconectar, cobro, apertura, corte, ticketEntrada, imprimirDesdeDetalle };
 
 })();
 
@@ -9333,39 +8501,23 @@ function toggleCajaRetiro() {
   }
 }
 
-let _guardandoCaja = false;
 async function confirmarAperturaCaja() {
-  if (_guardandoCaja) return;
-  _guardandoCaja = true;
+  const motivo  = document.getElementById('caja-motivo').value;
+  const monto   = parseFloat(document.getElementById('caja-monto').value) || 0;
+  const nota    = document.getElementById('caja-nota').value.trim();
+  const mascota = document.getElementById('caja-mascota')?.value.trim() || '';
 
-  const motivo   = document.getElementById('caja-motivo').value;
-  const montoRaw = document.getElementById('caja-monto').value.trim();
-  const monto    = montoRaw === '' ? 0 : parseFloat(montoRaw);
-  const nota     = document.getElementById('caja-nota').value.trim();
-  const mascota  = document.getElementById('caja-mascota')?.value.trim() || '';
-
-  if (!motivo) { notify('Selecciona un concepto', 'error'); _guardandoCaja = false; return; }
+  if (!motivo) { notify('Selecciona un concepto', 'error'); return; }
   // Si el motivo es "Otro", la nota es obligatoria
   if ((motivo === 'Otro' || motivo === 'Otro ingreso') && !nota.trim()) {
     notify('⚠️ Escribe una nota para el concepto "Otro"', 'error');
     document.getElementById('caja-nota')?.focus();
-    _guardandoCaja = false;
-    return;
-  }
-  // Corrección CRÍTICO (auditoría final): rechazar montos negativos o inválidos.
-  // Antes solo se descartaban valores "falsy" (0/NaN), así que un negativo
-  // como -500 pasaba intacto y se sumaba como si fuera dinero real.
-  if (montoRaw !== '' && (isNaN(monto) || monto < 0)) {
-    notify('⚠️ Ingresa un monto válido — no puede ser negativo', 'error');
-    _guardandoCaja = false;
     return;
   }
   // Solo requerir monto si no es conteo o cambio de billetes
   const motivosSinMonto = ['Conteo de caja', 'Cambio de billetes'];
   if (!monto && !motivosSinMonto.includes(motivo)) {
-    notify('Ingresa el monto', 'error');
-    _guardandoCaja = false;
-    return;
+    notify('Ingresa el monto', 'error'); return;
   }
 
   cerrarModalCaja();
@@ -9382,7 +8534,6 @@ async function confirmarAperturaCaja() {
   }
 
   renderMovimientosCaja();
-  _guardandoCaja = false;
 }
 
 // abrirCajonPorCobro() → movida a Printer.cobro()
@@ -9513,13 +8664,8 @@ async function hacerCorteCaja() {
   }
   modal.innerHTML = `<div style="background:white;border-radius:12px;width:100%;max-width:400px">${resumen}</div>`;
 }
-let _generandoCorte = false;
 async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, movIds) {
-  if (_generandoCorte) return;
-  _generandoCorte = true;
-
   await Printer.corte(cobrosEfectivo, fondoInicial, salidas, totalCaja);
-  const hardwareOk = Printer.huboExitoHardware();
 
   // 1. Crear registro en cortes_caja
   let corteId = null;
@@ -9542,15 +8688,8 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, m
     console.error('Error guardando corte_caja:', e);
   }
 
-  if (!corteId) {
-    notify('❌ No se pudo guardar el corte. Intenta de nuevo — la caja no se reinició.', 'error');
-    _generandoCorte = false;
-    return;
-  }
-
   // 2. Asociar movimientos al corte usando sus IDs explícitos
-  let movimientosMarcados = true;
-  if (Array.isArray(movIds) && movIds.length > 0) {
+  if (corteId && Array.isArray(movIds) && movIds.length > 0) {
     try {
       await sb('PATCH', 'caja_movimientos',
         { corte_id: corteId },
@@ -9558,20 +8697,12 @@ async function imprimirCorte(cobrosEfectivo, fondoInicial, salidas, totalCaja, m
       );
     } catch(e) {
       console.error('Error asociando movimientos al corte:', e);
-      movimientosMarcados = false;
     }
   }
 
   cerrarModalComprobante();
-  if (!movimientosMarcados) {
-    notify('⚠️ El corte se guardó pero no se pudieron marcar los movimientos incluidos. Revísalo antes de hacer el siguiente corte para evitar duplicar montos.', 'error');
-  } else if (!hardwareOk) {
-    notify('✅ Corte guardado — ⚠️ el cajón no se abrió / el ticket no se imprimió', 'error');
-  } else {
-    notify('✅ Corte impreso y caja reiniciada en $0', 'success');
-  }
+  notify('✅ Corte impreso y caja reiniciada en $0', 'success');
   renderMovimientosCaja();
-  _generandoCorte = false;
 }
 
 
@@ -10055,19 +9186,12 @@ function openModalAdelanto() {
   document.getElementById('modal-adelanto').classList.add('open');
 }
 
-let _guardandoAdelantoFacturacion = false;
 async function guardarAdelanto() {
-  if (_guardandoAdelantoFacturacion) return;
-  _guardandoAdelantoFacturacion = true;
   const cid = parseInt(document.getElementById('adel-cliente').value);
   const monto = parseFloat(document.getElementById('adel-monto').value);
-  if (!cid) { notify('Selecciona un cliente','error'); _guardandoAdelantoFacturacion = false; return; }
-  if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); _guardandoAdelantoFacturacion = false; return; }
-  // Solo se vincula automáticamente si hay UNA sola estancia activa sin ambigüedad —
-  // con 2+ estancias activas del mismo cliente no se puede adivinar cuál es, y
-  // vincularlo a la incorrecta sería peor que dejarlo "Sin vincular".
-  const entradasActivasCliente = entradas.filter(e=>e.clienteId===cid);
-  const entActiva = entradasActivasCliente.length === 1 ? entradasActivasCliente[0] : null;
+  if (!cid) { notify('Selecciona un cliente','error'); return; }
+  if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); return; }
+  const entActiva = entradas.find(e=>e.clienteId===cid);
   const metodo = document.getElementById('adel-metodo').value;
   setLoading(true);
   try {
@@ -10083,19 +9207,11 @@ async function guardarAdelanto() {
     });
     await cargarTodo();
     closeModal('modal-adelanto');
+    notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
     // Cajón + ticket + caja_movimientos si el adelanto es en efectivo
-    let cajaOk = true, hardwareOk = true;
     if (metodo === 'Efectivo' && monto > 0) {
       const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
-      cajaOk = await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
-      hardwareOk = Printer.huboExitoHardware();
-    }
-    if (!cajaOk) {
-      notify(`🔖 Adelanto de $${monto.toLocaleString('es-MX')} registrado — ⚠️ no se pudo registrar en caja`, 'error');
-    } else if (!hardwareOk) {
-      notify(`🔖 Adelanto de $${monto.toLocaleString('es-MX')} registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
-    } else {
-      notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
+      await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
     }
     initFacturacion();
     // Ofrecer envío de confirmación por WhatsApp
@@ -10116,7 +9232,6 @@ async function guardarAdelanto() {
     notify('Error: '+e.message,'error');
   }
   setLoading(false);
-  _guardandoAdelantoFacturacion = false;
 }
 
 // ===================== RAZAS =====================
@@ -10237,7 +9352,6 @@ function seleccionarRaza(idx, raza) {
 
 function openModalNuevoCliente() {
   mascotasNuevas = [];
-  _clienteParcialPendiente = null;
   document.getElementById('mascotas-container').innerHTML = '';
   agregarTarjetaMascota(); // siempre inicia con una mascota vacía
   document.getElementById('modal-nuevo-cliente').classList.add('open');
@@ -10356,13 +9470,9 @@ function seleccionarRazaExtra(idx, raza) {
   if (dd) dd.style.display='none';
 }
 
-let _guardandoMascotaExtra = false;
 async function guardarMascotaExtra(clienteId) {
-  if (_guardandoMascotaExtra) return;
-  _guardandoMascotaExtra = true;
-
   const validas = mascotasNuevas.filter(m=>m&&m.nombre.trim());
-  if (!validas.length) { notify('Ponle nombre a la mascota','error'); _guardandoMascotaExtra = false; return; }
+  if (!validas.length) { notify('Ponle nombre a la mascota','error'); return; }
   setLoading(true);
   try {
     for (const m of validas) {
@@ -10381,9 +9491,8 @@ async function guardarMascotaExtra(clienteId) {
     } else {
       verPerfilCliente(clienteId);
     }
-  } catch(e) { notify(mensajeErrorUsuario(e, 'agregar mascota'), 'error'); }
+  } catch(e) { notify('Error: '+e.message,'error'); }
   setLoading(false);
-  _guardandoMascotaExtra = false;
 }
 
 function agregarMascotaDesdeEntrada() {
@@ -11603,14 +10712,11 @@ async function cobrarRapido() {
     });
     // Abrir cajón + ticket
     const cajaOk = await Printer.cobro('Cobro rápido', concepto, monto, null);
-    const hardwareOk = Printer.huboExitoHardware();
     closeModal('modal-cobro-rapido');
-    if (!cajaOk) {
-      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ cobrado — ⚠️ no se pudo guardar en caja`, 'error');
-    } else if (!hardwareOk) {
-      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ registrado y en caja — ⚠️ el cajón no se abrió / el ticket no se imprimió`, 'error');
-    } else {
+    if (cajaOk) {
       notify(`✅ $${monto.toLocaleString('es-MX')} PM$ — ${_crConcepto}`, 'success');
+    } else {
+      notify(`✅ $${monto.toLocaleString('es-MX')} PM$ registrado — ⚠️ no se pudo guardar en caja`, 'error');
     }
   } catch(err) {
     notify('Error: ' + err.message, 'error');

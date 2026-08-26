@@ -1051,22 +1051,30 @@
                 </label>
               </div>
               <div id="ne-adelanto-form" style="display:none;background:var(--green-light);border-radius:8px;padding:12px 14px;border:1px solid #86efac">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                  <div>
-                    <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Monto del adelanto *</label>
-                    <input type="number" id="ne-adelanto-monto" min="0" placeholder="0.00" step="0.01"
-                      oninput="calcResumen()"
-                      style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:14px;font-weight:700;font-family:'Poppins',sans-serif;outline:none">
+                <div id="ne-adelanto-pm-simple">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Monto del adelanto *</label>
+                      <input type="number" id="ne-adelanto-monto" class="no-wheel-number" min="0" placeholder="0.00" step="0.01"
+                        oninput="calcResumen()"
+                        style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:14px;font-weight:700;font-family:'Poppins',sans-serif;outline:none">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Método</label>
+                      <select id="ne-adelanto-metodo"
+                        style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:13px;font-family:'Poppins',sans-serif;outline:none">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="Transferencia">🏦 Transferencia</option>
+                        <option value="Tarjeta">💳 Tarjeta</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label style="font-size:11px;font-weight:700;color:var(--gray-600);display:block;margin-bottom:4px">Método</label>
-                    <select id="ne-adelanto-metodo"
-                      style="width:100%;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:13px;font-family:'Poppins',sans-serif;outline:none">
-                      <option value="Efectivo">💵 Efectivo</option>
-                      <option value="Transferencia">🏦 Transferencia</option>
-                      <option value="Tarjeta">💳 Tarjeta</option>
-                    </select>
-                  </div>
+                  <a href="#" onclick="pmAbrir('ne-adelanto'); return false;" style="font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+                </div>
+                <div id="ne-adelanto-pm-mixto" style="display:none;margin-bottom:10px">
+                  <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+                  <div id="ne-adelanto-pm-filas"></div>
+                  <div id="ne-adelanto-pm-resumen" style="background:white;border-radius:6px;padding:8px 10px;margin-top:4px"></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:#166534">
                   <span>Saldo pendiente:</span>
@@ -1363,19 +1371,27 @@
             </label>
           </div>
           <div id="nr-adelanto-form" style="display:none;padding:16px 20px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="form-group" style="margin-bottom:0">
-                <label class="form-label">Monto del anticipo</label>
-                <input type="number" class="form-input" id="nr-adelanto-monto" placeholder="0.00" min="0" step="0.01">
+            <div id="nr-adelanto-pm-simple">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Monto del anticipo</label>
+                  <input type="number" class="form-input no-wheel-number" id="nr-adelanto-monto" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Método de pago</label>
+                  <select class="form-input" id="nr-adelanto-metodo">
+                    <option value="Efectivo">💵 Efectivo</option>
+                    <option value="Transferencia">🏦 Transferencia</option>
+                    <option value="Tarjeta">💳 Tarjeta</option>
+                  </select>
+                </div>
               </div>
-              <div class="form-group" style="margin-bottom:0">
-                <label class="form-label">Método de pago</label>
-                <select class="form-input" id="nr-adelanto-metodo">
-                  <option value="Efectivo">💵 Efectivo</option>
-                  <option value="Transferencia">🏦 Transferencia</option>
-                  <option value="Tarjeta">💳 Tarjeta</option>
-                </select>
-              </div>
+              <a href="#" onclick="pmAbrir('nr-adelanto'); return false;" style="font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+            </div>
+            <div id="nr-adelanto-pm-mixto" style="display:none;margin-top:6px">
+              <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+              <div id="nr-adelanto-pm-filas"></div>
+              <div id="nr-adelanto-pm-resumen" style="background:white;border-radius:6px;padding:8px 10px;margin-top:4px"></div>
             </div>
           </div>
         </div>
@@ -1677,7 +1693,7 @@
             <label class="form-label">Monto <span id="caja-monto-req" style="color:var(--red)">*</span></label>
             <div style="position:relative">
               <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:13px">$</span>
-              <input type="number" class="form-input" id="caja-monto" placeholder="0.00"
+              <input type="number" class="form-input no-wheel-number" id="caja-monto" placeholder="0.00"
                 style="padding-left:28px" min="0">
             </div>
           </div>
@@ -2304,19 +2320,27 @@
         <!-- Form rápido de adelanto -->
         <div id="mdh-form-adelanto" style="display:none;background:white;border-radius:8px;padding:12px;border:1px solid #93c5fd;margin-bottom:12px">
           <div style="font-weight:700;font-size:12px;color:var(--blue);margin-bottom:8px">Registrar pago / adelanto</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div>
-              <label class="form-label" style="font-size:11px">Monto (PM$)</label>
-              <input type="text" inputmode="numeric" class="form-input" id="mdh-adel-monto" placeholder="0" style="font-size:13px;padding:6px 10px">
+          <div id="mdh-adel-pm-simple">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+              <div>
+                <label class="form-label" style="font-size:11px">Monto (PM$)</label>
+                <input type="text" inputmode="numeric" class="form-input" id="mdh-adel-monto" placeholder="0" style="font-size:13px;padding:6px 10px">
+              </div>
+              <div>
+                <label class="form-label" style="font-size:11px">Método</label>
+                <select class="form-input" id="mdh-adel-metodo" style="font-size:13px;padding:6px 10px">
+                  <option value="Efectivo">💵 Efectivo</option>
+                  <option value="Transferencia">🏦 Transferencia</option>
+                  <option value="Tarjeta">💳 Tarjeta</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label class="form-label" style="font-size:11px">Método</label>
-              <select class="form-input" id="mdh-adel-metodo" style="font-size:13px;padding:6px 10px">
-                <option value="Efectivo">💵 Efectivo</option>
-                <option value="Transferencia">🏦 Transferencia</option>
-                <option value="Tarjeta">💳 Tarjeta</option>
-              </select>
-            </div>
+            <a href="#" onclick="pmAbrir('mdh-adel'); return false;" style="font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+          </div>
+          <div id="mdh-adel-pm-mixto" style="display:none;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+            <div id="mdh-adel-pm-filas"></div>
+            <div id="mdh-adel-pm-resumen" style="background:var(--gray-50);border-radius:6px;padding:8px 10px;margin-top:4px"></div>
           </div>
           <div style="display:flex;gap:8px">
             <button onclick="mdh_guardarAdelanto()" style="flex:1;background:var(--blue);color:white;border:none;border-radius:6px;padding:7px;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar</button>
@@ -2568,19 +2592,27 @@
     </div>
     <div class="modal-body">
       <div id="ap-cuentas-lista" style="margin-bottom:16px"></div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Monto a pagar</label>
-          <input type="number" class="form-input" id="ap-monto" placeholder="0.00" min="0">
+      <div id="ap-pm-simple">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Monto a pagar</label>
+            <input type="number" class="form-input no-wheel-number" id="ap-monto" placeholder="0.00" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Método de pago</label>
+            <select class="form-input" id="ap-metodo">
+              <option value="Efectivo">💵 Efectivo</option>
+              <option value="Transferencia">🏦 Transferencia</option>
+              <option value="Tarjeta">💳 Tarjeta</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Método de pago</label>
-          <select class="form-input" id="ap-metodo">
-            <option value="Efectivo">💵 Efectivo</option>
-            <option value="Transferencia">🏦 Transferencia</option>
-            <option value="Tarjeta">💳 Tarjeta</option>
-          </select>
-        </div>
+        <a href="#" onclick="pmAbrir('ap'); return false;" style="font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+      </div>
+      <div id="ap-pm-mixto" style="display:none;margin-top:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+        <div id="ap-pm-filas"></div>
+        <div id="ap-pm-resumen" style="background:var(--gray-50);border-radius:8px;padding:8px 12px;margin-top:4px"></div>
       </div>
       <div id="ap-resumen" style="background:var(--gray-50);border-radius:8px;padding:10px 14px;font-size:13px;display:none"></div>
     </div>
@@ -2630,7 +2662,7 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Monto cobrado (PM$) *</label>
-          <input type="number" class="form-input" id="cobro-monto" placeholder="0.00" oninput="actualizarResumenCobro()">
+          <input type="number" class="form-input no-wheel-number" id="cobro-monto" placeholder="0.00" oninput="actualizarResumenCobro()">
         </div>
         <div class="form-group">
           <label class="form-label">Concepto</label>
@@ -2699,11 +2731,19 @@
           </select>
         </div>
       </div>
-      <div class="form-row single">
-        <div class="form-group">
-          <label class="form-label">Monto del adelanto (PM$) *</label>
-          <input type="number" class="form-input" id="adel-monto" placeholder="0.00">
+      <div id="adel-pm-simple">
+        <div class="form-row single">
+          <div class="form-group">
+            <label class="form-label">Monto del adelanto (PM$) *</label>
+            <input type="number" class="form-input no-wheel-number" id="adel-monto" placeholder="0.00">
+          </div>
         </div>
+        <a href="#" onclick="pmAbrir('adel'); return false;" style="font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+      </div>
+      <div id="adel-pm-mixto" style="display:none;margin-top:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+        <div id="adel-pm-filas"></div>
+        <div id="adel-pm-resumen" style="background:var(--gray-50);border-radius:8px;padding:8px 12px;margin-top:4px"></div>
       </div>
       <div class="form-row single">
         <div class="form-group">
@@ -3711,9 +3751,14 @@ async function guardarReservacion() {
   // Adelanto
   const tieneAdelanto = document.getElementById('nr-tiene-adelanto').checked;
   const montoAdelanto = tieneAdelanto ? parseFloat(document.getElementById('nr-adelanto-monto').value) : 0;
-  const metodoAdelanto = document.getElementById('nr-adelanto-metodo').value;
   if (tieneAdelanto && (!montoAdelanto || montoAdelanto <= 0)) {
     notify('⚠️ Ingresa el monto del anticipo', 'error'); _guardandoReservacion = false; return;
+  }
+  let pagosAdelanto = [];
+  if (tieneAdelanto) {
+    const valAdel = pmValidarTotal('nr-adelanto', montoAdelanto);
+    if (!valAdel.ok) { notify(valAdel.mensaje, 'error'); _guardandoReservacion = false; return; }
+    pagosAdelanto = valAdel.pagos;
   }
 
   const he = document.getElementById('nr-hora-entrada').value;
@@ -3761,26 +3806,27 @@ async function guardarReservacion() {
       const nuevaEntrada = await sb('POST', 'entradas', datos);
       const entradaId = nuevaEntrada?.[0]?.id;
       // Registrar adelanto si aplica
-      let cajaOkAdelanto = true, hardwareOkAdelanto = true;
+      let cajaOkAdelanto = true, hardwareOkAdelanto = true, adelantoParcial = null;
       if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
-        await sb('POST', 'cobros', {
-          cliente_id: nr_clienteSeleccionado.id,
-          entrada_id: entradaId,
-          fecha: new Date().toISOString().split('T')[0],
-          fecha_pago: new Date().toISOString(),
-          metodo: metodoAdelanto,
-          monto: montoAdelanto,
-          concepto: 'Anticipo / Adelanto',
-          notas: 'Anticipo al hacer reservación',
-          status: 'adelanto'
+        const { exitosos, fallidos } = await registrarCobrosDesglosados(pagosAdelanto, {
+          clienteId: nr_clienteSeleccionado.id, entradaId,
+          concepto: 'Anticipo / Adelanto', notas: 'Anticipo al hacer reservación', status: 'adelanto'
         });
-        // Abrir cajón si es efectivo
-        if (metodoAdelanto === 'Efectivo') {
-          cajaOkAdelanto = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelanto, entradaId);
+        if (fallidos.length) adelantoParcial = { exitosos, fallidos };
+        const montoAdelantoEfectivo = exitosos.filter(p=>p.metodo==='Efectivo').reduce((s,p)=>s+p.monto,0);
+        if (montoAdelantoEfectivo > 0) {
+          cajaOkAdelanto = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelantoEfectivo, entradaId, exitosos);
           hardwareOkAdelanto = Printer.huboExitoHardware();
         }
       }
-      if (!cajaOkAdelanto) {
+      if (adelantoParcial) {
+        await mostrarAlertaImportante({
+          tipo: 'critica',
+          titulo: adelantoParcial.exitosos.length ? 'LA RESERVACIÓN SE GUARDÓ — EL ANTICIPO QUEDÓ PARCIAL' : 'LA RESERVACIÓN SE GUARDÓ — EL ANTICIPO NO SE REGISTRÓ',
+          mensaje: 'La reservación SÍ quedó guardada.',
+          detalle: [...pmDetalleParcial(adelantoParcial.exitosos, adelantoParcial.fallidos), 'Para registrar lo que falta, usa "Registrar pago" desde el Detalle del Hospedaje — no vuelvas a guardar esta reservación.']
+        });
+      } else if (!cajaOkAdelanto) {
         await mostrarAlertaImportante({
           tipo: 'critica',
           titulo: 'LA RESERVACIÓN Y EL ANTICIPO SÍ SE GUARDARON',
@@ -4521,6 +4567,9 @@ async function mdh_cambiarServicioMascota(nombreMascota, sel) {
 }
 
 function mdh_abrirFormAdelanto() {
+  // Un pago mixto a medias solo se retoma si es el MISMO hospedaje.
+  if (_pmParciales.mdh && _pmParciales.mdh.base?.entradaId !== detalleHospedajeId) _pmParciales.mdh = null;
+  pmCerrar('mdh-adel');
   document.getElementById('mdh-form-adelanto').style.display = 'block';
   // Pre-llenar con saldo pendiente
   const importe = mdh_getImporteConDescuento();
@@ -4539,48 +4588,54 @@ let _guardandoAdelantoDetalle = false;
 async function mdh_guardarAdelanto() {
   if (_guardandoAdelantoDetalle) return;
   _guardandoAdelantoDetalle = true;
-  const monto  = parseFloat(document.getElementById('mdh-adel-monto').value);
-  const metodo = document.getElementById('mdh-adel-metodo').value;
-  if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); _guardandoAdelantoDetalle = false; return; }
   const e = entradas.find(en => en.id === detalleHospedajeId);
   if (!e) { _guardandoAdelantoDetalle = false; return; }
+  const c = clientes.find(cl => cl.id === e.clienteId);
+
+  let pagos, base;
+  if (_pmParciales.mdh) {
+    pagos = _pmParciales.mdh.fallidos; base = _pmParciales.mdh.base;
+  } else {
+    const monto = parseFloat(document.getElementById('mdh-adel-monto').value);
+    if (!monto || monto <= 0) { notify('Ingresa un monto válido', 'error'); _guardandoAdelantoDetalle = false; return; }
+    const prep = pmPrepararPagos('mdh', 'mdh-adel', monto);
+    if (!prep.ok) { notify(prep.mensaje, 'error'); _guardandoAdelantoDetalle = false; return; }
+    pagos = prep.pagos;
+    base = { clienteId: e.clienteId, entradaId: detalleHospedajeId, concepto: 'Pago / Adelanto', notas: '', status: 'adelanto' };
+  }
+
   setLoading(true);
   try {
-    await sb('POST', 'cobros', {
-      cliente_id: e.clienteId,
-      entrada_id: detalleHospedajeId,
-      fecha: new Date().toISOString().split('T')[0],
-      fecha_pago: new Date().toISOString(),
-      metodo, monto,
-      concepto: 'Pago / Adelanto',
-      notas: '', status: 'adelanto'
-    });
+    const resultado = await pmEjecutarCobro('mdh', pagos, base);
     await cargarTodo();
+    if (!resultado) { setLoading(false); _guardandoAdelantoDetalle = false; return; }
+    const { exitosos, montoTotal, montoEfectivo } = resultado;
+
     document.getElementById('mdh-form-adelanto').style.display = 'none';
+    pmCerrar('mdh-adel');
     mdh_renderAdelantos();
-    // Cajón + ticket si es efectivo
-    const c = clientes.find(cl => cl.id === e.clienteId);
+    // Cajón + ticket si hubo parte en efectivo
     let cajaOk = true, hardwareOk = true;
-    if (metodo === 'Efectivo') {
-      cajaOk = await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), monto, detalleHospedajeId);
+    if (montoEfectivo > 0) {
+      cajaOk = await Printer.cobro(c?.nombre || '', (e.mascotas||[]).join(', '), montoEfectivo, detalleHospedajeId, exitosos);
       hardwareOk = Printer.huboExitoHardware();
     }
     if (!cajaOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL PAGO SÍ QUEDÓ REGISTRADO',
-        mensaje: `El pago de $${monto.toLocaleString('es-MX')} PM$ SÍ se registró correctamente.`,
+        mensaje: `El pago de $${montoTotal.toLocaleString('es-MX')} PM$ SÍ se registró correctamente.`,
         detalle: ['No se pudo registrar el movimiento en caja.', 'NO vuelvas a registrar el pago. Verifica el corte de caja manualmente.']
       });
     } else if (!hardwareOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL TICKET NO SE IMPRIMIÓ',
-        mensaje: `El pago de $${monto.toLocaleString('es-MX')} PM$ SÍ quedó registrado y en caja.`,
+        mensaje: `El pago de $${montoTotal.toLocaleString('es-MX')} PM$ SÍ quedó registrado y en caja.`,
         detalle: ['La impresora no respondió y el cajón/ticket no se abrió/imprimió.', 'NO vuelvas a registrar el pago. Puedes reimprimir el ticket cuando la impresora esté disponible.']
       });
     } else {
-      notify('✅ Pago registrado: $' + monto.toLocaleString('es-MX') + ' PM$', 'success');
+      notify('✅ Pago registrado: $' + montoTotal.toLocaleString('es-MX') + ' PM$', 'success');
     }
     // Ofrecer WA
     if (c?.whatsapp) {
@@ -4589,11 +4644,11 @@ async function mdh_guardarAdelanto() {
           const tel = (c.whatsapp||'').replace(/\D/g,'');
           const num = tel.startsWith('52') ? tel : '52'+tel;
           const importe = parseFloat(document.getElementById('mdh-importe')?.value) || 0;
-          const pagos   = (cobros||[]).filter(co => co.entradaId === detalleHospedajeId);
-          const totalPagado = pagos.reduce((s,co) => s + parseFloat(co.monto||0), 0);
+          const pagosEntrada = (cobros||[]).filter(co => co.entradaId === detalleHospedajeId);
+          const totalPagado = pagosEntrada.reduce((s,co) => s + parseFloat(co.monto||0), 0);
           const pendiente = Math.max(0, importe - totalPagado);
-          const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
-          const msg = `🐾 *PetGround*\n\nHola *${c.nombre}*,\n\nRegistramos tu pago:\n\n${metIcon[metodo]||''} *${metodo}: $${monto.toLocaleString('es-MX')} PM$*\n🐕 Mascotas: ${(e.mascotas||[]).join(', ')}\n🏠 Hab. ${e.habitacion}\n\n💰 Total: $${importe.toLocaleString('es-MX')} PM$\n✅ Pagado: $${totalPagado.toLocaleString('es-MX')} PM$\n${pendiente > 0 ? `⚠️ Pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '🎉 *¡Pagado completo!*'}\n\n_¡Gracias por tu confianza! 🐶_`;
+          const metodoTexto = exitosos.length > 1 ? exitosos.map(p=>`${pmIcono(p.metodo)} ${p.metodo}: $${p.monto.toLocaleString('es-MX')}`).join(' + ') : `${pmIcono(exitosos[0].metodo)} ${exitosos[0].metodo}: $${montoTotal.toLocaleString('es-MX')} PM$`;
+          const msg = `🐾 *PetGround*\n\nHola *${c.nombre}*,\n\nRegistramos tu pago:\n\n*${metodoTexto}*\n🐕 Mascotas: ${(e.mascotas||[]).join(', ')}\n🏠 Hab. ${e.habitacion}\n\n💰 Total: $${importe.toLocaleString('es-MX')} PM$\n✅ Pagado: $${totalPagado.toLocaleString('es-MX')} PM$\n${pendiente > 0 ? `⚠️ Pendiente: $${pendiente.toLocaleString('es-MX')} PM$` : '🎉 *¡Pagado completo!*'}\n\n_¡Gracias por tu confianza! 🐶_`;
           window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
       }, 300);
@@ -5625,6 +5680,10 @@ let _aplicarPagoClienteId = null;
 function abrirAplicarPago(clienteId) {
   const id = clienteId || clienteEntradaSeleccionado?.id;
   if (!id) return;
+  // Un pago mixto a medias solo se retoma si es el MISMO cliente — para uno
+  // distinto, empezar limpio (evita aplicar por error un reintento ajeno).
+  if (_pmParciales.saldo && _pmParciales.saldo.clienteId !== id) _pmParciales.saldo = null;
+  pmCerrar('ap');
   _aplicarPagoClienteId = id;
   const c = clientes.find(cl=>cl.id===id);
   const pendientes = cobros.filter(co=>co.clienteId===id && co.status==='pendiente');
@@ -5679,82 +5738,124 @@ async function confirmarAplicarPago() {
   _aplicandoPago = true;
   const id = _aplicarPagoClienteId;
   if (!id) { _aplicandoPago = false; return; }
-  const monto = parseFloat(document.getElementById('ap-monto')?.value)||0;
-  const metodo = document.getElementById('ap-metodo')?.value||'Efectivo';
-  if (monto <= 0) { notify('⚠️ Ingresa un monto mayor a 0', 'error'); _aplicandoPago = false; return; }
-
   const c = clientes.find(cl=>cl.id===id);
+
+  let pagos;
+  if (_pmParciales.saldo) {
+    pagos = _pmParciales.saldo.fallidos;
+  } else {
+    const monto = parseFloat(document.getElementById('ap-monto')?.value)||0;
+    if (monto <= 0) { notify('⚠️ Ingresa un monto mayor a 0', 'error'); _aplicandoPago = false; return; }
+    const prep = pmPrepararPagos('saldo', 'ap', monto);
+    if (!prep.ok) { notify(prep.mensaje, 'error'); _aplicandoPago = false; return; }
+    pagos = prep.pagos;
+  }
+  const montoOperacion = pagos.reduce((s,p)=>s+p.monto,0);
+
+  // Se recalcula siempre sobre el estado actual de `cobros` — en un reintento
+  // ya refleja lo que el/los método(s) exitosos del intento anterior aplicaron.
   const pendientes = cobros.filter(co=>co.clienteId===id && co.status==='pendiente')
     .sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const totalPendiente = pendientes.reduce((s,co)=>s+co.monto,0);
 
   // El monto aplicado a la deuda debe coincidir exactamente con lo que se registra
   // como ingreso en caja — no se permite "aplicar" más de lo que realmente se debe.
-  if (monto > totalPendiente) {
-    notify(`⚠️ El monto ($${monto.toLocaleString('es-MX')}) es mayor a la deuda total ($${totalPendiente.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
+  if (montoOperacion > totalPendiente) {
+    notify(`⚠️ El monto ($${montoOperacion.toLocaleString('es-MX')}) es mayor a la deuda total ($${totalPendiente.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
     _aplicandoPago = false;
     return;
   }
 
   setLoading(true);
-  let aplicadoHastaAhora = 0;
+  const exitosos = [], fallidos = [];
+  // Cola de deudas pendientes que se consume secuencialmente. Cada método del
+  // desglose es un "chunk" que reutiliza EXACTAMENTE el mismo algoritmo de
+  // asignación de siempre (pagar completo o dividir el último pendiente),
+  // solo que aplicado repetidas veces en vez de una sola.
+  let colaPendientes = pendientes.map(co=>({...co}));
   try {
-    let restante = monto;
-    for (const co of pendientes) {
-      if (restante <= 0) break;
-      if (restante >= co.monto) {
-        // Paga completo este cobro
-        await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}`, fecha_pago: new Date().toISOString() });
-        aplicadoHastaAhora += co.monto;
-        restante -= co.monto;
-      } else {
-        // Pago parcial — actualizar monto pendiente
-        await sb('PATCH', `cobros?id=eq.${co.id}`, { monto: co.monto - restante, notas: `Pago parcial $${restante.toLocaleString('es-MX')} el ${new Date().toISOString().split('T')[0]}` });
-        // Registrar el pago aplicado — conserva el mismo entrada_id de la deuda original
-        // para no perder el vínculo con el hospedaje.
-        await sb('POST', 'cobros', {
-          cliente_id: id, entrada_id: co.entradaId || null,
-          fecha: new Date().toISOString().split('T')[0],
-          fecha_pago: new Date().toISOString(),
-          metodo, monto: restante, concepto: 'Abono a cuenta pendiente',
-          notas: `Abono parcial`, status: 'pagado'
-        });
-        aplicadoHastaAhora += restante;
-        restante = 0;
+    for (const pago of pagos) {
+      let restanteChunk = pago.monto;
+      try {
+        while (restanteChunk > 0 && colaPendientes.length) {
+          const co = colaPendientes[0];
+          if (restanteChunk >= co.monto) {
+            // Paga completo este cobro
+            await sb('PATCH', `cobros?id=eq.${co.id}`, { status: 'pagado', metodo: pago.metodo, notas: `Pagado el ${new Date().toISOString().split('T')[0]}`, fecha_pago: new Date().toISOString() });
+            restanteChunk -= co.monto;
+            colaPendientes.shift();
+          } else {
+            // Pago parcial — actualizar monto pendiente
+            await sb('PATCH', `cobros?id=eq.${co.id}`, { monto: co.monto - restanteChunk, notas: `Pago parcial $${restanteChunk.toLocaleString('es-MX')} el ${new Date().toISOString().split('T')[0]}` });
+            // Registrar el pago aplicado — conserva el mismo entrada_id de la deuda original
+            // para no perder el vínculo con el hospedaje.
+            await sb('POST', 'cobros', {
+              cliente_id: id, entrada_id: co.entradaId || null,
+              fecha: new Date().toISOString().split('T')[0],
+              fecha_pago: new Date().toISOString(),
+              metodo: pago.metodo, monto: restanteChunk, concepto: 'Abono a cuenta pendiente',
+              notas: `Abono parcial`, status: 'pagado'
+            });
+            colaPendientes[0] = { ...co, monto: co.monto - restanteChunk };
+            restanteChunk = 0;
+          }
+        }
+        exitosos.push(pago);
+      } catch(errChunk) {
+        console.error('confirmarAplicarPago: fallo aplicando método', pago, errChunk);
+        fallidos.push(pago);
       }
     }
     await cargarTodo();
+
+    if (fallidos.length) {
+      _pmParciales.saldo = { fallidos, clienteId: id };
+      await mostrarAlertaImportante({
+        tipo: 'critica',
+        titulo: exitosos.length ? 'PAGO PARCIALMENTE REGISTRADO' : 'NO SE PUDO APLICAR EL PAGO',
+        mensaje: exitosos.length
+          ? `Del pago de $${montoOperacion.toLocaleString('es-MX')} PM$ a la deuda, parte SÍ quedó aplicada y parte no.`
+          : 'No se aplicó ningún monto.',
+        detalle: pmDetalleParcial(exitosos, fallidos)
+      });
+      setLoading(false); _aplicandoPago = false; return;
+    }
+    _pmParciales.saldo = null;
+
     closeModal('modal-aplicar-pago');
-    // Cajón + ticket + caja_movimientos si el pago es en efectivo
+    pmCerrar('ap');
+    // Cajón + ticket + caja_movimientos: solo por la parte en efectivo
+    const montoEfectivo = exitosos.filter(p=>p.metodo==='Efectivo').reduce((s,p)=>s+p.monto,0);
     let cajaOk = true, hardwareOk = true;
-    if (metodo === 'Efectivo' && monto > 0) {
+    if (montoEfectivo > 0) {
       cajaOk = await Printer.cobro(
         c?.nombre || 'Cliente',
         'Cobro de saldo pendiente',
-        monto,
-        null
+        montoEfectivo,
+        null,
+        exitosos
       );
       hardwareOk = Printer.huboExitoHardware();
     }
-    const restanteTotal = Math.max(0, totalPendiente - monto);
+    const restanteTotal = Math.max(0, totalPendiente - montoOperacion);
     if (!cajaOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL PAGO SÍ QUEDÓ REGISTRADO',
-        mensaje: `El pago de $${monto.toLocaleString('es-MX')} PM$ SÍ se aplicó correctamente a la deuda.`,
+        mensaje: `El pago de $${montoOperacion.toLocaleString('es-MX')} PM$ SÍ se aplicó correctamente a la deuda.`,
         detalle: ['No se pudo registrar el movimiento en caja.', 'NO vuelvas a cobrar. Verifica el corte de caja manualmente.']
       });
     } else if (!hardwareOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL TICKET NO SE IMPRIMIÓ',
-        mensaje: `El pago de $${monto.toLocaleString('es-MX')} PM$ SÍ quedó aplicado y en caja.`,
+        mensaje: `El pago de $${montoOperacion.toLocaleString('es-MX')} PM$ SÍ quedó aplicado y en caja.`,
         detalle: ['La impresora no respondió y el cajón/ticket no se abrió/imprimió.', 'NO vuelvas a cobrar. Puedes reimprimir el ticket cuando la impresora esté disponible.']
       });
     } else {
       notify(restanteTotal > 0
-        ? `✅ Pago de $${monto.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
-        : `✅ ¡Cuenta liquidada! $${monto.toLocaleString('es-MX')} cobrados`, 'success');
+        ? `✅ Pago de $${montoOperacion.toLocaleString('es-MX')} aplicado — Saldo restante: $${restanteTotal.toLocaleString('es-MX')}`
+        : `✅ ¡Cuenta liquidada! $${montoOperacion.toLocaleString('es-MX')} cobrados`, 'success');
     }
     // Refrescar banner si estamos en nueva entrada
     if (clienteEntradaSeleccionado?.id === id) seleccionarClienteEntrada(id);
@@ -5764,11 +5865,11 @@ async function confirmarAplicarPago() {
   } catch(e) {
     // Estado parcial real: parte del bucle ya se aplicó en Supabase antes de la falla.
     // El usuario debe saber exactamente cuánto, no solo que "hubo un error".
-    if (aplicadoHastaAhora > 0) {
+    if (exitosos.length) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'OPERACIÓN INCOMPLETA',
-        mensaje: `Se alcanzaron a aplicar $${aplicadoHastaAhora.toLocaleString('es-MX')} de $${monto.toLocaleString('es-MX')} antes de la falla.`,
+        mensaje: `Se alcanzaron a aplicar $${exitosos.reduce((s,p)=>s+p.monto,0).toLocaleString('es-MX')} de $${montoOperacion.toLocaleString('es-MX')} antes de la falla.`,
         detalle: [mensajeErrorUsuario(e, 'cobrar saldo pendiente'), 'Verifica las deudas de este cliente antes de reintentar — no vuelvas a aplicar el monto completo.']
       });
     } else {
@@ -7685,6 +7786,17 @@ async function guardarEntrada() {
   const hab = document.getElementById('ne-habitacion').value;
   if (!hab) { notify('⚠️ Selecciona una habitación', 'error'); _guardandoEntrada = false; return; }
 
+  // Adelanto embebido — si aplica, validar que el desglose de métodos cuadre
+  // exactamente con el monto antes de continuar (igual que en Reservación).
+  const tieneAdelantoNE = document.getElementById('ne-tiene-adelanto')?.checked;
+  const montoAdelantoNE = tieneAdelantoNE ? (parseFloat(document.getElementById('ne-adelanto-monto')?.value) || 0) : 0;
+  let pagosAdelantoNE = [];
+  if (tieneAdelantoNE && montoAdelantoNE > 0) {
+    const valAdelNE = pmValidarTotal('ne-adelanto', montoAdelantoNE);
+    if (!valAdelNE.ok) { notify(valAdelNE.mensaje, 'error'); _guardandoEntrada = false; return; }
+    pagosAdelantoNE = valAdelNE.pagos;
+  }
+
   // CORRECCIÓN 4 — Validar que ninguna mascota tenga ya un hospedaje activo
   // Compara nombre + clienteId: mismo nombre en cliente distinto no es el mismo perro
   const mascotasConHospedajeActivo = mascotas.filter(mascNombre => {
@@ -7814,37 +7926,39 @@ async function guardarEntrada() {
       notify('✅ Entrada registrada','success');
     }
     // Registrar adelanto si se indicó al crear
-    const tieneAdelantoNE = document.getElementById('ne-tiene-adelanto')?.checked;
-    const montoAdelantoNE = tieneAdelantoNE ? parseFloat(document.getElementById('ne-adelanto-monto')?.value) || 0 : 0;
-    const metodoAdelantoNE = document.getElementById('ne-adelanto-metodo')?.value || 'Efectivo';
     if (tieneAdelantoNE && montoAdelantoNE > 0 && entradaIdFinal && clienteEntradaSeleccionado?.id) {
-      await sb('POST', 'cobros', {
-        cliente_id: clienteEntradaSeleccionado.id,
-        entrada_id: entradaIdFinal,
-        fecha: new Date().toISOString().split('T')[0],
-        fecha_pago: new Date().toISOString(),
-        metodo: metodoAdelantoNE,
-        monto: montoAdelantoNE,
-        concepto: 'Adelanto al registrar entrada',
-        notas: '',
-        status: 'adelanto'
+      const { exitosos: exitososAdelNE, fallidos: fallidosAdelNE } = await registrarCobrosDesglosados(pagosAdelantoNE, {
+        clienteId: clienteEntradaSeleccionado.id, entradaId: entradaIdFinal,
+        concepto: 'Adelanto al registrar entrada', notas: '', status: 'adelanto'
       });
-      // Si el adelanto es en efectivo: abrir cajón + registrar en caja_movimientos
-      if (metodoAdelantoNE === 'Efectivo') {
-        const cajaOkAdelantoNE = await Printer.cobro(
+      const montoAdelantoNEEfectivo = exitososAdelNE.filter(p=>p.metodo==='Efectivo').reduce((s,p)=>s+p.monto,0);
+      let cajaOkAdelantoNE = true, hardwareOkAdelantoNE = true;
+      // Si hubo parte en efectivo: abrir cajón + registrar en caja_movimientos
+      if (montoAdelantoNEEfectivo > 0) {
+        cajaOkAdelantoNE = await Printer.cobro(
           clienteEntradaSeleccionado.nombre,
           mascotas.join(', '),
-          montoAdelantoNE,
-          entradaIdFinal
+          montoAdelantoNEEfectivo,
+          entradaIdFinal,
+          exitososAdelNE
         );
-        if (!cajaOkAdelantoNE) {
+        hardwareOkAdelantoNE = Printer.huboExitoHardware();
+      }
+      if (fallidosAdelNE.length) {
+        await mostrarAlertaImportante({
+          tipo: 'critica',
+          titulo: exitososAdelNE.length ? 'LA ENTRADA SE GUARDÓ — EL ANTICIPO QUEDÓ PARCIAL' : 'LA ENTRADA SE GUARDÓ — EL ANTICIPO NO SE REGISTRÓ',
+          mensaje: 'La entrada SÍ quedó guardada.',
+          detalle: [...pmDetalleParcial(exitososAdelNE, fallidosAdelNE), 'Para registrar lo que falta, usa "Registrar pago" desde el Detalle del Hospedaje — no vuelvas a guardar esta entrada.']
+        });
+      } else if (!cajaOkAdelantoNE) {
           await mostrarAlertaImportante({
             tipo: 'critica',
             titulo: 'EL ANTICIPO SÍ QUEDÓ REGISTRADO',
             mensaje: 'El anticipo SÍ se registró correctamente.',
             detalle: ['No se pudo registrar el movimiento en caja.', 'NO vuelvas a registrar el anticipo. Verifica el corte de caja manualmente.']
           });
-        } else if (!Printer.huboExitoHardware()) {
+        } else if (!hardwareOkAdelantoNE) {
           await mostrarAlertaImportante({
             tipo: 'critica',
             titulo: 'EL TICKET NO SE IMPRIMIÓ',
@@ -7852,7 +7966,6 @@ async function guardarEntrada() {
             detalle: ['La impresora no respondió y el cajón/ticket no se abrió/imprimió.', 'NO vuelvas a registrar el anticipo. Puedes reimprimir el ticket cuando la impresora esté disponible.']
           });
         }
-      }
     }
     // Guardar datos para el ticket ANTES de limpiar el formulario
     const clienteParaTicket = clienteEntradaSeleccionado;
@@ -7926,6 +8039,8 @@ function hacerSalida(nombre, id) {
   const e = entradas.find(en=>en.id===salidaActual);
   const c = e ? clientes.find(cl=>cl.id===e.clienteId) : null;
   if (!c || !e) return;
+  // Un pago mixto a medias solo se retoma si es la MISMA salida.
+  if (_pmParciales.checkout && _pmParciales.checkout.base?.entradaId !== salidaActual) _pmParciales.checkout = null;
 
   const diasHospedado = Math.ceil((new Date() - new Date(e.entrada)) / (1000*60*60*24));
   const atrasado = new Date(e.salidaPrevista) < new Date();
@@ -8007,22 +8122,30 @@ function hacerSalida(nombre, id) {
           oninput="actualizarResumenSalida()">
         <span style="font-size:13px;font-weight:600;color:var(--gray-600)">PM$</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
-        <button type="button" onclick="selMetodoPago('Efectivo',this)"
-          id="btn-met-efectivo"
-          style="padding:10px 6px;border-radius:8px;border:2px solid var(--green);background:#f0fdf4;color:#166534;font-weight:700;font-size:13px;cursor:pointer">
-          💵 Efectivo
-        </button>
-        <button type="button" onclick="selMetodoPago('Transferencia',this)"
-          id="btn-met-transferencia"
-          style="padding:10px 6px;border-radius:8px;border:2px solid var(--gray-200);background:var(--gray-50);color:var(--gray-600);font-weight:700;font-size:13px;cursor:pointer">
-          🏦 Transferencia
-        </button>
-        <button type="button" onclick="selMetodoPago('Tarjeta',this)"
-          id="btn-met-tarjeta"
-          style="padding:10px 6px;border-radius:8px;border:2px solid var(--gray-200);background:var(--gray-50);color:var(--gray-600);font-weight:700;font-size:13px;cursor:pointer">
-          💳 Tarjeta
-        </button>
+      <div id="salida-pm-simple">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
+          <button type="button" onclick="selMetodoPago('Efectivo',this)"
+            id="btn-met-efectivo"
+            style="padding:10px 6px;border-radius:8px;border:2px solid var(--green);background:#f0fdf4;color:#166534;font-weight:700;font-size:13px;cursor:pointer">
+            💵 Efectivo
+          </button>
+          <button type="button" onclick="selMetodoPago('Transferencia',this)"
+            id="btn-met-transferencia"
+            style="padding:10px 6px;border-radius:8px;border:2px solid var(--gray-200);background:var(--gray-50);color:var(--gray-600);font-weight:700;font-size:13px;cursor:pointer">
+            🏦 Transferencia
+          </button>
+          <button type="button" onclick="selMetodoPago('Tarjeta',this)"
+            id="btn-met-tarjeta"
+            style="padding:10px 6px;border-radius:8px;border:2px solid var(--gray-200);background:var(--gray-50);color:var(--gray-600);font-weight:700;font-size:13px;cursor:pointer">
+            💳 Tarjeta
+          </button>
+        </div>
+        <a href="#" onclick="pmAbrir('salida','salida-monto-cobrado'); return false;" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--blue);font-weight:700;text-decoration:none">+ Agregar otro método</a>
+      </div>
+      <div id="salida-pm-mixto" style="display:none;margin-top:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:6px">Forma de pago</div>
+        <div id="salida-pm-filas"></div>
+        <div id="salida-pm-resumen" style="background:white;border-radius:6px;padding:8px 10px;margin-top:4px"></div>
       </div>
       <!-- Select oculto para compatibilidad con el resto del código -->
       <select id="salida-metodo" style="display:none">
@@ -8097,39 +8220,56 @@ async function confirmarSalida() {
   // Solo cuenta dinero realmente recibido (pagado/adelanto) — nunca una deuda pendiente
   // que por cualquier motivo ya estuviera vinculada a esta entrada.
   const adelantosPrevios = cobros.filter(co=>co.entradaId===e?.id && co.status!=='pendiente').reduce((s,co)=>s+co.monto,0);
-  const cobrado = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
-  const metodo = document.getElementById('salida-metodo')?.value||'Efectivo';
 
-  // No permitir cobrar más de lo que realmente se debe.
-  const maximoAPagar = e ? Math.max(0, e.importe - adelantosPrevios) : 0;
-  if (cobrado > maximoAPagar) {
-    notify(`⚠️ El monto a cobrar ($${cobrado.toLocaleString('es-MX')}) es mayor al saldo real pendiente ($${maximoAPagar.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
-    _confirmandoSalida = false;
-    return;
+  let pagos, base, cobradoOriginal, esReintento = false;
+  if (_pmParciales.checkout) {
+    pagos = _pmParciales.checkout.fallidos; base = _pmParciales.checkout.base;
+    cobradoOriginal = _pmParciales.checkout.cobradoOriginal;
+    esReintento = true;
+  } else {
+    cobradoOriginal = parseFloat(document.getElementById('salida-monto-cobrado')?.value)||0;
+    // No permitir cobrar más de lo que realmente se debe.
+    const maximoAPagar = e ? Math.max(0, e.importe - adelantosPrevios) : 0;
+    if (cobradoOriginal > maximoAPagar) {
+      notify(`⚠️ El monto a cobrar ($${cobradoOriginal.toLocaleString('es-MX')}) es mayor al saldo real pendiente ($${maximoAPagar.toLocaleString('es-MX')}). Corrige el monto.`, 'error');
+      _confirmandoSalida = false;
+      return;
+    }
+    if (cobradoOriginal > 0) {
+      const prep = pmPrepararPagos('checkout', 'salida', cobradoOriginal);
+      if (!prep.ok) { notify(prep.mensaje, 'error'); _confirmandoSalida = false; return; }
+      pagos = prep.pagos;
+    } else {
+      pagos = [];
+    }
+    base = { clienteId: c?.id, entradaId: salidaActual, concepto: 'Cobro al hacer salida', notas: '', status: 'pagado' };
   }
-
-  const totalCobrado = adelantosPrevios + cobrado;
-  const pendiente = e ? Math.max(0, e.importe - totalCobrado) : 0;
 
   setLoading(true);
   // Rastrea qué se alcanzó a guardar antes de una posible falla, para nunca dejar
   // al usuario adivinando qué quedó a medias.
-  let entradaMarcada = false, cobroRegistrado = false, pendienteRegistrado = false;
+  let entradaMarcada = false, pendienteEscrito = false;
   try {
-    await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
+    // Solo se marca la entrada como completada en el primer intento — un
+    // reintento de métodos faltantes no debe volver a tocar la entrada.
+    if (!esReintento) await sb('PATCH', `entradas?id=eq.${salidaActual}`, { status: 'completado' });
     entradaMarcada = true;
-    if (cobrado > 0 && c) {
-      await sb('POST', 'cobros', {
-        cliente_id: c.id, entrada_id: salidaActual,
-        fecha: new Date().toISOString().split('T')[0],
-        fecha_pago: new Date().toISOString(),
-        metodo, monto: cobrado,
-        concepto: 'Cobro al hacer salida',
-        notas: pendiente > 0 ? `Pendiente: $${pendiente}` : 'Pago completo',
-        status: 'pagado'
-      });
-      cobroRegistrado = true;
+
+    let exitosos = [], montoEfectivo = 0;
+    if (pagos.length && c) {
+      const resultado = await pmEjecutarCobro('checkout', pagos, base);
+      if (!resultado) {
+        // pmEjecutarCobro ya guardó los fallidos pendientes de reintento;
+        // se conserva también el monto original para el cálculo final del saldo.
+        _pmParciales.checkout.cobradoOriginal = cobradoOriginal;
+        setLoading(false); _confirmandoSalida = false; return;
+      }
+      exitosos = resultado.exitosos; montoEfectivo = resultado.montoEfectivo;
     }
+
+    // El saldo pendiente real se calcula sobre lo que YA no queda por reintentar
+    // (si hubo un reintento, aquí ya se guardó todo lo faltante).
+    const pendiente = e ? Math.max(0, e.importe - adelantosPrevios - cobradoOriginal) : 0;
     if (pendiente > 0 && c) {
       await sb('POST', 'cobros', {
         cliente_id: c.id, entrada_id: salidaActual,
@@ -8139,23 +8279,25 @@ async function confirmarSalida() {
         notas: 'Generado al hacer salida',
         status: 'pendiente'
       });
-      pendienteRegistrado = true;
+      pendienteEscrito = true;
     }
     await cargarTodo();
     closeModal('modal-salida');
+    pmCerrar('salida', 'salida-monto-cobrado');
     // Ofrecer comprobante WA
-    // Si pagó en efectivo → abrir cajón + imprimir ticket
+    // Si hubo parte en efectivo → abrir cajón + imprimir ticket (una sola vez)
     let cajaOk = true, hardwareOk = true;
-    if (metodo === 'Efectivo' && cobrado > 0 && c) {
+    if (montoEfectivo > 0) {
       const mascotasNombre = (e.mascotas||[]).join(', ');
-      cajaOk = await Printer.cobro(c.nombre, mascotasNombre, cobrado, salidaActual);
+      cajaOk = await Printer.cobro(c.nombre, mascotasNombre, montoEfectivo, salidaActual, exitosos);
       hardwareOk = Printer.huboExitoHardware();
     }
 
-    if (c?.whatsapp && cobrado > 0) {
+    if (c?.whatsapp && cobradoOriginal > 0) {
       setTimeout(() => {
         if (confirm(`¿Enviar comprobante de pago por WhatsApp a ${c.nombre}?`)) {
-          enviarComprobanteWA(e, c, cobrado, metodo, pendiente);
+          const metodoTexto = exitosos.length > 1 ? exitosos.map(p=>p.metodo).join(' + ') : (exitosos[0]?.metodo || 'Efectivo');
+          enviarComprobanteWA(e, c, cobradoOriginal, metodoTexto, pendiente);
         }
       }, 400);
     }
@@ -8181,11 +8323,9 @@ async function confirmarSalida() {
   } catch(err) {
     // Estado parcial real: parte de la secuencia ya se guardó en Supabase antes de la falla.
     if (entradaMarcada) {
-      const detalle = cobroRegistrado
-        ? (pendiente > 0 && !pendienteRegistrado
-            ? `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados, pero el saldo pendiente de $${pendiente.toLocaleString('es-MX')} NO se registró.`
-            : `La salida y el cobro de $${cobrado.toLocaleString('es-MX')} ya quedaron guardados.`)
-        : `La salida ya quedó marcada como completada, pero el cobro de $${cobrado.toLocaleString('es-MX')} NO se registró.`;
+      const detalle = cobradoOriginal > 0
+        ? `La salida y el cobro de $${cobradoOriginal.toLocaleString('es-MX')} ya quedaron guardados${!pendienteEscrito ? ', pero el saldo pendiente restante NO se registró' : ''}.`
+        : `La salida ya quedó marcada como completada.`;
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'OPERACIÓN INCOMPLETA',
@@ -9100,6 +9240,236 @@ async function renderDeudasPendientes() {
 
 
 
+// ===================== BUG SCROLL EN INPUTS DE MONTO =====================
+// Los <input type="number"> incrementan/decrementan su valor con la rueda del
+// mouse/trackpad mientras tienen foco (comportamiento nativo del navegador,
+// no de este código). Eso corrompía montos ya escritos (ej. 630 → 636) sin que
+// el operador lo notara. Quitar el foco al detectar scroll evita el auto-step
+// sin tocar type, step, min ni ninguna validación existente.
+document.addEventListener('wheel', function(e) {
+  if (e.target && e.target.classList && e.target.classList.contains('no-wheel-number') && document.activeElement === e.target) {
+    e.target.blur();
+  }
+}, { passive: true, capture: true });
+
+// ===================== PAGOS MIXTOS =====================
+// Un cobro puede dividirse en varios métodos (ej. Efectivo + Tarjeta). Se
+// representa reutilizando el modelo actual sin cambios de esquema: una fila
+// de `cobros` por método, todas con el mismo entrada_id. `caja_movimientos`
+// solo recibe la parte en efectivo — igual que hoy, nunca tarjeta/transferencia.
+const METODOS_PAGO_DISPONIBLES = ['Efectivo','Transferencia','Tarjeta'];
+function pmIcono(m) { return {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'}[m] || ''; }
+
+const _pmEstados = {};   // prefix -> { filas:[{metodo,monto}], total }
+const _pmParciales = {}; // contexto -> { fallidos:[{metodo,monto}], base } — pago mixto a medias, pendiente de reintento
+
+// Activa el modo "pago mixto" para `prefix` (ids esperados: ${prefix}-metodo,
+// ${prefix}-monto, ${prefix}-pm-simple, ${prefix}-pm-mixto, ${prefix}-pm-filas, ${prefix}-pm-resumen).
+// `montoElId` es opcional — por defecto el input es `${prefix}-monto`, pero
+// Checkout usa un id distinto (`salida-monto-cobrado`) y lo pasa explícito.
+function pmAbrir(prefix, montoElId) {
+  montoElId = montoElId || (prefix+'-monto');
+  const inputMonto = document.getElementById(montoElId);
+  const selectMetodo = document.getElementById(prefix+'-metodo');
+  const total = parseFloat(inputMonto?.value) || 0;
+  if (total <= 0) { notify('⚠️ Ingresa primero el monto a cobrar', 'error'); return; }
+  _pmEstados[prefix] = { filas: [{ metodo: selectMetodo?.value || 'Efectivo', monto: total }], total, montoElId };
+  const simple = document.getElementById(prefix+'-pm-simple');
+  const mixto = document.getElementById(prefix+'-pm-mixto');
+  if (simple) simple.style.display = 'none';
+  if (mixto) mixto.style.display = '';
+  if (inputMonto) inputMonto.readOnly = true;
+  pmRenderFilas(prefix);
+}
+
+function pmCerrar(prefix, montoElId) {
+  const est = _pmEstados[prefix];
+  montoElId = montoElId || est?.montoElId || (prefix+'-monto');
+  const inputMonto = document.getElementById(montoElId);
+  const selectMetodo = document.getElementById(prefix+'-metodo');
+  if (est && est.filas[0] && selectMetodo) selectMetodo.value = est.filas[0].metodo;
+  if (inputMonto) inputMonto.readOnly = false;
+  delete _pmEstados[prefix];
+  const simple = document.getElementById(prefix+'-pm-simple');
+  const mixto = document.getElementById(prefix+'-pm-mixto');
+  if (simple) simple.style.display = '';
+  if (mixto) mixto.style.display = 'none';
+}
+
+function pmAgregarFila(prefix) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  const usados = est.filas.map(f=>f.metodo);
+  const libres = METODOS_PAGO_DISPONIBLES.filter(m=>!usados.includes(m));
+  if (!libres.length) { notify('Ya agregaste los 3 métodos disponibles', 'error'); return; }
+  est.filas.push({ metodo: libres[0], monto: 0 });
+  pmRenderFilas(prefix);
+}
+
+function pmEliminarFila(prefix, idx) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  if (est.filas.length <= 1) return;
+  est.filas.splice(idx, 1);
+  pmRenderFilas(prefix);
+}
+
+function pmCambiarMetodo(prefix, idx, metodo) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  const dupIdx = est.filas.findIndex((f,i)=>i!==idx && f.metodo===metodo);
+  if (dupIdx !== -1) {
+    // Ya existe una línea con ese método — se fusionan los montos en vez de
+    // permitir dos líneas del mismo método (nunca debe haber duplicados).
+    est.filas[dupIdx].monto = (parseFloat(est.filas[dupIdx].monto)||0) + (parseFloat(est.filas[idx].monto)||0);
+    est.filas.splice(idx, 1);
+    notify(`Ya había una línea de ${metodo} — se combinaron los montos`, 'info');
+  } else {
+    est.filas[idx].metodo = metodo;
+  }
+  pmRenderFilas(prefix);
+}
+
+function pmCambiarMonto(prefix, idx, valor) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  est.filas[idx].monto = valor === '' ? '' : (parseFloat(valor)||0);
+  pmRenderResumen(prefix);
+}
+
+function pmRenderFilas(prefix) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  const cont = document.getElementById(prefix+'-pm-filas');
+  if (!cont) return;
+  cont.innerHTML = est.filas.map((f,idx) => `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <select class="form-input" style="flex:1.2" onchange="pmCambiarMetodo('${prefix}',${idx},this.value)">
+        ${METODOS_PAGO_DISPONIBLES.map(m=>`<option value="${m}" ${m===f.metodo?'selected':''}>${pmIcono(m)} ${m}</option>`).join('')}
+      </select>
+      <input type="number" class="form-input no-wheel-number" style="flex:1" min="0" placeholder="0.00"
+        value="${(f.monto===0||f.monto==='')?'':f.monto}" oninput="pmCambiarMonto('${prefix}',${idx},this.value)">
+      ${est.filas.length > 1 ? `<button type="button" onclick="pmEliminarFila('${prefix}',${idx})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px 8px">✕</button>` : '<span style="width:28px;display:inline-block"></span>'}
+    </div>
+  `).join('') +
+  (est.filas.length < METODOS_PAGO_DISPONIBLES.length
+    ? `<button type="button" onclick="pmAgregarFila('${prefix}')" style="background:none;border:none;color:var(--blue);font-weight:700;font-size:12px;cursor:pointer;padding:4px 0">+ Agregar otro método</button>`
+    : '') +
+  `<div style="margin-top:2px"><button type="button" onclick="pmCerrar('${prefix}')" style="background:none;border:none;color:var(--gray-400);font-size:11px;cursor:pointer;text-decoration:underline;padding:2px 0">Volver a un solo método</button></div>`;
+  pmRenderResumen(prefix);
+}
+
+function pmRenderResumen(prefix) {
+  const est = _pmEstados[prefix]; if (!est) return;
+  const resumen = document.getElementById(prefix+'-pm-resumen');
+  if (!resumen) return;
+  const asignado = est.filas.reduce((s,f)=>s+(parseFloat(f.monto)||0), 0);
+  const restante = Math.round((est.total - asignado) * 100) / 100;
+  resumen.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>Total a cobrar</span><span style="font-weight:700">$${est.total.toLocaleString('es-MX')}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>Total asignado</span><span style="font-weight:700">$${asignado.toLocaleString('es-MX')}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;font-weight:800">
+      <span>${restante===0?'✅ Cuadrado':restante>0?'Faltan':'Excede por'}</span>
+      <span style="color:${restante===0?'var(--green)':'var(--red)'}">${restante!==0?'$'+Math.abs(restante).toLocaleString('es-MX'):''}</span>
+    </div>
+  `;
+}
+
+// Lee el desglose de pagos vigente para `prefix`: si está en modo mixto,
+// las filas con monto > 0 (los montos en 0 se descartan); si no, el
+// método/monto único de siempre — sin cambiar el comportamiento actual.
+// `totalEsperado` ya lo conoce siempre el caller (lo lee de su propio input de
+// monto, que no siempre se llama igual — ej. Checkout usa `salida-monto-cobrado`).
+// En modo simple se usa tal cual junto con el único método seleccionado.
+function pmObtenerPagos(prefix, totalEsperado) {
+  const est = _pmEstados[prefix];
+  if (!est) {
+    const metodo = document.getElementById(prefix+'-metodo')?.value || 'Efectivo';
+    return [{ metodo, monto: totalEsperado || 0 }];
+  }
+  return est.filas
+    .map(f => ({ metodo: f.metodo, monto: parseFloat(f.monto) || 0 }))
+    .filter(f => f.monto > 0);
+}
+
+// Bloquea la confirmación si la suma de los métodos no coincide exactamente
+// con `totalEsperado`.
+function pmValidarTotal(prefix, totalEsperado) {
+  const pagos = pmObtenerPagos(prefix, totalEsperado);
+  const asignado = pagos.reduce((s,p)=>s+p.monto, 0);
+  const diff = Math.round((totalEsperado - asignado) * 100) / 100;
+  if (Math.abs(diff) < 0.01) return { ok: true, pagos };
+  if (diff > 0) return { ok: false, mensaje: `⚠️ Faltan $${diff.toLocaleString('es-MX')} por asignar` };
+  return { ok: false, mensaje: `⚠️ Excede por $${Math.abs(diff).toLocaleString('es-MX')}` };
+}
+
+// Decide qué pagos procesar: si hay un pago mixto a medias pendiente para
+// este contexto, retoma SOLO lo que falta (nunca vuelve a intentar lo ya
+// guardado); si no, valida y toma el desglose actual del formulario.
+function pmPrepararPagos(contexto, prefix, totalEsperado) {
+  if (_pmParciales[contexto]) return { ok: true, pagos: _pmParciales[contexto].fallidos, reintento: true };
+  const val = pmValidarTotal(prefix, totalEsperado);
+  if (!val.ok) return { ok: false, mensaje: val.mensaje };
+  return { ok: true, pagos: val.pagos, reintento: false };
+}
+
+// Crea una fila de `cobros` por cada método del desglose, en secuencia (nunca
+// Promise.all) para saber con certeza cuál se alcanzó a guardar y cuál no.
+async function registrarCobrosDesglosados(pagos, base) {
+  const exitosos = [];
+  const fallidos = [];
+  for (const pago of pagos) {
+    try {
+      await sb('POST', 'cobros', {
+        cliente_id: base.clienteId,
+        entrada_id: base.entradaId || null,
+        fecha: base.fecha || new Date().toISOString().split('T')[0],
+        fecha_pago: base.fechaPago || new Date().toISOString(),
+        metodo: pago.metodo, monto: pago.monto,
+        concepto: base.concepto || '',
+        notas: base.notas || '',
+        status: base.status || 'pagado'
+      });
+      exitosos.push(pago);
+    } catch(e) {
+      console.error('registrarCobrosDesglosados: fallo al guardar pago', pago, e);
+      fallidos.push(pago);
+    }
+  }
+  return { exitosos, fallidos };
+}
+
+// Texto para mostrarAlertaImportante cuando un pago mixto queda a medias:
+// dice exactamente qué método sí y cuál no se registró, y evita que el
+// operador vuelva a cobrar el monto completo por error.
+function pmDetalleParcial(exitosos, fallidos) {
+  const detalle = [];
+  if (exitosos.length) detalle.push('SÍ quedó registrado: ' + exitosos.map(p=>`$${p.monto.toLocaleString('es-MX')} en ${p.metodo}`).join(', ') + '.');
+  if (fallidos.length) detalle.push('NO se pudo registrar: ' + fallidos.map(p=>`$${p.monto.toLocaleString('es-MX')} en ${p.metodo}`).join(', ') + '.');
+  detalle.push('NO vuelvas a registrar el monto completo — al reintentar, solo se procesará lo que falta.');
+  return detalle;
+}
+
+// Orquesta el registro de un cobro con desglose para los flujos "simples"
+// (adelantos y checkout — no hay una cola de deudas previas que reasignar,
+// a diferencia de Cobrar Saldo Pendiente que tiene su propia lógica).
+// Devuelve null si quedó parcial/fallido (ya se mostró la alerta y se guardó
+// el estado pendiente), o los datos para que el caller decida caja/ticket/UI.
+async function pmEjecutarCobro(contexto, pagos, base) {
+  const montoTotal = pagos.reduce((s,p)=>s+p.monto,0);
+  const { exitosos, fallidos } = await registrarCobrosDesglosados(pagos, base);
+  if (fallidos.length) {
+    _pmParciales[contexto] = { fallidos, base };
+    await mostrarAlertaImportante({
+      tipo: 'critica',
+      titulo: exitosos.length ? 'PAGO PARCIALMENTE REGISTRADO' : 'NO SE PUDO REGISTRAR EL PAGO',
+      mensaje: exitosos.length
+        ? `Del monto de $${montoTotal.toLocaleString('es-MX')} PM$, parte SÍ quedó registrada y parte no.`
+        : 'No se registró ningún monto.',
+      detalle: pmDetalleParcial(exitosos, fallidos)
+    });
+    return null;
+  }
+  _pmParciales[contexto] = null;
+  const montoEfectivo = exitosos.filter(p=>p.metodo==='Efectivo').reduce((s,p)=>s+p.monto,0);
+  return { exitosos, montoTotal, montoEfectivo };
+}
+
 // ===================== PRINTER MODULE =====================
 // Toda la lógica de QZ Tray y generación de tickets vive aquí.
 // El resto del sistema solo llama a Printer.cobro(), Printer.apertura(), etc.
@@ -9247,12 +9617,22 @@ const Printer = (() => {
     }
 
     if (tipo === 'cobro_efectivo') {
+      const esMixto = Array.isArray(datos.desglose) && datos.desglose.length > 1;
       t += sep;
-      t += ' COBRO EN EFECTIVO\n';
+      t += esMixto ? ' COBRO REGISTRADO\n' : ' COBRO EN EFECTIVO\n';
       t += sep;
       t += ` Cliente:  ${datos.cliente}\n`;
       t += ` Mascota:  ${datos.mascota}\n`;
-      t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
+      if (esMixto) {
+        const totalMixto = datos.desglose.reduce((s,p)=>s+p.monto,0);
+        t += ` Total:    $${totalMixto.toLocaleString('es-MX')}\n`;
+        t += sep;
+        t += ' FORMA DE PAGO\n';
+        datos.desglose.forEach(p => { t += ` ${(p.metodo+':').padEnd(16)}$${p.monto.toLocaleString('es-MX')}\n`; });
+        t += sep;
+      } else {
+        t += ` Monto:    $${datos.monto.toLocaleString('es-MX')}\n`;
+      }
       t += ` Cobro:    ${usuario}\n`;
       t += ` Fecha:    ${fecha}  ${hora}\n`;
       t += sep;
@@ -9321,8 +9701,11 @@ const Printer = (() => {
 
   // Cobro en efectivo: abre cajón + imprime ticket + registra en caja_movimientos
   // Conserva el mismo comportamiento que abrirCajonPorCobro() (fase 1 — sin separar responsabilidades)
-  async function cobro(cliente, mascota, monto, entradaId) {
-    const ticket = _buildTicket('cobro_efectivo', {cliente, mascota, monto});
+  // `desglosePagos` es opcional: si se pasa (pago mixto), el ticket imprime el
+  // desglose completo por método en un solo ticket; `monto` sigue siendo SOLO
+  // la parte en efectivo (lo único que toca caja_movimientos y el cajón).
+  async function cobro(cliente, mascota, monto, entradaId, desglosePagos) {
+    const ticket = _buildTicket('cobro_efectivo', {cliente, mascota, monto, desglose: desglosePagos});
     await _enviarCajonYTicket(ticket);
     const cajaOk = await guardarMovimientoCaja('entrada', 'Cobro en efectivo', monto,
       `${cliente} - ${mascota}`, entradaId);
@@ -10296,6 +10679,10 @@ function cobrarDirecto(cid, eid, pendiente) {
 
 // ===================== ADELANTO =====================
 function openModalAdelanto() {
+  // Cada apertura del modal es una operación nueva — un pago mixto a medias
+  // de una apertura anterior no debe reaplicarse a otro cliente por error.
+  _pmParciales.facturacion = null;
+  pmCerrar('adel');
   initFacturacion();
   document.getElementById('modal-adelanto').classList.add('open');
 }
@@ -10304,53 +10691,60 @@ let _guardandoAdelantoFacturacion = false;
 async function guardarAdelanto() {
   if (_guardandoAdelantoFacturacion) return;
   _guardandoAdelantoFacturacion = true;
-  const cid = parseInt(document.getElementById('adel-cliente').value);
-  const monto = parseFloat(document.getElementById('adel-monto').value);
-  if (!cid) { notify('Selecciona un cliente','error'); _guardandoAdelantoFacturacion = false; return; }
-  if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); _guardandoAdelantoFacturacion = false; return; }
-  // Solo se vincula automáticamente si hay UNA sola estancia activa sin ambigüedad —
-  // con 2+ estancias activas del mismo cliente no se puede adivinar cuál es, y
-  // vincularlo a la incorrecta sería peor que dejarlo "Sin vincular".
-  const entradasActivasCliente = entradas.filter(e=>e.clienteId===cid);
-  const entActiva = entradasActivasCliente.length === 1 ? entradasActivasCliente[0] : null;
-  const metodo = document.getElementById('adel-metodo').value;
+
+  let pagos, base, cid, entActivaId;
+  if (_pmParciales.facturacion) {
+    pagos = _pmParciales.facturacion.fallidos; base = _pmParciales.facturacion.base;
+    cid = base.clienteId; entActivaId = base.entradaId;
+  } else {
+    cid = parseInt(document.getElementById('adel-cliente').value);
+    const monto = parseFloat(document.getElementById('adel-monto').value);
+    if (!cid) { notify('Selecciona un cliente','error'); _guardandoAdelantoFacturacion = false; return; }
+    if (!monto||monto<=0) { notify('Ingresa un monto válido','error'); _guardandoAdelantoFacturacion = false; return; }
+    // Solo se vincula automáticamente si hay UNA sola estancia activa sin ambigüedad —
+    // con 2+ estancias activas del mismo cliente no se puede adivinar cuál es, y
+    // vincularlo a la incorrecta sería peor que dejarlo "Sin vincular".
+    const entradasActivasCliente = entradas.filter(e=>e.clienteId===cid);
+    const entActiva = entradasActivasCliente.length === 1 ? entradasActivasCliente[0] : null;
+    entActivaId = entActiva?.id || null;
+    const prep = pmPrepararPagos('facturacion', 'adel', monto);
+    if (!prep.ok) { notify(prep.mensaje, 'error'); _guardandoAdelantoFacturacion = false; return; }
+    pagos = prep.pagos;
+    base = { clienteId: cid, entradaId: entActivaId, fecha: document.getElementById('adel-fecha').value, concepto:'Adelanto', notas: document.getElementById('adel-notas').value, status:'adelanto' };
+  }
+
   setLoading(true);
   try {
-    await sb('POST', 'cobros', {
-      cliente_id: cid,
-      entrada_id: entActiva?.id||null,
-      fecha: document.getElementById('adel-fecha').value,
-      fecha_pago: new Date().toISOString(),
-      metodo,
-      monto, concepto:'Adelanto',
-      notas: document.getElementById('adel-notas').value,
-      status:'adelanto'
-    });
+    const resultado = await pmEjecutarCobro('facturacion', pagos, base);
     await cargarTodo();
+    if (!resultado) { setLoading(false); _guardandoAdelantoFacturacion = false; return; }
+    const { exitosos, montoTotal, montoEfectivo } = resultado;
+
     closeModal('modal-adelanto');
-    // Cajón + ticket + caja_movimientos si el adelanto es en efectivo
+    pmCerrar('adel');
+    // Cajón + ticket + caja_movimientos si hubo parte en efectivo
     let cajaOk = true, hardwareOk = true;
-    if (metodo === 'Efectivo' && monto > 0) {
+    if (montoEfectivo > 0) {
       const nombreCliente = clientes.find(cl => cl.id === cid)?.nombre || 'Cliente';
-      cajaOk = await Printer.cobro(nombreCliente, 'Adelanto', monto, entActiva?.id || null);
+      cajaOk = await Printer.cobro(nombreCliente, 'Adelanto', montoEfectivo, entActivaId, exitosos);
       hardwareOk = Printer.huboExitoHardware();
     }
     if (!cajaOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL ADELANTO SÍ QUEDÓ REGISTRADO',
-        mensaje: `El adelanto de $${monto.toLocaleString('es-MX')} PM$ SÍ se registró correctamente.`,
+        mensaje: `El adelanto de $${montoTotal.toLocaleString('es-MX')} PM$ SÍ se registró correctamente.`,
         detalle: ['No se pudo registrar el movimiento en caja.', 'NO vuelvas a registrar el adelanto. Verifica el corte de caja manualmente.']
       });
     } else if (!hardwareOk) {
       await mostrarAlertaImportante({
         tipo: 'critica',
         titulo: 'EL TICKET NO SE IMPRIMIÓ',
-        mensaje: `El adelanto de $${monto.toLocaleString('es-MX')} PM$ SÍ quedó registrado y en caja.`,
+        mensaje: `El adelanto de $${montoTotal.toLocaleString('es-MX')} PM$ SÍ quedó registrado y en caja.`,
         detalle: ['La impresora no respondió y el cajón/ticket no se abrió/imprimió.', 'NO vuelvas a registrar el adelanto. Puedes reimprimir el ticket cuando la impresora esté disponible.']
       });
     } else {
-      notify('🔖 Adelanto registrado: $'+monto.toLocaleString('es-MX')+' PM$','success');
+      notify('🔖 Adelanto registrado: $'+montoTotal.toLocaleString('es-MX')+' PM$','success');
     }
     initFacturacion();
     // Ofrecer envío de confirmación por WhatsApp
@@ -10360,9 +10754,9 @@ async function guardarAdelanto() {
         if (confirm(`¿Enviar confirmación de adelanto por WhatsApp a ${c.nombre}?`)) {
           const tel = (c.whatsapp||'').replace(/\D/g,'');
           const num = tel.startsWith('52') ? tel : '52'+tel;
-          const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
           const mascotasCliente = (c.mascotas||[]).map(m=>m.nombre||m).join(', ') || '—';
-          const msg = `🐾 *PetGround*\n\nHola *${c.nombre}*,\n\nHemos recibido tu adelanto:\n\n${metIcon[metodo]||''} *${metodo}: $${monto.toLocaleString('es-MX')} PM$*\n📅 Fecha: ${document.getElementById('adel-fecha').value}\n🐕 Mascotas: ${mascotasCliente}\n\n✅ *Adelanto registrado correctamente*\n\nEste monto se aplicará al total de tu hospedaje.\n\n_¡Gracias por tu confianza! 🐶_`;
+          const metodoTexto = exitosos.length > 1 ? exitosos.map(p=>`${pmIcono(p.metodo)} ${p.metodo}: $${p.monto.toLocaleString('es-MX')}`).join(' + ') : `${pmIcono(exitosos[0].metodo)} ${exitosos[0].metodo}: $${montoTotal.toLocaleString('es-MX')} PM$`;
+          const msg = `🐾 *PetGround*\n\nHola *${c.nombre}*,\n\nHemos recibido tu adelanto:\n\n*${metodoTexto}*\n📅 Fecha: ${document.getElementById('adel-fecha').value}\n🐕 Mascotas: ${mascotasCliente}\n\n✅ *Adelanto registrado correctamente*\n\nEste monto se aplicará al total de tu hospedaje.\n\n_¡Gracias por tu confianza! 🐶_`;
           window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
       }, 300);
@@ -11768,7 +12162,7 @@ function eliminarServicio(id) {
         <label style="font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px">Monto a cobrar</label>
         <div style="position:relative">
           <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;font-weight:700;color:var(--gray-400)">$</span>
-          <input type="number" id="cr-monto" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
+          <input type="number" id="cr-monto" class="no-wheel-number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
             style="width:100%;padding:14px 14px 14px 32px;border:2px solid var(--gray-200);border-radius:10px;font-size:24px;font-weight:800;color:var(--blue);font-family:'Nunito',sans-serif;outline:none;text-align:right"
             onfocus="this.style.borderColor='var(--green)'"
             onblur="this.style.borderColor='var(--gray-200)'"

@@ -1461,27 +1461,29 @@
         </div>
       </div>
 
-      <!-- KPIs secundarios -->
+      <!-- KPIs secundarios (Nivel 2) -->
       <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-        <div class="stat-card">
-          <div class="stat-icon blue">📋</div>
-          <div class="stat-info">
-            <div class="stat-num" id="fac-num-cobros">0</div>
-            <div class="stat-label">Cobros en período</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon green">📊</div>
-          <div class="stat-info">
-            <div class="stat-num" id="fac-promedio">$0</div>
-            <div class="stat-label">Promedio por cobro</div>
-          </div>
-        </div>
         <div class="stat-card">
           <div class="stat-icon orange">📈</div>
           <div class="stat-info">
             <div class="stat-num" id="fac-crecimiento">—</div>
-            <div class="stat-label">Crecimiento vs año ant.</div>
+            <div class="stat-label">Cobrado vs mismo período año ant.</div>
+            <div style="font-size:10px;color:var(--orange);font-weight:600" id="fac-crecimiento-nota"></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue">💰</div>
+          <div class="stat-info">
+            <div class="stat-num" id="fac-efectivo-caja">$0</div>
+            <div class="stat-label">Efectivo esperado en caja</div>
+          </div>
+        </div>
+        <div class="stat-card" style="cursor:pointer" onclick="document.getElementById('panel-adelantos').scrollIntoView({behavior:'smooth'})">
+          <div class="stat-icon green">🔖</div>
+          <div class="stat-info">
+            <div class="stat-num" id="fac-adelantos-revisar">$0</div>
+            <div class="stat-label">Adelantos por revisar</div>
+            <div style="font-size:10px;color:var(--gray-400)" id="fac-adelantos-revisar-count"></div>
           </div>
         </div>
       </div>
@@ -1489,7 +1491,7 @@
       <!-- GRÁFICA PRINCIPAL: Barras + línea de tendencia -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
-          <div class="card-title">📊 Ventas del período</div>
+          <div class="card-title">💵 Cobrado del período</div>
           <div style="display:flex;gap:8px;align-items:center">
             <select id="fac-agrupacion" class="form-input" style="width:auto;padding:5px 10px;font-size:12px" onchange="renderGraficaCompleta()">
               <option value="semana">Por semana</option>
@@ -1519,13 +1521,27 @@
         </div>
       </div>
 
+      <!-- Descuentos del período -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <div class="card-title">🏷️ Descuentos del período</div>
+        </div>
+        <div style="padding:16px 20px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:22px;color:#dc2626" id="fac-descuentos-periodo">$0</div>
+          <div style="font-size:12px;color:var(--gray-400)" id="fac-descuentos-count">Sin descuentos en el período</div>
+        </div>
+      </div>
+
       <!-- COMPARATIVO AÑO ANTERIOR -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
           <div class="card-title">📅 Comparativo mensual vs año anterior</div>
           <span class="badge badge-green" id="fac-comp-badge">—</span>
         </div>
-        <div style="padding:16px 20px" id="fac-grafica-comparativo"></div>
+        <div style="padding:16px 20px">
+          <div id="fac-grafica-comparativo"></div>
+          <div style="font-size:11px;color:var(--orange);font-weight:600;margin-top:8px" id="fac-comp-nota"></div>
+        </div>
       </div>
 
       <!-- PROYECCIÓN DEL MES -->
@@ -1543,6 +1559,14 @@
           <div class="card-title">🏠 Pendiente — hospedajes activos</div>
           <span style="font-weight:800;color:var(--red);margin-left:auto;margin-right:10px" id="pendientes-total">$0.00</span>
           <span class="badge badge-orange" id="badge-pendientes-count">0</span>
+        </div>
+        <div style="padding:8px 20px 0;font-size:11px;color:var(--gray-400)">Estimado según el importe actual de las estancias activas; puede cambiar si se extienden o modifican.</div>
+        <div id="fac-sobrepago-card" style="display:none;margin:10px 20px 0;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;align-items:center;gap:10px;cursor:pointer" onclick="verDetalleSobrepagos()">
+          <span style="font-size:16px">⚠️</span>
+          <div style="flex:1;font-size:12px;color:#92400e">
+            <strong>Sobrepagos detectados:</strong> <span id="fac-sobrepago-monto">$0</span> · <span id="fac-sobrepago-count">0</span>
+          </div>
+          <span style="font-size:11px;color:#92400e;text-decoration:underline">Ver detalle</span>
         </div>
         <div id="panel-pendientes">
           <table>
@@ -1573,6 +1597,7 @@
       <div class="card" style="margin-bottom:16px" id="panel-adelantos">
         <div class="card-header">
           <div class="card-title">🔖 Adelantos registrados</div>
+          <span style="font-size:12px;color:var(--gray-400);margin-left:12px" id="adelantos-revisar-resumen"></span>
           <button class="btn btn-sm btn-ghost" onclick="openModalAdelanto()">➕ Nuevo</button>
         </div>
         <table>
@@ -2927,6 +2952,69 @@ function fechaFinanciera(cobro) {
   return cobro.fechaPago || cobro.fecha;
 }
 
+// ===================== COBRADO (fuente única) =====================
+// "Cobrado" = todo dinero efectivamente recibido: pagos completos Y
+// adelantos. NO incluye 'pendiente' (deuda aún no recibida). Las filas no
+// activas (duplicados) ya quedan fuera desde cargarTodo(), que solo carga
+// estado='activo' — por eso no se vuelve a filtrar aquí.
+function esCobradoStatus(status) {
+  return status === 'pagado' || status === 'adelanto';
+}
+
+// Filtra `cobros` a los que cuentan como Cobrado dentro de un rango de fechas
+// (según fechaFinanciera). Única fuente de "Cobrado" para todo el módulo
+// financiero, para no repetir el mismo filtro con pequeñas variaciones en
+// cada pantalla.
+function cobrosEnRango(desde, hasta) {
+  return cobros.filter(c => {
+    if (!esCobradoStatus(c.status)) return false;
+    const f = fechaFinanciera(c).slice(0,10);
+    return f >= desde && f <= hasta;
+  });
+}
+function montoCobradoEnRango(desde, hasta) {
+  return cobrosEnRango(desde, hasta).reduce((s,c)=>s+c.monto, 0);
+}
+
+// Fecha en que arrancó el sistema actual de reservaciones/checkout. Cualquier
+// comparación "vs año anterior" que involucre datos previos a esta fecha
+// mezcla crecimiento real del negocio con el cambio de sistema — se marca
+// como limitación conocida, nunca se ajusta ni se oculta el número.
+const INICIO_SISTEMA_ACTUAL = '2026-04-01';
+
+// Dado un rango [desde,hasta] (YYYY-MM-DD), calcula el rango equivalente del
+// año anterior. Si el rango actual llega hasta hoy (está incompleto), se
+// recorta al MISMO número de días transcurridos en vez de comparar contra el
+// mes/año completo del año pasado — evita comparar un período a medias
+// contra uno ya cerrado.
+function rangoAnioAnterior(desde, hasta) {
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const hastaEfectiva = hasta < hoyStr ? hasta : hoyStr;
+  const msPorDia = 24*60*60*1000;
+  const dDesde = new Date(desde+'T12:00:00');
+  const dHastaEfectiva = new Date(hastaEfectiva+'T12:00:00');
+  const diasTranscurridos = Math.max(1, Math.round((dHastaEfectiva - dDesde) / msPorDia) + 1);
+
+  const añoAnt = parseInt(desde.slice(0,4)) - 1;
+  const desdeAnt = añoAnt + desde.slice(4);
+  const dDesdeAnt = new Date(desdeAnt+'T12:00:00');
+  const hastaAnt = new Date(dDesdeAnt.getTime() + (diasTranscurridos-1)*msPorDia).toISOString().split('T')[0];
+
+  return { desdeAnt, hastaAnt, cruzaMigracion: hastaAnt < INICIO_SISTEMA_ACTUAL };
+}
+
+// Compara el Cobrado de [desde,hasta] contra el mismo rango (recortado si
+// aplica) del año anterior. Única fuente de "crecimiento"/comparación vs año
+// anterior de todo el módulo — evita 3 implementaciones distintas del mismo
+// cálculo.
+function compararConAnioAnterior(desde, hasta) {
+  const total = montoCobradoEnRango(desde, hasta);
+  const { desdeAnt, hastaAnt, cruzaMigracion } = rangoAnioAnterior(desde, hasta);
+  const totalAnt = montoCobradoEnRango(desdeAnt, hastaAnt);
+  const crecimiento = totalAnt > 0 ? Math.round((total - totalAnt) / totalAnt * 100) : null;
+  return { total, totalAnt, crecimiento, desdeAnt, hastaAnt, cruzaMigracion };
+}
+
 // Resuelve el descuento real de una entrada, sin importar en cuál de los dos
 // formatos se haya guardado. Mismo criterio de prioridad ya usado y probado
 // en generarComprobantePDF(): si existe el formato viejo (descuento jsonb
@@ -4023,10 +4111,11 @@ function renderGraficaFac() {
   const año = parseInt(document.getElementById('rep-chart-año')?.value) || new Date().getFullYear();
   const modo = document.getElementById('rep-chart-modo')?.value || 'barras';
 
-  // Calcular facturación por mes del año seleccionado
+  // Calcular cobrado por mes del año seleccionado (pagado + adelanto — ver
+  // esCobradoStatus(); es la misma definición de "Cobrado" en todo el sistema)
   const facPorMes = Array(12).fill(0);
   const facPorMesAnt = Array(12).fill(0);
-  cobros.filter(c=>c.status==='pagado').forEach(c => {
+  cobros.filter(c=>esCobradoStatus(c.status)).forEach(c => {
     if (!c.fecha) return;
     const f = fechaFinanciera(c);
     const y = parseInt(f.slice(0,4));
@@ -4037,9 +4126,13 @@ function renderGraficaFac() {
 
   const maxVal = Math.max(...facPorMes, ...facPorMesAnt, 1);
   const totalAño = facPorMes.reduce((s,v)=>s+v,0);
-  const totalAnt = facPorMesAnt.reduce((s,v)=>s+v,0);
   const mejorMes = facPorMes.indexOf(Math.max(...facPorMes));
   const promMes = totalAño / 12;
+  // Comparación "vs año anterior" — misma fuente única que el resto del
+  // sistema (compararConAnioAnterior), recortada a días equivalentes si el
+  // año seleccionado sigue en curso.
+  const hoyGF = new Date();
+  const compGF = compararConAnioAnterior(`${año}-01-01`, año===hoyGF.getFullYear() ? hoyGF.toISOString().split('T')[0] : `${año}-12-31`);
 
   // Render barras SVG-like con divs
   const container = document.getElementById('rep-grafica-fac');
@@ -4073,12 +4166,13 @@ function renderGraficaFac() {
     </div>`:''}
   `;
 
-  // Resumen
-  const crecimiento = totalAnt > 0 ? Math.round((totalAño - totalAnt) / totalAnt * 100) : null;
+  // Resumen — "vs año anterior" viene de compararConAnioAnterior() (fuente
+  // única, ver arriba), no de un cálculo propio de esta pantalla.
+  const crecimiento = compGF.crecimiento;
   document.getElementById('rep-grafica-resumen').innerHTML = `
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
       <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--green)">$${(totalAño/1000).toFixed(0)}k</div>
-      <div style="font-size:11px;color:var(--gray-400)">Total ${año}</div>
+      <div style="font-size:11px;color:var(--gray-400)">Total ${año} (cobrado)</div>
     </div>
     <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
       <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--blue)">$${Math.round(promMes/1000).toFixed(0)}k</div>
@@ -4091,8 +4185,9 @@ function renderGraficaFac() {
     ${crecimiento !== null ? `<div style="background:${crecimiento>=0?'var(--green-light)':'var(--red-light)'};border-radius:var(--radius-sm);padding:12px;text-align:center;border:1px solid ${crecimiento>=0?'var(--green)':'var(--red)'}">
       <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:${crecimiento>=0?'var(--green)':'var(--red)'}">${crecimiento>=0?'+':''}${crecimiento}%</div>
       <div style="font-size:11px;color:var(--gray-400)">vs ${año-1}</div>
+      ${compGF.cruzaMigracion ? `<div style="font-size:9px;color:var(--orange);margin-top:2px">⚠️ No plenamente comparable</div>` : ''}
     </div>` : `<div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--gray-400)">${cobros.filter(c=>c.status==='pagado').length}</div>
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--gray-400)">${cobros.filter(c=>esCobradoStatus(c.status)).length}</div>
       <div style="font-size:11px;color:var(--gray-400)">Cobros registrados</div>
     </div>`}
   `;
@@ -8901,6 +8996,8 @@ function initFacturacion() {
   renderTopClientesPeriodo();
   renderDeudasPendientes();
   renderAdelantos();
+  renderMovimientosCaja();
+  calcDescuentosPeriodo();
   renderPendientes();
 }
 
@@ -8912,71 +9009,123 @@ function getFechasPeriodo() {
 
 function cobrosDelPeriodo() {
   const { desde, hasta } = getFechasPeriodo();
-  return cobros.filter(c => {
-    const f = fechaFinanciera(c).slice(0,10);
-    return f >= desde && f <= hasta && c.status === 'pagado';
-  });
+  return cobrosEnRango(desde, hasta);
 }
+
+// Base compartida por el KPI "Proyección del mes" y por el detalle de
+// renderProyeccion() — una sola cuenta, no dos copias de la misma fórmula.
+function calcularProyeccionMes() {
+  const hoy = new Date();
+  const desdeMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+  const hastaHoy = hoy.toISOString().split('T')[0];
+  const diasMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).getDate();
+  const diaActual = hoy.getDate();
+  const diasRestantes = diasMes - diaActual;
+
+  const cobradoMes = montoCobradoEnRango(desdeMes, hastaHoy);
+  const promedioDiario = diaActual > 0 ? cobradoMes / diaActual : 0;
+  const proyRitmo = Math.round(cobradoMes + promedioDiario*diasRestantes);
+
+  // Reservaciones confirmadas cuya entrada cae en lo que resta del mes —
+  // dinero ya conocido (no una estimación), se muestra por separado.
+  const finMesStr = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).toISOString().split('T')[0];
+  const reservacionesRestantes = (reservaciones||[]).filter(r => {
+    const f = (r.entrada||'').slice(0,10);
+    return f >= hastaHoy && f <= finMesStr;
+  }).reduce((s,r)=>s+(r.importe||0), 0);
+
+  return { cobradoMes, promedioDiario, proyRitmo, diasMes, diaActual, diasRestantes, reservacionesRestantes };
+}
+
+// Detalle de sobrepagos detectados en el último calcFacKPIs() — se usa desde
+// verDetalleSobrepagos() para mostrar a qué cliente/entrada corresponde cada uno.
+let _sobrepagosDetalle = [];
 
 function calcFacKPIs() {
   const periodo = cobrosDelPeriodo();
   const total = periodo.reduce((s,c)=>s+c.monto,0);
-  const numCobros = periodo.length;
-  const promedio = numCobros > 0 ? total/numCobros : 0;
 
-  // Pendiente hospedajes activos (solo cobros pagados/adelantos reales)
-  const pendienteActivos = entradas.reduce((s,e) => {
+  // Pendiente hospedajes activos + sobrepagos, en el mismo barrido: un
+  // sobrepago es una estancia donde lo cobrado (pagado+adelanto) superó el
+  // importe — antes desaparecía en silencio dentro de Math.max(0,...).
+  let pendienteActivos = 0, sobrepagoTotal = 0;
+  _sobrepagosDetalle = [];
+  entradas.forEach(e => {
     const adelE = cobros.filter(c=>
       c.entradaId===e.id &&
       (c.status==='pagado' || c.status==='adelanto')
     ).reduce((a,c)=>a+c.monto,0);
-    return s + Math.max(0, e.importe - adelE);
-  },0);
+    const diff = e.importe - adelE;
+    if (diff >= 0) {
+      pendienteActivos += diff;
+    } else {
+      sobrepagoTotal += -diff;
+      _sobrepagosDetalle.push({ entradaId: e.id, clienteId: e.clienteId, exceso: -diff });
+    }
+  });
 
   // Deudas pendientes (cobros con status pendiente)
   const deudasPendientes = cobros.filter(c=>c.status==='pendiente').reduce((s,c)=>s+c.monto,0);
 
-  // Proyección del mes
-  const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  const finMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0);
-  const diasMes = finMes.getDate();
-  const diaActual = hoy.getDate();
-  const cobradoMes = cobros.filter(c => {
-    const d = new Date(fechaFinanciera(c));
-    return d.getMonth()===hoy.getMonth() && d.getFullYear()===hoy.getFullYear() && c.status==='pagado';
-  }).reduce((s,c)=>s+c.monto,0);
-  const proyeccion = diaActual > 0 ? Math.round((cobradoMes / diaActual) * diasMes) : 0;
+  // Proyección del mes — misma base que el detalle de renderProyeccion()
+  const proy = calcularProyeccionMes();
 
-  // Crecimiento vs año anterior
+  // Cobrado vs mismo período año anterior — recortado a días equivalentes si
+  // el período actual sigue incompleto (ver compararConAnioAnterior()).
   const { desde, hasta } = getFechasPeriodo();
-  const añoAnt = (parseInt(desde.slice(0,4))-1);
-  const desdeAnt = (añoAnt)+desde.slice(4);
-  const hastaAnt = (añoAnt)+hasta.slice(4);
-  const totalAnt = cobros.filter(c=>{
-    const f = fechaFinanciera(c).slice(0,10);
-    return f>=desdeAnt&&f<=hastaAnt&&c.status==='pagado';
-  }).reduce((s,c)=>s+c.monto,0);
-  const crecimiento = totalAnt > 0 ? Math.round((total-totalAnt)/totalAnt*100) : null;
+  const comp = compararConAnioAnterior(desde, hasta);
 
   document.getElementById('fac-total-mes').textContent = '$'+total.toLocaleString('es-MX');
   document.getElementById('fac-pendiente-activos').textContent = '$'+pendienteActivos.toLocaleString('es-MX');
   document.getElementById('fac-pendiente-deudas').textContent = '$'+deudasPendientes.toLocaleString('es-MX');
-  document.getElementById('fac-proyeccion').textContent = '$'+proyeccion.toLocaleString('es-MX');
-  document.getElementById('fac-num-cobros').textContent = numCobros;
-  document.getElementById('fac-promedio').textContent = '$'+Math.round(promedio).toLocaleString('es-MX');
+  document.getElementById('fac-proyeccion').textContent = '$'+proy.proyRitmo.toLocaleString('es-MX');
+
   const crec = document.getElementById('fac-crecimiento');
   if (crec) {
-    if (crecimiento !== null) {
-      crec.textContent = (crecimiento>=0?'+':'')+crecimiento+'%';
-      crec.style.color = crecimiento >= 0 ? 'var(--green)' : 'var(--red)';
+    if (comp.crecimiento !== null) {
+      crec.textContent = (comp.crecimiento>=0?'+':'')+comp.crecimiento+'%';
+      crec.style.color = comp.crecimiento >= 0 ? 'var(--green)' : 'var(--red)';
     } else {
       crec.textContent = 'Sin datos ant.';
+      crec.style.color = '';
     }
   }
+  const crecNota = document.getElementById('fac-crecimiento-nota');
+  if (crecNota) crecNota.textContent = (comp.crecimiento !== null && comp.cruzaMigracion) ? '⚠️ Incluye datos previos al sistema actual' : '';
+
+  // Sobrepagos — solo se muestra si hay alguno, para no sumar ruido visual.
+  const sobrepagoCard = document.getElementById('fac-sobrepago-card');
+  if (sobrepagoCard) {
+    if (_sobrepagosDetalle.length > 0) {
+      sobrepagoCard.style.display = 'flex';
+      const montoEl = document.getElementById('fac-sobrepago-monto');
+      const countEl = document.getElementById('fac-sobrepago-count');
+      if (montoEl) montoEl.textContent = '$'+sobrepagoTotal.toLocaleString('es-MX');
+      if (countEl) countEl.textContent = _sobrepagosDetalle.length + (_sobrepagosDetalle.length===1?' estancia':' estancias');
+    } else {
+      sobrepagoCard.style.display = 'none';
+    }
+  }
+
   // Badge deudas en sección
   const deudasCount = document.getElementById('fac-deudas-count');
   if (deudasCount) deudasCount.textContent = cobros.filter(c=>c.status==='pendiente').length;
+}
+
+// Detalle de sobrepagos — solo visibiliza el exceso, no genera devoluciones
+// ni modifica ningún saldo.
+function verDetalleSobrepagos() {
+  if (!_sobrepagosDetalle.length) return;
+  const detalle = _sobrepagosDetalle.map(s => {
+    const c = clientes.find(cl=>cl.id===s.clienteId);
+    return `${c?.nombre || 'Cliente #'+s.clienteId} — entrada #${s.entradaId}: $${s.exceso.toLocaleString('es-MX')} PM$ de más`;
+  });
+  mostrarAlertaImportante({
+    tipo: 'advertencia',
+    titulo: 'SOBREPAGOS DETECTADOS',
+    mensaje: `${_sobrepagosDetalle.length} hospedaje${_sobrepagosDetalle.length!==1?'s':''} activo${_sobrepagosDetalle.length!==1?'s':''} ${_sobrepagosDetalle.length!==1?'recibieron':'recibió'} más dinero del que cuesta la estancia.`,
+    detalle: [...detalle, 'Esto no cambia ningún saldo — es solo información para que lo revises.']
+  });
 }
 
 // ===================== GRÁFICA PRINCIPAL BARRAS + LÍNEA =====================
@@ -9037,7 +9186,7 @@ function renderGraficaCompleta() {
       }).join('')}
     </div>
     <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--gray-400)">
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:rgba(27,47,91,0.7);border-radius:2px"></div>Ventas</div>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:rgba(27,47,91,0.7);border-radius:2px"></div>Cobrado</div>
       <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:2px;background:var(--orange);border-radius:2px"></div>Tendencia</div>
       <div style="margin-left:auto">Promedio: $${Math.round(promedio).toLocaleString('es-MX')}</div>
     </div>
@@ -9057,7 +9206,7 @@ function renderGraficaComparativo() {
 
   const facEste = Array(12).fill(0);
   const facAnt = Array(12).fill(0);
-  cobros.filter(c=>c.status==='pagado').forEach(c => {
+  cobros.filter(c=>esCobradoStatus(c.status)).forEach(c => {
     if (!c.fecha) return;
     const f = fechaFinanciera(c);
     const y = parseInt(f.slice(0,4));
@@ -9069,14 +9218,26 @@ function renderGraficaComparativo() {
   const maxVal = Math.max(...facEste, ...facAnt, 1);
   const totalEste = facEste.reduce((s,v)=>s+v,0);
   const totalAnt = facAnt.reduce((s,v)=>s+v,0);
-  const crecAnual = totalAnt > 0 ? Math.round((totalEste-totalAnt)/totalAnt*100) : null;
+  // Comparación justa: si el año en curso está incompleto, se recorta al
+  // mismo número de días transcurridos del año anterior (compararConAnioAnterior()),
+  // en vez de comparar contra los 12 meses completos del año pasado.
+  const comp = compararConAnioAnterior(`${año}-01-01`, año===hoy.getFullYear() ? hoy.toISOString().split('T')[0] : `${año}-12-31`);
+  const crecAnual = comp.crecimiento;
 
   const badge = document.getElementById('fac-comp-badge');
-  if (badge && crecAnual!==null) {
-    badge.textContent = (crecAnual>=0?'+':'')+crecAnual+'% vs '+( año-1);
-    badge.style.background = crecAnual>=0 ? 'var(--green)' : 'var(--red)';
-    badge.style.color = 'white';
+  if (badge) {
+    if (crecAnual!==null) {
+      badge.textContent = (crecAnual>=0?'+':'')+crecAnual+'% vs '+( año-1);
+      badge.style.background = crecAnual>=0 ? 'var(--green)' : 'var(--red)';
+      badge.style.color = 'white';
+    } else {
+      badge.textContent = 'Sin datos '+(año-1);
+      badge.style.background = 'var(--gray-200)';
+      badge.style.color = 'var(--gray-600)';
+    }
   }
+  const compNota = document.getElementById('fac-comp-nota');
+  if (compNota) compNota.textContent = (crecAnual !== null && comp.cruzaMigracion) ? '⚠️ Dato histórico no plenamente comparable — cruza el cambio de sistema de marzo/abril 2026' : '';
 
   el.innerHTML = `
     <div style="display:flex;align-items:flex-end;gap:4px;height:160px">
@@ -9102,51 +9263,40 @@ function renderGraficaComparativo() {
 }
 
 // ===================== PROYECCIÓN DEL MES =====================
+// Muestra 3 cifras separadas — ritmo de cobranza (estimación) y
+// reservaciones confirmadas (dinero ya conocido) NUNCA se presentan como una
+// sola certeza; solo se suman en una línea aparte, explícitamente rotulada
+// como "exposición potencial".
 function renderProyeccion() {
   const el = document.getElementById('fac-proyeccion-detalle');
   if (!el) return;
   const hoy = new Date();
-  const diasMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).getDate();
-  const diaActual = hoy.getDate();
-  const diasRestantes = diasMes - diaActual;
-
-  // Lo cobrado este mes
-  const cobradoMes = cobros.filter(c => {
-    const d = new Date(fechaFinanciera(c));
-    return d.getMonth()===hoy.getMonth() && d.getFullYear()===hoy.getFullYear() && c.status==='pagado';
-  }).reduce((s,c)=>s+c.monto,0);
-
-  // Lo que están debiendo los hospedajes activos (se cobrarán este mes o siguiente)
-  const porCobrarActivos = entradas.reduce((s,e) => {
-    const adelE = cobros.filter(c=>c.entradaId===e.id&&c.status!=='pendiente').reduce((a,c)=>a+c.monto,0);
-    return s + Math.max(0, e.importe - adelE);
-  },0);
-
-  const promDiario = diaActual > 0 ? cobradoMes/diaActual : 0;
-  const proyTotal = Math.round(cobradoMes + promDiario*diasRestantes);
-  const proyConActivos = proyTotal + porCobrarActivos;
-
-  const pct = Math.min(100, Math.round((diaActual/diasMes)*100));
+  const proy = calcularProyeccionMes();
+  const pct = Math.min(100, Math.round((proy.diaActual/proy.diasMes)*100));
+  const exposicionPotencial = proy.proyRitmo + proy.reservacionesRestantes;
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
       <div style="background:var(--gray-50);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--green)">$${cobradoMes.toLocaleString('es-MX')}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--green)">$${proy.cobradoMes.toLocaleString('es-MX')}</div>
         <div style="font-size:11px;color:var(--gray-400)">Cobrado hasta hoy</div>
-        <div style="font-size:10px;color:var(--gray-400)">(día ${diaActual} de ${diasMes})</div>
+        <div style="font-size:10px;color:var(--gray-400)">(día ${proy.diaActual} de ${proy.diasMes})</div>
       </div>
       <div style="background:rgba(27,47,91,0.06);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--blue)">$${proyTotal.toLocaleString('es-MX')}</div>
-        <div style="font-size:11px;color:var(--gray-400)">Proyección al cierre del mes</div>
-        <div style="font-size:10px;color:var(--gray-400)">Promedio diario: $${Math.round(promDiario).toLocaleString('es-MX')}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--blue)">$${proy.proyRitmo.toLocaleString('es-MX')}</div>
+        <div style="font-size:11px;color:var(--gray-400)">Proyección por ritmo de cobranza</div>
+        <div style="font-size:10px;color:var(--gray-400)">Promedio diario: $${Math.round(proy.promedioDiario).toLocaleString('es-MX')}</div>
       </div>
       <div style="background:rgba(244,123,32,0.08);border-radius:var(--radius-sm);padding:12px;text-align:center">
-        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--orange)">$${proyConActivos.toLocaleString('es-MX')}</div>
-        <div style="font-size:11px;color:var(--gray-400)">Proyección + hospedajes activos</div>
-        <div style="font-size:10px;color:var(--gray-400)">Por cobrar: $${porCobrarActivos.toLocaleString('es-MX')}</div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:var(--orange)">$${proy.reservacionesRestantes.toLocaleString('es-MX')}</div>
+        <div style="font-size:11px;color:var(--gray-400)">Reservaciones confirmadas restantes</div>
+        <div style="font-size:10px;color:var(--gray-400)">Dinero ya conocido, no estimado</div>
       </div>
     </div>
-    <div style="margin-bottom:6px;font-size:12px;color:var(--gray-600)">Avance del mes: <strong>${diaActual} de ${diasMes} días (${pct}%)</strong></div>
+    <div style="font-size:11px;color:var(--gray-400);text-align:center;margin-bottom:14px">
+      Exposición potencial del mes (ritmo + reservaciones confirmadas): <strong style="color:var(--gray-600)">$${exposicionPotencial.toLocaleString('es-MX')}</strong>
+    </div>
+    <div style="margin-bottom:6px;font-size:12px;color:var(--gray-600)">Avance del mes: <strong>${proy.diaActual} de ${proy.diasMes} días (${pct}%)</strong></div>
     <div style="height:10px;background:var(--gray-100);border-radius:8px;overflow:hidden">
       <div style="height:100%;width:${pct}%;background:var(--orange);border-radius:8px;transition:width 0.5s"></div>
     </div>
@@ -10034,6 +10184,17 @@ async function renderMovimientosCaja() {
   if (elS) elS.textContent = formatoMoneda(salidas);
   if (elT) { elT.textContent = formatoMoneda(total); elT.style.color = total >= 0 ? '#1a4f8a' : '#c0392b'; }
 
+  // KPI "Efectivo esperado en caja" del dashboard financiero (Facturación) —
+  // mismo cálculo, pero SIEMPRE sobre el total pendiente de corte sin el
+  // filtro de fecha opcional de esta pantalla (ese filtro es solo para ver
+  // la lista de Caja, no debe afectar el KPI financiero).
+  const elFacCaja = document.getElementById('fac-efectivo-caja');
+  if (elFacCaja) {
+    const entradasReal = movsTotal.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+    const salidasReal  = movsTotal.filter(m=>m.tipo==='salida').reduce((s,m)=>s+parseFloat(m.monto||0),0);
+    elFacCaja.textContent = formatoMoneda(entradasReal - salidasReal);
+  }
+
   if (!movsLista.length) {
     el.innerHTML = fechaFiltro
       ? '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Sin movimientos ese día</div></div>'
@@ -10479,10 +10640,27 @@ function switchFacTab(tab) {
 }
 
 // ===================== RENDER ADELANTOS =====================
+function _actualizarResumenAdelantosRevisar(monto, count) {
+  const resumenEl = document.getElementById('adelantos-revisar-resumen');
+  if (resumenEl) {
+    resumenEl.textContent = count
+      ? `Adelantos por revisar: $${monto.toLocaleString('es-MX')} · ${count} registro${count!==1?'s':''}`
+      : 'Todos los adelantos están aplicados';
+  }
+  const kpiMonto = document.getElementById('fac-adelantos-revisar');
+  const kpiCount = document.getElementById('fac-adelantos-revisar-count');
+  if (kpiMonto) kpiMonto.textContent = '$'+monto.toLocaleString('es-MX');
+  if (kpiCount) kpiCount.textContent = count ? `${count} registro${count!==1?'s':''}` : 'Sin pendientes';
+}
+
 async function renderAdelantos() {
   const tbody = document.getElementById('tbody-adelantos');
   const adels = cobros.filter(c=>c.status==='adelanto');
-  if (!adels.length) { tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🔖</div><div class="es-text">Sin adelantos registrados</div></div></td></tr>'; return; }
+  if (!adels.length) {
+    tbody.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="es-icon">🔖</div><div class="es-text">Sin adelantos registrados</div></div></td></tr>';
+    _actualizarResumenAdelantosRevisar(0, 0);
+    return;
+  }
   const metIcon = {Efectivo:'💵',Transferencia:'🏦',Tarjeta:'💳'};
 
   // Resolver la entrada vinculada aunque ya no esté activa (el array `entradas`
@@ -10536,6 +10714,11 @@ async function renderAdelantos() {
     if (pa !== pb) return pa - pb;
     return new Date(b.c.fecha) - new Date(a.c.fecha);
   });
+
+  // Resumen visible de "por revisar" — no cambia estados ni lógica, solo
+  // agrega el total de lo que aún no está "Aplicado en checkout".
+  const porRevisar = filas.filter(f => f.estadoReal !== 'Aplicado en checkout');
+  _actualizarResumenAdelantosRevisar(porRevisar.reduce((s,f)=>s+f.c.monto,0), porRevisar.length);
 
   tbody.innerHTML = filas.map(({c, estadoReal, aplicadoA}) => {
     const cl = clientes.find(cl=>cl.id===c.clienteId);
@@ -11838,6 +12021,43 @@ async function renderCobros() {
     vacio.style.display = 'block';
     console.error('Error cargando historial de cobros:', err);
   }
+}
+
+// ===================== DESCUENTOS DEL PERÍODO (KPI) =====================
+// Total descontado en el período de Facturación — reutiliza resolverDescuento()
+// (mismo criterio unificado que ya usa el Historial de Descuentos y el PDF),
+// filtrado por fecha_entrada dentro del rango seleccionado. NO calcula % sobre
+// subtotal: la auditoría confirmó que subtotal no es confiable en ~44% de las
+// entradas, así que aquí solo se muestra el monto absoluto.
+async function calcDescuentosPeriodo() {
+  const elMonto = document.getElementById('fac-descuentos-periodo');
+  if (!elMonto) return;
+  const { desde, hasta } = getFechasPeriodo();
+  try {
+    const cols = 'id,descuento,desc_tipo,desc_valor,desc_monto,fecha_entrada';
+    const porId = {};
+    for (const filtro of ['descuento=not.is.null', 'desc_monto=gt.0']) {
+      let page = 0;
+      const pageSize = 1000;
+      while (true) {
+        const lote = await sb('GET', 'entradas', null,
+          `?${filtro}&select=${cols}&order=fecha_entrada.desc&limit=${pageSize}&offset=${page*pageSize}`);
+        lote.forEach(e => { porId[e.id] = e; });
+        if (lote.length < pageSize) break;
+        page++;
+      }
+    }
+    let total = 0, count = 0;
+    Object.values(porId).forEach(e => {
+      const f = (e.fecha_entrada||'').slice(0,10);
+      if (f < desde || f > hasta) return;
+      const d = resolverDescuento(e);
+      if (d && d.monto > 0) { total += d.monto; count++; }
+    });
+    elMonto.textContent = '$'+total.toLocaleString('es-MX');
+    const countEl = document.getElementById('fac-descuentos-count');
+    if (countEl) countEl.textContent = count ? `${count} estancia${count!==1?'s':''} con descuento` : 'Sin descuentos en el período';
+  } catch(e) { console.error('Error calculando descuentos del período:', e); }
 }
 
 // ===================== HISTORIAL DE DESCUENTOS =====================

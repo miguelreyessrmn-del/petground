@@ -230,6 +230,11 @@
      quedar siempre por encima de cualquier modal normal ya abierto. */
   .alerta-overlay { display:none; position:fixed; inset:0; background:rgba(10,20,50,0.65); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
   .alerta-overlay.open { display:flex; }
+  /* Confirmación de lectura de avisos importantes: clase propia, sin botón de
+     cierre, sin "clic fuera cierra" y sin Escape — solo se cierra pulsando el
+     botón de confirmación. z-index por encima de cualquier otro modal. */
+  .avisos-lectura-overlay { display:none; position:fixed; inset:0; background:rgba(10,20,50,0.7); z-index:600; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  .avisos-lectura-overlay.open { display:flex; }
   .modal { background:white; border-radius:var(--radius-lg); width:680px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:slideUp 0.25s ease; }
   @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
   .modal-header { padding:24px 28px 20px; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:white; z-index:1; }
@@ -689,13 +694,10 @@
         </div>
 
         <!-- AVISOS IMPORTANTES -->
-        <div class="card">
-          <div class="card-header" style="padding:8px 12px">
-            <div class="card-title" style="font-size:12.5px">⚠️ Avisos importantes</div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span class="badge badge-red" id="badge-avisos">0</span>
-              <button onclick="abrirModalAvisoManual()" title="Agregar aviso manual" style="width:20px;height:20px;border-radius:6px;border:none;background:var(--gray-100);color:var(--blue);font-weight:800;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
-            </div>
+        <div class="card" id="card-avisos-importantes" style="transition:background 0.2s,border-color 0.2s">
+          <div class="card-header" id="avisos-header" style="padding:8px 12px">
+            <div class="card-title" id="avisos-titulo" style="font-size:12.5px">⚠️ Avisos importantes</div>
+            <button onclick="abrirModalAvisoManual()" title="Agregar aviso manual" style="width:20px;height:20px;border-radius:6px;border:none;background:var(--gray-100);color:var(--blue);font-weight:800;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0">+</button>
           </div>
           <div id="avisos-importantes-body"></div>
         </div>
@@ -2242,6 +2244,22 @@
     </div>
     <div id="alerta-importante-cuerpo" style="padding:6px 24px 4px;font-size:14px;line-height:1.55;color:var(--gray-600)"></div>
     <div id="alerta-importante-acciones" style="padding:18px 24px 22px;display:flex;gap:10px"></div>
+  </div>
+</div>
+
+<!-- CONFIRMACIÓN DE LECTURA DE AVISOS IMPORTANTES — ver renderAvisosImportantes()
+     y _verificarAvisosPendientesDeLectura() en JS. Bloqueante a propósito: sin
+     botón de cerrar, sin clic-fuera, sin Escape. Solo el botón inferior la cierra. -->
+<div class="avisos-lectura-overlay" id="modal-avisos-lectura">
+  <div class="modal" style="width:480px;max-width:92vw;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:22px 24px 4px;flex-shrink:0">
+      <div id="avisos-lectura-titulo" style="font-family:'Nunito',sans-serif;font-weight:900;font-size:18px;color:#92400e"></div>
+      <div id="avisos-lectura-subtitulo" style="font-size:12.5px;color:var(--gray-600);margin-top:4px"></div>
+    </div>
+    <div id="avisos-lectura-cuerpo" style="padding:10px 24px;overflow-y:auto;flex:1"></div>
+    <div style="padding:16px 24px 22px;flex-shrink:0">
+      <button id="avisos-lectura-boton" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;font-weight:800;background:#d97706;border-color:#d97706"></button>
+    </div>
   </div>
 </div>
 
@@ -6486,9 +6504,16 @@ function _etiquetaFechaAtraso(fechaStr, hoyStr) {
 // podan solos (se dejan de mostrar y se borran del storage) en cuanto esa
 // mascota ya no tiene entrada activa; los que no están vinculados permanecen
 // hasta que alguien los elimine.
+// Orden/grupo de un aviso — 0: riesgo fuerte (agresivo/en celo, rojo),
+// 1: cuidado (medicamento/alergia/especial, ámbar), 2: aviso manual (ámbar).
+// Array.prototype.sort es estable, así que dentro de cada grupo se conserva
+// el orden de aparición — esto es lo que evita que la firma de lectura
+// cambie solo por un reordenamiento accidental del render.
 function renderAvisosImportantes() {
   const body = document.getElementById('avisos-importantes-body');
-  const badge = document.getElementById('badge-avisos');
+  const card = document.getElementById('card-avisos-importantes');
+  const header = document.getElementById('avisos-header');
+  const titulo = document.getElementById('avisos-titulo');
   if (!body) return;
 
   const items = [];
@@ -6514,7 +6539,7 @@ function renderAvisosImportantes() {
       if (!etiquetas.length) return;
       let nota = (m.notas||'').trim();
       if (nota.length > 90) nota = nota.slice(0,90) + '…';
-      items.push({ manual:false, fuerte: esAgresivo || enCelo, titulo: nombreMascota.toUpperCase(), etiquetas, cliente: c.nombre, nota });
+      items.push({ manual:false, grupo: (esAgresivo||enCelo) ? 0 : 1, titulo: nombreMascota.toUpperCase(), etiquetas, cliente: c.nombre, nota });
     });
   });
 
@@ -6525,23 +6550,43 @@ function renderAvisosImportantes() {
       const activa = entradas.some(e => e.clienteId === a.mascotaClienteId && (e.mascotas||[]).includes(a.mascotaNombre));
       if (!activa) { podar.push(a.id); return; }
     }
-    items.push({ manual:true, fuerte:true, id:a.id, titulo: a.mascotaNombre ? a.mascotaNombre.toUpperCase() : 'AVISO', texto: a.texto });
+    items.push({ manual:true, grupo:2, id:a.id, titulo: a.mascotaNombre ? a.mascotaNombre.toUpperCase() : 'AVISO', texto: a.texto });
   });
   if (podar.length) {
     _guardarAvisosManuales(manuales.filter(a => !podar.includes(a.id)));
   }
 
-  items.sort((a,b) => (b.fuerte?1:0) - (a.fuerte?1:0));
-  if (badge) badge.textContent = String(items.length);
+  items.sort((a,b) => a.grupo - b.grupo);
+
+  // Identidad visual del bloque completo: ámbar y evidente en cuanto hay
+  // algo que atender; neutro cuando no hay nada — nunca rojo agresivo en
+  // toda la tarjeta (el rojo se reserva a las filas de riesgo fuerte).
+  if (card) {
+    card.style.background = items.length ? '#fffbeb' : '';
+    card.style.border = items.length ? '1.5px solid #f59e0b' : '';
+  }
+  if (header) header.style.borderBottom = items.length ? '1px solid #fde68a' : '';
+  if (titulo) {
+    titulo.innerHTML = items.length
+      ? `⚠️ AVISOS IMPORTANTES <span style="font-weight:900;color:#92400e">· ${items.length}</span>`
+      : `⚠️ Avisos importantes`;
+    titulo.style.color = items.length ? '#92400e' : '';
+    titulo.style.fontWeight = items.length ? '800' : '';
+  }
 
   if (!items.length) {
-    body.innerHTML = `<div style="padding:8px 12px;font-size:11.5px;color:var(--gray-400)">✅ Sin avisos importantes</div>`;
+    body.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--gray-400)">✅ Sin avisos importantes</div>`;
+    _verificarAvisosPendientesDeLectura(items);
     return;
   }
-  body.innerHTML = `<div style="max-height:230px;overflow-y:auto;padding:6px 8px 4px">` + items.map(a => {
-    const color = a.fuerte ? '#dc2626' : '#b45309';
-    const bg = a.fuerte ? '#fef2f2' : '#fffbeb';
-    const icon = a.fuerte ? '🔴' : '🟡';
+  // Sin max-height ni overflow-y: el bloque crece con el contenido — nunca
+  // esconde un aviso detrás de scroll interno (mismo principio que Notas
+  // operativas).
+  body.innerHTML = `<div style="padding:6px 8px 8px">` + items.map(a => {
+    const esFuerte = a.grupo === 0;
+    const color = esFuerte ? '#dc2626' : '#b45309';
+    const bg = esFuerte ? '#fef2f2' : '#fffbeb';
+    const icon = esFuerte ? '🔴' : '🟡';
     const cerrar = a.manual ? `<span onclick="eliminarAvisoManual(${a.id})" title="Eliminar aviso" style="cursor:pointer;color:${color};font-weight:800;padding:0 3px;flex-shrink:0">×</span>` : '';
     const linea1 = a.manual ? `${icon} ${a.titulo}` : `${icon} ${a.titulo}${a.etiquetas.length?' — '+a.etiquetas.join(', '):''}`;
     const linea2 = a.manual ? `Aviso manual · ${a.texto}` : a.cliente;
@@ -6555,6 +6600,98 @@ function renderAvisosImportantes() {
       ${linea3?`<div style="color:${color};margin-top:1px">${linea3}</div>`:''}
     </div>`;
   }).join('') + `</div>`;
+
+  _verificarAvisosPendientesDeLectura(items);
+}
+
+// ===================== CONFIRMACIÓN DE LECTURA DE AVISOS =====================
+// Firma estable de un aviso: cualquier cambio de contenido relevante (nuevas
+// etiquetas, texto de la nota, texto manual) cambia la clave. Se usa el
+// nombre/etiquetas/nota tal cual, sin inventar un hash — es intencionalmente
+// simple, no hace falta más para esta necesidad.
+function _claveAviso(a) {
+  return a.manual
+    ? `M|${a.id}|${a.titulo}|${a.texto}`
+    : `A|${a.titulo}|${a.etiquetas.join(',')}|${a.nota}`;
+}
+
+let _avisosModalAbierto = false;
+
+// Se llama al final de cada renderAvisosImportantes(). Decide si hace falta
+// pedir (o repetir) la confirmación de lectura en esta sesión:
+// - sin avisos: nada que confirmar (y se limpia el reconocimiento guardado).
+// - avisos que ya estaban reconocidos (aunque hayan desaparecido otros):
+//   no se pide nada, solo se sincroniza el reconocimiento.
+// - aparece al menos un aviso nuevo (o uno existente cambió de forma
+//   sustancial, lo que cambia su clave): se pide confirmación — mostrando
+//   SOLO lo nuevo si ya se había leído algo antes en esta sesión, o TODO si
+//   es la primera vez.
+function _verificarAvisosPendientesDeLectura(items) {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) return; // sesión aún no iniciada
+  if (_avisosModalAbierto) return;
+
+  const clavesActuales = items.map(_claveAviso);
+  let reconocidas = [];
+  try { reconocidas = JSON.parse(sessionStorage.getItem('pg_avisos_reconocidos') || '[]'); } catch(e) { reconocidas = []; }
+
+  if (!clavesActuales.length) {
+    if (reconocidas.length) sessionStorage.removeItem('pg_avisos_reconocidos');
+    return;
+  }
+
+  const nuevos = clavesActuales.filter(k => !reconocidas.includes(k));
+  if (!nuevos.length) {
+    // Nada nuevo — puede haber menos avisos que antes (ej. checkout); eso
+    // nunca pide confirmación. Se sincroniza el reconocimiento igual, para
+    // que un aviso ya visto que reaparezca más tarde no cuente como "nuevo".
+    sessionStorage.setItem('pg_avisos_reconocidos', JSON.stringify(clavesActuales));
+    return;
+  }
+
+  const esPrimeraVezDeLaSesion = reconocidas.length === 0;
+  const itemsAMostrar = esPrimeraVezDeLaSesion ? items : items.filter(a => nuevos.includes(_claveAviso(a)));
+  _mostrarModalAvisos(itemsAMostrar, esPrimeraVezDeLaSesion, clavesActuales);
+}
+
+function _mostrarModalAvisos(items, esPrimeraVez, clavesActuales) {
+  const overlay = document.getElementById('modal-avisos-lectura');
+  const titulo = document.getElementById('avisos-lectura-titulo');
+  const subtitulo = document.getElementById('avisos-lectura-subtitulo');
+  const cuerpo = document.getElementById('avisos-lectura-cuerpo');
+  const boton = document.getElementById('avisos-lectura-boton');
+  if (!overlay || !cuerpo || !boton) return;
+
+  _avisosModalAbierto = true;
+  const esPlural = items.length > 1;
+  titulo.textContent = esPrimeraVez
+    ? '⚠️ AVISOS IMPORTANTES'
+    : (esPlural ? '⚠️ NUEVOS AVISOS IMPORTANTES' : '⚠️ NUEVO AVISO IMPORTANTE');
+  subtitulo.textContent = esPrimeraVez ? 'Antes de continuar revisa las indicaciones:' : '';
+
+  cuerpo.innerHTML = items.map(a => {
+    const esFuerte = a.grupo === 0;
+    const color = esFuerte ? '#dc2626' : '#b45309';
+    const bg = esFuerte ? '#fef2f2' : '#fffbeb';
+    const icon = esFuerte ? '🔴' : '🟡';
+    const linea1 = a.manual ? `${icon} ${a.titulo}` : `${icon} ${a.titulo}${a.etiquetas.length?' — '+a.etiquetas.join(', '):''}`;
+    const linea2 = a.manual ? `Aviso manual · ${a.texto}` : a.cliente;
+    const linea3 = (!a.manual && a.nota) ? `"${a.nota}"` : '';
+    return `<div style="padding:8px 10px;border-left:4px solid ${color};background:${bg};margin-bottom:8px;border-radius:6px;font-size:13px">
+      <div style="font-weight:800;color:${color}">${linea1}</div>
+      <div style="color:${a.manual?color:'var(--gray-600)'};margin-top:2px">${linea2}</div>
+      ${linea3?`<div style="color:${color};margin-top:2px">${linea3}</div>`:''}
+    </div>`;
+  }).join('');
+
+  boton.textContent = esPrimeraVez ? 'HE LEÍDO LOS AVISOS' : (esPlural ? 'HE LEÍDO LOS NUEVOS AVISOS' : 'HE LEÍDO EL NUEVO AVISO');
+  boton.onclick = () => {
+    sessionStorage.setItem('pg_avisos_reconocidos', JSON.stringify(clavesActuales));
+    overlay.classList.remove('open');
+    _avisosModalAbierto = false;
+  };
+
+  overlay.classList.add('open');
 }
 
 // Avisos manuales — persistidos en la tabla config ya existente (mismo
@@ -11424,6 +11561,11 @@ function entrarAlSistema() {
   document.querySelector('.sidebar').style.display = 'flex';
   document.querySelector('.main').style.display = 'block';
   iniciarAutoLogout();
+  // Los avisos ya se calcularon mientras el login seguía visible (la
+  // verificación de lectura se ignora a propósito hasta que haya sesión) —
+  // se vuelve a renderizar ahora que el overlay está oculto para que, si hay
+  // avisos activos, se pida la confirmación de lectura de inmediato.
+  renderAvisosImportantes();
   // Actualizar sidebar con usuario actual
   const initials = usuarioActual.initials;
   document.getElementById('sidebar-avatar').textContent = initials;

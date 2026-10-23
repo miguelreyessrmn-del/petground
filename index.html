@@ -2131,6 +2131,7 @@
           <div class="card-title">🏷️ Historial de descuentos</div>
           <span class="badge badge-orange" id="rep-descuentos-count">0</span>
         </div>
+        <div id="rep-descuentos-total" style="display:none;padding:10px 20px;font-size:14px;font-weight:700;color:#dc2626;border-bottom:1px solid var(--gray-100)"></div>
         <div id="rep-descuentos-loading" style="padding:20px;text-align:center;color:var(--gray-400);font-size:13px">⏳ Cargando...</div>
         <table id="rep-descuentos-table" style="display:none">
           <thead>
@@ -12212,10 +12213,12 @@ async function renderHistorialDescuentos() {
   const vacio = document.getElementById('rep-descuentos-vacio');
   const tbody = document.getElementById('rep-descuentos-tbody');
   const countBadge = document.getElementById('rep-descuentos-count');
+  const totalEl = document.getElementById('rep-descuentos-total');
   if (!tbody) return;
   loading.style.display = 'block';
   table.style.display = 'none';
   vacio.style.display = 'none';
+  if (totalEl) totalEl.style.display = 'none';
 
   try {
     const cols = 'id,cliente_id,mascotas,habitacion,fecha_entrada,descuento,desc_tipo,desc_valor,desc_monto,subtotal,importe';
@@ -12242,6 +12245,12 @@ async function renderHistorialDescuentos() {
     if (!filas.length) { vacio.style.display = 'block'; if (countBadge) countBadge.textContent = '0'; return; }
     table.style.display = 'table';
     if (countBadge) countBadge.textContent = filas.length;
+    // Total = suma de las mismas filas que se listan abajo (mismo d.monto de resolverDescuento)
+    const totalDesc = filas.reduce((s, { d }) => s + (parseFloat(d.monto) || 0), 0);
+    if (totalEl) {
+      totalEl.textContent = `💰 Total en descuentos: ${formatoMoneda(totalDesc)} · ${filas.length} descuento${filas.length !== 1 ? 's' : ''}`;
+      totalEl.style.display = 'block';
+    }
 
     tbody.innerHTML = filas.map(({e, d}) => {
       const cl = clientes.find(c => c.id === e.cliente_id);

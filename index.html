@@ -3149,6 +3149,7 @@ async function cargarTodo() {
         id: m.id, nombre: m.nombre, raza: m.raza||'', sexo: m.sexo||'',
         color: m.color||'', nacimiento: m.nacimiento||'',
         notas: m.notas||'', flags: m.flags||[], foto: m.foto||'',
+        ultimo_celo: m.ultimo_celo || null, intervalo_celo: m.intervalo_celo || 180,
         servicio_id: m.servicio_id || null
       })),
       alojamientos: 0, facturacion: 0

@@ -9759,26 +9759,36 @@ async function pmEjecutarCobro(contexto, pagos, base) {
   return { exitosos, montoTotal, montoEfectivo };
 }
 
-// ===================== PRINTER MODULE =====================
-// Toda la lógica de QZ Tray y generación de tickets vive aquí.
-// El resto del sistema solo llama a Printer.cobro(), Printer.apertura(), etc.
-// Fase 2: separar guardarMovimientoCaja de Printer.cobro() cuando se valide.
+// ===================== PRINT BACKEND (transporte de hardware) =====================
+// Contrato que debe cumplir cualquier backend de impresión:
+//   capabilities        — objeto estático, qué sabe hacer este backend
+//   isAvailable()        -> boolean, ¿el transporte subyacente existe en esta página?
+//   isConnected()        -> boolean, ¿hay conexión activa ahora mismo? (sin intentar conectar)
+//   connect()            -> Promise<boolean>, intenta (re)conectar
+//   print(printerName, dataArr) -> Promise<void>, envía un trabajo raw ya construido
+// dataArr sigue el mismo formato que usaba qz.print(): [{type:'raw',format:'hex'|'base64',data:string}, ...]
+//
+// Hoy solo existe un backend (SystemQueueBackend, sobre QZ Tray). Qué bytes van en
+// dataArr (si incluyen o no el pulso de cajón) lo decide Printer, nunca el backend —
+// es una regla de negocio (ver _enviarCajonYTicket / _vaciarCola), no de transporte.
 
-const Printer = (() => {
+function _createSystemQueueBackend() {
+  const capabilities = {
+    rawEscPos: true,
+    drawerKick: true,
+    systemQueue: true
+  };
 
-  // ── Estado privado ────────────────────────────────────────
-  let _cola = [];           // jobs pendientes {tipo, lineas} — SOLO tickets, nunca apertura de cajón
-  let _ocupado = false;     // mutex: evita impresiones simultáneas
-  let _ultimoHardwareOk = null; // resultado del último intento de cajón+ticket (true/false/null)
-
-  // ── A: Hardware / QZ Tray (privado) ──────────────────────
-
-  function _getNombreImpresora() {
-    return getConfig('impresora_nombre', 'EPSON_TM_T88V');
+  function isAvailable() {
+    return typeof qz !== 'undefined';
   }
 
-  async function _conectar() {
-    if (typeof qz === 'undefined') return false;
+  function isConnected() {
+    return isAvailable() && qz.websocket.isActive();
+  }
+
+  async function connect() {
+    if (!isAvailable()) return false;
     try {
       qz.security.setCertificatePromise(function(resolve) {
         resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----');
@@ -9799,7 +9809,38 @@ const Printer = (() => {
     }
   }
 
-  // Imprime cajón ESC/POS + ticket en una sola llamada QZ (una sola autorización).
+  async function print(printerName, dataArr) {
+    const config = qz.configs.create(printerName);
+    await qz.print(config, dataArr);
+  }
+
+  return { capabilities, isAvailable, isConnected, connect, print };
+}
+
+// ===================== PRINTER MODULE =====================
+// Toda la lógica de impresión y apertura de cajón vive aquí.
+// El resto del sistema solo llama a Printer.cobro(), Printer.apertura(), etc.
+// Fase 2: separar guardarMovimientoCaja de Printer.cobro() cuando se valide.
+
+const Printer = (() => {
+
+  // ── Estado privado ────────────────────────────────────────
+  let _cola = [];           // jobs pendientes {tipo, lineas} — SOLO tickets, nunca apertura de cajón
+  let _ocupado = false;     // mutex: evita impresiones simultáneas
+  let _ultimoHardwareOk = null; // resultado del último intento de cajón+ticket (true/false/null)
+  const _backend = _createSystemQueueBackend();   // único backend activo hoy
+
+  // ── A: Hardware (privado) — delega en el backend activo ──
+
+  function _getNombreImpresora() {
+    return getConfig('impresora_nombre', 'EPSON_TM_T88V');
+  }
+
+  async function _conectar() {
+    return await _backend.connect();
+  }
+
+  // Imprime cajón ESC/POS + ticket en una sola llamada al backend (una sola autorización).
   // Cajón en hex (bytes exactos), ticket en base64 Latin-1 (sin encodeURIComponent).
   // Si el hardware falla por cualquier motivo, NUNCA se reintenta la apertura del
   // cajón automáticamente — solo el ticket queda disponible para reimpresión manual
@@ -9822,16 +9863,14 @@ const Printer = (() => {
         _ultimoHardwareOk = false;
         return;
       }
-      const config = qz.configs.create(_getNombreImpresora());
-      // QZ Tray 2.2.6 soporta arrays mixtos (hex + base64) en una sola llamada.
-      // El printer recibe ambos como stream continuo y los secuencia internamente.
+      // El backend recibe ambos como stream continuo y los secuencia internamente.
       const dataArr = [{ type: 'raw', format: 'hex', data: '1B700019FA' }];
       if (lineas) {
         // Sanitizar a Latin-1 antes de btoa — caracteres > U+00FF causan InvalidCharacterError
         const lineasLatin1 = lineas.replace(/[^\x00-\xFF]/g, '?');
         dataArr.push({ type: 'raw', format: 'base64', data: btoa(lineasLatin1) });
       }
-      await qz.print(config, dataArr);
+      await _backend.print(_getNombreImpresora(), dataArr);
       _ultimoHardwareOk = true;
     } catch(e) {
       if (lineas) { _cola.push({ tipo: 'ticket', lineas }); _bannerCola(); }
@@ -9860,10 +9899,9 @@ const Printer = (() => {
     for (const job of pendientes) {
       try {
         if (job.tipo === 'ticket' && job.lineas) {
-          const config = qz.configs.create(_getNombreImpresora());
           const lineasLatin1 = job.lineas.replace(/[^\x00-\xFF]/g, '?');
           const dataArr = [{ type: 'raw', format: 'base64', data: btoa(lineasLatin1) }];
-          await qz.print(config, dataArr);
+          await _backend.print(_getNombreImpresora(), dataArr);
         }
       } catch(e) {
         console.warn('Printer: error imprimiendo ticket pendiente:', e);
@@ -9976,8 +10014,8 @@ const Printer = (() => {
 
   // Verifica estado de QZ al abrir la pantalla Caja
   async function verificarEstado() {
-    if (typeof qz === 'undefined') { _bannerQZ(false); return; }
-    _bannerQZ(qz.websocket.isActive());
+    if (!_backend.isAvailable()) { _bannerQZ(false); return; }
+    _bannerQZ(_backend.isConnected());
     _bannerCola();
   }
 

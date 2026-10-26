@@ -9772,12 +9772,102 @@ async function pmEjecutarCobro(contexto, pagos, base) {
 // dataArr (si incluyen o no el pulso de cajón) lo decide Printer, nunca el backend —
 // es una regla de negocio (ver _enviarCajonYTicket / _vaciarCola), no de transporte.
 
+// Firma de peticiones QZ (supabase/functions/qz-sign). Certificado y clave pública
+// son públicos — la clave privada vive solo como secreto en Supabase.
+// QZ Tray Demo Cert, SHA-1 BD:29:A6:ED:8E:F2:8D:D3:C1:6D:B5:35:07:84:BF:3C:54:DA:6F:3D
+const QZ_SIGN_URL = 'https://rekegzxcypltnlxhsevc.supabase.co/functions/v1/qz-sign';
+const QZ_SIGN_TIMEOUT_MS = 6000;
+const QZ_CERTIFICADO = `-----BEGIN CERTIFICATE-----
+MIIECzCCAvOgAwIBAgIGAZ6ogPLGMA0GCSqGSIb3DQEBCwUAMIGiMQswCQYDVQQG
+EwJVUzELMAkGA1UECAwCTlkxEjAQBgNVBAcMCUNhbmFzdG90YTEbMBkGA1UECgwS
+UVogSW5kdXN0cmllcywgTExDMRswGQYDVQQLDBJRWiBJbmR1c3RyaWVzLCBMTEMx
+HDAaBgkqhkiG9w0BCQEWDXN1cHBvcnRAcXouaW8xGjAYBgNVBAMMEVFaIFRyYXkg
+RGVtbyBDZXJ0MB4XDTI2MDYwNzE4MzEyM1oXDTQ2MDYwNzE4MzEyM1owgaIxCzAJ
+BgNVBAYTAlVTMQswCQYDVQQIDAJOWTESMBAGA1UEBwwJQ2FuYXN0b3RhMRswGQYD
+VQQKDBJRWiBJbmR1c3RyaWVzLCBMTEMxGzAZBgNVBAsMElFaIEluZHVzdHJpZXMs
+IExMQzEcMBoGCSqGSIb3DQEJARYNc3VwcG9ydEBxei5pbzEaMBgGA1UEAwwRUVog
+VHJheSBEZW1vIENlcnQwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCc
+HtavPrbdwdRtqVcU1sS0uOMaXjLdQt1u1KqRjl/Dq3CwPDwpHgYmg/qvXwpWAMri
+STDiNx0ZxvRr+71kggBlF4mm4ZWR7txZoVAGQj6OgKejTy/bMzmkZT660AU8+/zD
+uGlI+8qLk8xwECZXH4jSIk/UwkiNpCVth1p1xcWQGyyU5P2mUdjsNhmVfa9rtigE
+3V74vOdAjjU2ZQHKqTM0gmqwU+X996Mnw1RplH+6+0S905tMeL+Ipy2BtceCNurz
+dT9mNlKVPjC4SdIGlzQCbuM+5vsUOPbGyqpq8n6onZFLJm2AcMezsqLzY69EBZ2C
+rbGtMquTvoHqQfCWzBDZAgMBAAGjRTBDMBIGA1UdEwEB/wQIMAYBAf8CAQEwDgYD
+VR0PAQH/BAQDAgEGMB0GA1UdDgQWBBT6meQp8Qr1hQIK2hObS8EBCDSOezANBgkq
+hkiG9w0BAQsFAAOCAQEAcDGcxjBkg9LUkbqnkTUk6VbAHzHZLyfMz8ncQ8tcIUza
+Wy9XkP3Cr0plu3trIJHT+FXVbF19pqL/1562efNhAqK9vGiK5c+icqHZMIDOTgeA
+vravA3uOjuROeAk3HrVjgU8d7TlzgYhxsd4oAmmvRjUq7O76FXzAMKUEg+LT5/zK
+5yjd+JzaG3JDiNBUsuRAqukVu00qOVoo/QhTb0FSGP8nokXlVW4inaiCIYKq+aow
+Fh0R2TgZa2q+p5Tp68BrKNDdquy1HZYB4wiOYD8k8SKlMMULXWCVWcIqawE8/2m1
+iaeOloQBCQq7wLNw2CMzG3UghPe7ids5/3evanMauA==
+-----END CERTIFICATE-----`;
+const QZ_CLAVE_PUBLICA = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnB7Wrz623cHUbalXFNbE
+tLjjGl4y3ULdbtSqkY5fw6twsDw8KR4GJoP6r18KVgDK4kkw4jcdGcb0a/u9ZIIA
+ZReJpuGVke7cWaFQBkI+joCno08v2zM5pGU+utAFPPv8w7hpSPvKi5PMcBAmVx+I
+0iJP1MJIjaQlbYdadcXFkBsslOT9plHY7DYZlX2va7YoBN1e+LznQI41NmUByqkz
+NIJqsFPl/fejJ8NUaZR/uvtEvdObTHi/iKctgbXHgjbq83U/ZjZSlT4wuEnSBpc0
+Am7jPub7FDj2xsqqavJ+qJ2RSyZtgHDHs7Ki82OvRAWdgq2xrTKrk76B6kHwlswQ
+2QIDAQAB
+-----END PUBLIC KEY-----`;
+
 function _createSystemQueueBackend() {
   const capabilities = {
     rawEscPos: true,
     drawerKick: true,
     systemQueue: true
   };
+
+  let _clavePublica = null;
+  let _avisoFirmaVisible = false;
+
+  function _base64ABytes(s) {
+    return Uint8Array.from(atob(s.replace(/-----[^-]+-----|\s/g, '')), c => c.charCodeAt(0));
+  }
+
+  // Pide la firma a qz-sign y la verifica con la clave pública antes de usarla.
+  // Nunca rechaza ni se queda colgada: devuelve null si no hay firma válida
+  // (función caída, error de red, 500, timeout o firma incorrecta).
+  function _firmar(toSign) {
+    const ctrl = new AbortController();
+    const intento = (async () => {
+      const r = await fetch(QZ_SIGN_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: toSign, cache: 'no-store', signal: ctrl.signal });
+      if (!r.ok) throw new Error('qz-sign respondió ' + r.status);
+      const firma = (await r.text()).trim();
+      if (!_clavePublica) {
+        _clavePublica = await crypto.subtle.importKey('spki', _base64ABytes(QZ_CLAVE_PUBLICA),
+          { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' }, false, ['verify']);
+      }
+      const valida = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', _clavePublica,
+        _base64ABytes(firma), new TextEncoder().encode(toSign));
+      if (!valida) throw new Error('firma inválida');
+      return firma;
+    })().catch(e => { console.warn('QZ: no se obtuvo firma válida —', e.message || e); return null; });
+    const limite = new Promise(res => setTimeout(() => {
+      ctrl.abort();
+      res(null);
+    }, QZ_SIGN_TIMEOUT_MS));
+    return Promise.race([intento, limite]);
+  }
+
+  // Sin firma válida QZ muestra su diálogo manual "Invalid Signature".
+  // Se avisa al operador qué pulsar; no se reintenta ni se reenvía nada.
+  function _avisarAutorizacionManual() {
+    if (_avisoFirmaVisible || typeof mostrarAlertaImportante !== 'function') return;
+    _avisoFirmaVisible = true;
+    mostrarAlertaImportante({
+      tipo: 'advertencia',
+      titulo: 'AUTORIZA LA IMPRESIÓN EN QZ',
+      mensaje: 'No se pudo validar automáticamente la impresión.',
+      detalle: [
+        'En la ventana de QZ pulsa <b>ALLOW</b>.',
+        '<b>NO</b> marques “Remember this decision”.',
+        'Si pulsas BLOCK y lo recuerdas, la impresión puede quedar bloqueada.',
+        'Esto es solo un problema de autorización de la impresora. El registro del cobro se guarda por separado y puede haberse guardado ya: <b>no vuelvas a cobrar</b> sin revisarlo.'
+      ]
+    }).finally(() => { _avisoFirmaVisible = false; });
+  }
 
   function isAvailable() {
     return typeof qz !== 'undefined';
@@ -9791,11 +9881,17 @@ function _createSystemQueueBackend() {
     if (!isAvailable()) return false;
     try {
       qz.security.setCertificatePromise(function(resolve) {
-        resolve('-----BEGIN CERTIFICATE REQUEST-----\n-----END CERTIFICATE REQUEST-----');
+        resolve(QZ_CERTIFICADO);
       });
       qz.security.setSignatureAlgorithm('SHA512');
       qz.security.setSignaturePromise(function(toSign) {
-        return function(resolve) { resolve(); };
+        return function(resolve) {
+          _firmar(toSign).then(firma => {
+            if (firma) { resolve(firma); return; }
+            resolve('');   // fallback aprobado: QZ pide autorización manual, sin reintentos
+            _avisarAutorizacionManual();
+          });
+        };
       });
       if (!qz.websocket.isActive()) {
         await Promise.race([

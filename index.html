@@ -1363,6 +1363,17 @@
           </div>
         </div>
 
+        <!-- Responsiva (mismo dato que Nueva Entrada: clientes.responsiva_firmada) -->
+        <div class="card" style="margin-bottom:16px;background:#f0fdf4;border:1.5px solid #86efac">
+          <div style="padding:14px 20px;display:flex;align-items:center;gap:14px">
+            <input type="checkbox" id="nr-responsiva" style="width:20px;height:20px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+            <div>
+              <label for="nr-responsiva" id="nr-responsiva-label" style="font-weight:700;font-size:13px;color:#166534;cursor:pointer">📋 Responsiva firmada</label>
+              <div style="font-size:11px;color:#4ade80;margin-top:2px">El cliente firmó físicamente la hoja de responsiva</div>
+            </div>
+          </div>
+        </div>
+
         <!-- SECCIÓN ADELANTO OPCIONAL -->
         <div class="card" style="margin-bottom:16px;background:#f0fdf4;border:1.5px solid #86efac">
           <div class="card-header" style="background:transparent;border-bottom:1px solid #bbf7d0">
@@ -1372,6 +1383,7 @@
               <span id="nr-adelanto-texto">El cliente deja anticipo ahora</span>
             </label>
           </div>
+          <div id="nr-adelanto-previo" style="display:none;padding:10px 20px;font-size:13px;color:#166534;border-bottom:1px solid #bbf7d0"></div>
           <div id="nr-adelanto-form" style="display:none;padding:16px 20px">
             <div id="nr-adelanto-pm-simple">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -3554,20 +3566,18 @@ async function editarReservacion(id) {
     // 5. Notas
     document.getElementById('nr-notas').value = r.notas || '';
 
-    // 6. Adelantos existentes — solo mostrar como info, NO generar nuevos
-    const adelantoForm = document.getElementById('nr-adelanto-form');
-    const adelantoCb   = document.getElementById('nr-tiene-adelanto');
-    const adelantoLabel = document.getElementById('nr-adelanto-texto');
-    if (adelantosExistentes.length > 0) {
-      const totalAdelanto = adelantosExistentes.reduce((s,a) => s + parseFloat(a.monto||0), 0);
-      if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = true; }
-      if (adelantoLabel) adelantoLabel.innerHTML = `💵 Adelanto ya registrado: <strong>$${totalAdelanto.toLocaleString('es-MX')}</strong> <span style="font-size:11px;color:var(--gray-400)">(no se puede modificar en edición)</span>`;
-      if (adelantoForm) adelantoForm.style.display = 'none';
-    } else {
-      if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = false; }
-      if (adelantoLabel) adelantoLabel.innerHTML = '💵 Registrar adelanto recibido';
-      if (adelantoForm) adelantoForm.style.display = 'none';
-    }
+    // 6. Adelantos: lo ya recibido se muestra como dato fijo (nunca se re-cobra);
+    //    la casilla arranca desmarcada y solo registra dinero NUEVO que entra ahora.
+    const adelantoCb = document.getElementById('nr-tiene-adelanto');
+    if (adelantoCb) { adelantoCb.checked = false; adelantoCb.disabled = false; }
+    document.getElementById('nr-adelanto-form').style.display = 'none';
+    document.getElementById('nr-adelanto-monto').value = '';
+    pmCerrar('nr-adelanto');
+    nr_mostrarAdelantoPrevio(adelantosExistentes);
+
+    // Responsiva: si el cliente no la tiene aún, conservar lo guardado en la reservación
+    const respCb = document.getElementById('nr-responsiva');
+    if (respCb && !respCb.disabled && r.responsiva_firmada) respCb.checked = true;
 
     // 7. Cambiar botón y título
     const btn = document.querySelector('#screen-nueva-reservacion .btn-primary[onclick="guardarReservacion()"]');
@@ -3634,6 +3644,7 @@ async function nr_seleccionarCliente(id) {
     }).join('');
   }
   nr_sincronizarConceptos();
+  await nr_cargarResponsivaCliente(c);
 }
 
 function nr_clearCliente() {
@@ -3824,6 +3835,123 @@ function nr_toggleAdelanto() {
   document.getElementById('nr-adelanto-form').style.display = cb.checked ? 'block' : 'none';
 }
 
+// Adelanto(s) ya recibidos de la reservación: se muestran como dato fijo, aparte
+// de la casilla, que solo registra dinero NUEVO que entra ahora.
+function nr_mostrarAdelantoPrevio(adelantos) {
+  const previo = document.getElementById('nr-adelanto-previo');
+  const label = document.getElementById('nr-adelanto-texto');
+  const total = (adelantos || []).reduce((s, a) => s + (parseFloat(a.monto) || 0), 0);
+  if (previo) {
+    previo.innerHTML = total > 0 ? `💵 Adelanto ya recibido: <strong>$${total.toLocaleString('es-MX')} PM$</strong> <span style="font-size:11px;color:var(--gray-400)">— no se modifica ni se vuelve a cobrar al guardar</span>` : '';
+    previo.style.display = total > 0 ? 'block' : 'none';
+  }
+  if (label) label.textContent = total > 0 ? 'Registrar NUEVO adelanto (dinero que entra ahora)' : 'El cliente deja anticipo ahora';
+}
+
+function nr_limpiarFormulario() {
+  nr_clearCliente();
+  document.getElementById('nr-notas').value = '';
+  document.getElementById('nr-fecha-entrada').value = '';
+  document.getElementById('nr-fecha-salida').value = '';
+  document.getElementById('nr-noches').value = '';
+  document.getElementById('nr-habitacion').value = '';
+  document.getElementById('nr-hab-seleccionada').textContent = '';
+  document.getElementById('nr-tiene-adelanto').checked = false;
+  document.getElementById('nr-adelanto-form').style.display = 'none';
+  document.getElementById('nr-adelanto-monto').value = '';
+  pmCerrar('nr-adelanto');
+  nr_mostrarAdelantoPrevio([]);
+  const resp = document.getElementById('nr-responsiva');
+  if (resp) { resp.checked = false; resp.disabled = false; }
+  const respLabel = document.getElementById('nr-responsiva-label');
+  if (respLabel) respLabel.textContent = '📋 Responsiva firmada';
+  document.getElementById('nr-conceptos-tbody').innerHTML = '';
+  nr_calcResumen();
+}
+
+function nr_salirModoEdicion() {
+  nr_reservacionEditandoId = null;
+  const btn = document.querySelector('#screen-nueva-reservacion .btn-primary[onclick="guardarReservacion()"]');
+  if (btn) { btn.textContent = '📋 Guardar reservación'; btn.style.background = ''; }
+  const titulo = document.getElementById('nr-titulo');
+  if (titulo) titulo.textContent = '📋 Nueva Reservación';
+  nr_limpiarFormulario();
+}
+
+// Registra dinero NUEVO como adelanto de una reservación, con la misma secuencia
+// segura de los demás cobros: primero `cobros` (una fila por método), luego —
+// solo si hubo efectivo — caja + ticket + cajón vía Printer.cobro (una sola vez).
+// Un fallo de caja/impresora nunca revierte el cobro ya guardado.
+async function nr_registrarAdelanto(entradaId, pagos, mascotas, notas) {
+  const { exitosos, fallidos } = await registrarCobrosDesglosados(pagos, {
+    clienteId: nr_clienteSeleccionado.id, entradaId,
+    concepto: 'Anticipo / Adelanto', notas, status: 'adelanto'
+  });
+  let cajaOk = true, hardwareOk = true;
+  const efectivo = exitosos.filter(p => p.metodo === 'Efectivo').reduce((s, p) => s + p.monto, 0);
+  if (efectivo > 0) {
+    cajaOk = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), efectivo, entradaId, exitosos);
+    hardwareOk = Printer.huboExitoHardware();
+  }
+  return { exitosos, fallidos, cajaOk, hardwareOk };
+}
+
+// Avisa con precisión qué sí y qué no ocurrió con el adelanto. Devuelve false si
+// no hubo nada que avisar (todo salió bien).
+async function nr_avisarResultadoAdelanto(res) {
+  const { exitosos, fallidos, cajaOk, hardwareOk } = res;
+  const fmt = ps => ps.map(p => `$${p.monto.toLocaleString('es-MX')} en ${p.metodo}`).join(', ');
+  const total = exitosos.reduce((s, p) => s + p.monto, 0);
+  const hardware = [];
+  if (!cajaOk) hardware.push('No se pudo registrar el movimiento en caja — verifica el corte de caja manualmente.');
+  if (!hardwareOk) hardware.push('La impresora/cajón no respondió: el cajón no se abrió y el ticket no se imprimió. El ticket quedó pendiente para reimprimirlo cuando la impresora esté disponible.');
+  if (fallidos.length && !exitosos.length) {
+    await mostrarAlertaImportante({
+      tipo: 'critica',
+      titulo: 'EL ADELANTO NO SE REGISTRÓ',
+      mensaje: 'La reservación SÍ quedó guardada, pero el adelanto NO se registró como cobro.',
+      detalle: ['NO se pudo registrar: ' + fmt(fallidos) + '.', 'Para registrarlo, abre Editar reservación y registra un NUEVO adelanto.']
+    });
+    return true;
+  }
+  if (fallidos.length) {
+    await mostrarAlertaImportante({
+      tipo: 'critica',
+      titulo: 'EL ADELANTO QUEDÓ REGISTRADO SOLO EN PARTE',
+      mensaje: 'SÍ quedó registrado: ' + fmt(exitosos) + '. NO vuelvas a cobrar esa parte.',
+      detalle: ['NO se pudo registrar: ' + fmt(fallidos) + '.', ...hardware, 'Para registrar lo que falta, abre Editar reservación y registra un NUEVO adelanto solo por esa parte.']
+    });
+    return true;
+  }
+  if (hardware.length) {
+    await mostrarAlertaImportante({
+      tipo: 'critica',
+      titulo: 'EL ADELANTO SÍ QUEDÓ REGISTRADO. NO VUELVAS A COBRAR.',
+      mensaje: `El adelanto de $${total.toLocaleString('es-MX')} PM$ SÍ quedó registrado${cajaOk ? ' y en caja' : ''}.`,
+      detalle: hardware
+    });
+    return true;
+  }
+  return false;
+}
+
+// Responsiva: vive en el CLIENTE (clientes.responsiva_firmada, una vez firmada
+// queda para siempre) y cada entrada/reservación guarda su propia copia en
+// entradas.responsiva_firmada — mismo modelo que Nueva Entrada.
+async function nr_cargarResponsivaCliente(c) {
+  const cb = document.getElementById('nr-responsiva');
+  const label = document.getElementById('nr-responsiva-label');
+  if (!cb) return;
+  try {
+    const cDB = await sb('GET', 'clientes', null, `?id=eq.${c.id}&select=responsiva_firmada`);
+    if (cDB && cDB[0]) c.responsiva_firmada = cDB[0].responsiva_firmada || false;
+  } catch(e) {}
+  const yaFirmo = c.responsiva_firmada === true;
+  cb.checked = yaFirmo;
+  cb.disabled = yaFirmo;
+  if (label) label.textContent = yaFirmo ? '📋 Responsiva ya firmada ✅' : '📋 Responsiva firmada';
+}
+
 let _guardandoReservacion = false;
 async function guardarReservacion() {
   if (_guardandoReservacion) return;
@@ -3890,89 +4018,61 @@ async function guardarReservacion() {
     importe: totalFinal,
     notas: document.getElementById('nr-notas').value,
     status: 'reservacion',
-    conceptos_json: JSON.stringify(conceptosParaGuardar)
+    conceptos_json: JSON.stringify(conceptosParaGuardar),
+    responsiva_firmada: document.getElementById('nr-responsiva')?.checked || false
   };
 
+  const editandoId = nr_reservacionEditandoId;
+  let reservacionGuardada = false, adelanto = null;
   setLoading(true);
   try {
-    if (nr_reservacionEditandoId) {
-      // Modo edición: solo actualizar datos, sin crear cobros ni adelantos
-      await sb('PATCH', `entradas?id=eq.${nr_reservacionEditandoId}`, datos);
-      nr_reservacionEditandoId = null;
-      // Restaurar botón y título
-      const btn = document.querySelector('#screen-nueva-reservacion .btn-primary[onclick="guardarReservacion()"]');
-      if (btn) { btn.textContent = '✅ Guardar reservación'; btn.style.background = ''; }
-      const titulo = document.getElementById('nr-titulo');
-      if (titulo) titulo.textContent = '📋 Nueva Reservación';
-      const adelantoCb = document.getElementById('nr-tiene-adelanto');
-      if (adelantoCb) adelantoCb.disabled = false;
-      const adelantoLabel = document.getElementById('nr-adelanto-texto');
-      if (adelantoLabel) adelantoLabel.innerHTML = '💵 Registrar adelanto recibido';
-      notify('✅ Reservación actualizada', 'success');
+    // 1. Reservación (editar nunca crea, cambia ni re-cobra adelantos anteriores)
+    let entradaId = editandoId;
+    if (editandoId) {
+      await sb('PATCH', `entradas?id=eq.${editandoId}`, datos);
     } else {
-      // Modo nuevo: crear entrada + adelanto si aplica
       const nuevaEntrada = await sb('POST', 'entradas', datos);
-      const entradaId = nuevaEntrada?.[0]?.id;
-      // Registrar adelanto si aplica
-      let cajaOkAdelanto = true, hardwareOkAdelanto = true, adelantoParcial = null;
-      if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
-        const { exitosos, fallidos } = await registrarCobrosDesglosados(pagosAdelanto, {
-          clienteId: nr_clienteSeleccionado.id, entradaId,
-          concepto: 'Anticipo / Adelanto', notas: 'Anticipo al hacer reservación', status: 'adelanto'
-        });
-        if (fallidos.length) adelantoParcial = { exitosos, fallidos };
-        const montoAdelantoEfectivo = exitosos.filter(p=>p.metodo==='Efectivo').reduce((s,p)=>s+p.monto,0);
-        if (montoAdelantoEfectivo > 0) {
-          cajaOkAdelanto = await Printer.cobro(nr_clienteSeleccionado.nombre, mascotas.join(', '), montoAdelantoEfectivo, entradaId, exitosos);
-          hardwareOkAdelanto = Printer.huboExitoHardware();
-        }
-      }
-      if (adelantoParcial) {
-        await mostrarAlertaImportante({
-          tipo: 'critica',
-          titulo: adelantoParcial.exitosos.length ? 'LA RESERVACIÓN SE GUARDÓ — EL ANTICIPO QUEDÓ PARCIAL' : 'LA RESERVACIÓN SE GUARDÓ — EL ANTICIPO NO SE REGISTRÓ',
-          mensaje: 'La reservación SÍ quedó guardada.',
-          detalle: [...pmDetalleParcial(adelantoParcial.exitosos, adelantoParcial.fallidos), 'Para registrar lo que falta, usa "Registrar pago" desde el Detalle del Hospedaje — no vuelvas a guardar esta reservación.']
-        });
-      } else if (!cajaOkAdelanto) {
-        await mostrarAlertaImportante({
-          tipo: 'critica',
-          titulo: 'LA RESERVACIÓN Y EL ANTICIPO SÍ SE GUARDARON',
-          mensaje: 'La reservación y el anticipo SÍ quedaron registrados correctamente.',
-          detalle: ['No se pudo registrar el movimiento en caja.', 'NO vuelvas a registrar el anticipo. Verifica el corte de caja manualmente.']
-        });
-      } else if (!hardwareOkAdelanto) {
-        await mostrarAlertaImportante({
-          tipo: 'critica',
-          titulo: 'EL TICKET NO SE IMPRIMIÓ',
-          mensaje: 'La reservación y el anticipo SÍ quedaron registrados y en caja.',
-          detalle: ['La impresora no respondió y el cajón/ticket no se abrió/imprimió.', 'NO vuelvas a registrar el anticipo. Puedes reimprimir el ticket cuando la impresora esté disponible.']
-        });
-      } else {
-        notify('✅ Reservación guardada', 'success');
+      entradaId = nuevaEntrada?.[0]?.id;
+    }
+    reservacionGuardada = true;
+
+    // 2. Responsiva marcada → también en el perfil del cliente (igual que Nueva Entrada)
+    if (datos.responsiva_firmada && nr_clienteSeleccionado.responsiva_firmada !== true) {
+      try {
+        await sb('PATCH', `clientes?id=eq.${nr_clienteSeleccionado.id}`, { responsiva_firmada: true });
+        nr_clienteSeleccionado.responsiva_firmada = true;
+      } catch(e) {
+        notify('⚠️ La reservación se guardó, pero no se pudo marcar la responsiva en el perfil del cliente', 'error');
       }
     }
+
+    // 3. Adelanto NUEVO (solo si se marcó la casilla): cobro → caja → ticket/cajón
+    if (tieneAdelanto && montoAdelanto > 0 && entradaId) {
+      adelanto = await nr_registrarAdelanto(entradaId, pagosAdelanto, mascotas,
+        editandoId ? 'Anticipo registrado al editar la reservación' : 'Anticipo al hacer reservación');
+    }
+
+    if (editandoId) nr_salirModoEdicion();
+    const avisado = adelanto ? await nr_avisarResultadoAdelanto(adelanto) : false;
+    if (!avisado) notify(editandoId ? '✅ Reservación actualizada' : '✅ Reservación guardada', 'success');
     await cargarTodo();
-    // Limpiar form
-    nr_clearCliente();
-    document.getElementById('nr-notas').value = '';
-    document.getElementById('nr-fecha-entrada').value = '';
-    document.getElementById('nr-fecha-salida').value = '';
-    document.getElementById('nr-noches').value = '';
-    document.getElementById('nr-habitacion').value = '';
-    document.getElementById('nr-hab-seleccionada').textContent = '';
-    document.getElementById('nr-tiene-adelanto').checked = false;
-    document.getElementById('nr-adelanto-form').style.display = 'none';
-    document.getElementById('nr-conceptos-tbody').innerHTML = '';
-    nr_calcResumen();
+    nr_limpiarFormulario();
     showScreen('reservaciones-admin');
   } catch(e) {
+    const dineroGuardado = adelanto && adelanto.exitosos.length > 0;
     await mostrarAlertaImportante({
       tipo: 'critica',
-      titulo: 'NO SE PUDO GUARDAR LA RESERVACIÓN',
+      titulo: dineroGuardado ? 'EL ADELANTO SÍ QUEDÓ REGISTRADO. NO VUELVAS A COBRAR.' : 'NO SE PUDO GUARDAR LA RESERVACIÓN',
       mensaje: mensajeErrorUsuario(e, 'guardar reservación'),
-      detalle: ['No se creó ningún registro. Puedes intentarlo de nuevo sin riesgo de duplicar.']
+      detalle: [reservacionGuardada
+        ? 'La reservación SÍ quedó guardada. Revisa la lista de reservaciones antes de volver a intentarlo.'
+        : 'No se creó ningún registro. Puedes intentarlo de nuevo sin riesgo de duplicar.']
     });
+    // Lo ya guardado no debe poder reenviarse con otro clic en "Guardar"
+    if (reservacionGuardada) {
+      if (nr_reservacionEditandoId) nr_salirModoEdicion(); else nr_limpiarFormulario();
+      showScreen('reservaciones-admin');
+    }
   }
   setLoading(false);
   _guardandoReservacion = false;
@@ -11769,6 +11869,9 @@ document.getElementById('clave-sistema')?.addEventListener('keydown', e => {
 
 // ===================== GESTIÓN DE USUARIOS =====================
 function showScreen(name) {
+  // Salir de la pantalla de reservación sin guardar cancela el modo edición; si no,
+  // la siguiente "Nueva reservación" sobrescribiría la reservación que se estaba editando.
+  if (name !== 'nueva-reservacion' && nr_reservacionEditandoId) nr_salirModoEdicion();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const screen = document.getElementById('screen-' + name);
